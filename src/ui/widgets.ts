@@ -1,7 +1,7 @@
 import { getConfig, saveConfig, mergeConfigDefaults } from '@/state';
 
 function svgIcon(paths: string) {
-  return `<svg class="icon" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+  return `<svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">${paths}</svg>`;
 }
 
 function iconSun() { return svgIcon('<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'); }
@@ -31,6 +31,15 @@ function mapCondition(cond: string | undefined) {
   if (c.includes('cloud')) return 'cloud';
   if (c.includes('mist') || c.includes('fog') || c.includes('haze')) return 'mist';
   return 'sun';
+}
+
+function card(title: string, bodyHTML: string, iconSVG = '') {
+  return `
+    <div class="widget-card">
+      <div class="w-head">${iconSVG}<span>${title}</span><button class="w-menu" aria-label="More">⋯</button></div>
+      <div class="w-body">${bodyHTML}</div>
+    </div>
+  `;
 }
 
 export async function fetchWeather(): Promise<void> {
@@ -75,93 +84,31 @@ export async function renderWidgets(container: HTMLElement): Promise<void> {
     container.innerHTML = '';
     return;
   }
-  container.className = 'widgets';
-  container.innerHTML = '';
-
-  const cards: HTMLElement[] = [];
+  let html = '';
 
   // Weather card
-  const weatherCard = document.createElement('div');
-  weatherCard.className = 'widget-card weather-card';
-  const menu = buildMenu(container);
+  let weatherBody = '<span class="muted">Weather: set in Settings</span>';
+  let icon = '';
   if (wcfg.weather.current) {
     const cur = wcfg.weather.current;
-    const iconFn = ICONS[cur.icon || mapCondition(cur.condition)];
-    const icon = document.createElement('span');
-    icon.innerHTML = iconFn();
-    const temp = document.createElement('span');
-    temp.className = 'temp';
-    temp.textContent = `${Math.round(cur.temp)}° ${wcfg.weather.units}`;
-    const line1 = document.createElement('div');
-    line1.className = 'line1';
-    line1.append(icon, temp);
-    const cond = document.createElement('div');
-    cond.textContent = `${cur.condition} • ${cur.location || wcfg.weather.city || ''}`;
-    const upd = document.createElement('div');
-    if (cur.updatedISO) {
-      const d = new Date(cur.updatedISO);
-      upd.className = 'updated';
-      upd.textContent = `Updated ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    }
-    weatherCard.append(line1, cond, upd);
-  } else {
-    weatherCard.textContent = 'Weather: set in Settings';
+    const ic = ICONS[cur.icon || mapCondition(cur.condition)];
+    icon = ic();
+    const upd = cur.updatedISO
+      ? `<div class="muted">Updated ${new Date(cur.updatedISO).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`
+      : '';
+    weatherBody = `<div><span>${Math.round(cur.temp)}° ${wcfg.weather.units} ${cur.condition} • ${cur.location || ''}</span>${upd}</div>`;
   }
-  weatherCard.appendChild(menu);
-  cards.push(weatherCard);
+  html += card('Weather', weatherBody, icon);
 
   // Internal headline
-  const intCard = document.createElement('div');
-  intCard.className = 'widget-card';
-  const intIcon = document.createElement('span');
-  intIcon.innerHTML = iconMegaphone();
-  const intText = document.createElement('span');
-  intText.textContent = wcfg.headlines.internal;
-  intText.title = wcfg.headlines.internal;
-  intCard.append(intIcon, intText);
-  cards.push(intCard);
+  const int = wcfg.headlines.internal || '';
+  html += card('Internal', `<div class="single-line" title="${int}">${int}</div>`, iconMegaphone());
 
   // External headline
-  const extCard = document.createElement('div');
-  extCard.className = 'widget-card';
-  const extIcon = document.createElement('span');
-  extIcon.innerHTML = iconCone();
-  const extText = document.createElement('span');
-  extText.textContent = wcfg.headlines.external;
-  extText.title = wcfg.headlines.external;
-  extCard.append(extIcon, extText);
-  cards.push(extCard);
+  const ext = wcfg.headlines.external || '';
+  html += card('External', `<div class="single-line" title="${ext}">${ext}</div>`, iconCone());
 
-  for (const c of cards) container.appendChild(c);
+  container.innerHTML = html;
 }
 
-function buildMenu(container: HTMLElement) {
-  const details = document.createElement('details');
-  details.className = 'widget-menu';
-  const summary = document.createElement('summary');
-  summary.textContent = '⋮';
-  details.appendChild(summary);
-  const menu = document.createElement('div');
-  const btnRef = document.createElement('button');
-  btnRef.textContent = 'Refresh now';
-  btnRef.addEventListener('click', async (e) => {
-    e.preventDefault();
-    details.removeAttribute('open');
-    await fetchWeather();
-    await renderWidgets(container);
-  });
-  const btnHide = document.createElement('button');
-  btnHide.textContent = 'Hide widgets';
-  btnHide.addEventListener('click', async (e) => {
-    e.preventDefault();
-    details.removeAttribute('open');
-    const cfg = getConfig();
-    cfg.widgets.show = false;
-    await saveConfig({ widgets: cfg.widgets });
-    await renderWidgets(container);
-  });
-  menu.append(btnRef, btnHide);
-  details.appendChild(menu);
-  return details;
-}
-
+export { mapCondition };

@@ -1,6 +1,6 @@
 import './styles.css';
 
-import { STATE, initState } from '@/state';
+import { STATE, initState, applyPendingToActive } from '@/state';
 import { hhmmNowLocal, deriveShift } from '@/utils/time';
 import { renderHeader } from '@/ui/header';
 import { renderTabs, activeTab } from '@/ui/tabs';
@@ -35,8 +35,14 @@ export async function renderAll() {
 
 initState();
 renderAll();
-setInterval(() => {
-  STATE.clockHHMM = hhmmNowLocal();
-  STATE.shift = deriveShift(STATE.clockHHMM);
+setInterval(async () => {
+  const hhmm = hhmmNowLocal();
+  const shift = deriveShift(hhmm);
+  if (shift !== STATE.shift) {
+    initState();
+    await applyPendingToActive(STATE.dateISO, STATE.shift);
+  } else {
+    STATE.clockHHMM = hhmm;
+  }
   renderAll();
 }, 1000);

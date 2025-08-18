@@ -174,4 +174,14 @@ export async function importHistoryFromJSON(json: string): Promise<PendingShift[
   return data;
 }
 
+export async function applyPendingToActive(
+  dateISO: string,
+  shift: Shift
+): Promise<void> {
+  const pending = await DB.get<PendingShift>(KS.PENDING(dateISO, shift));
+  if (!pending) return;
+  await DB.set(KS.ACTIVE(dateISO, shift), pending);
+  await DB.del(KS.PENDING(dateISO, shift));
+}
+
 export { DB };

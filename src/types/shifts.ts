@@ -1,6 +1,6 @@
 export type ShiftId = string;
 
-export type ShiftStatus = 'draft' | 'onbat' | 'live' | 'archived';
+export type ShiftStatus = 'draft' | 'onbat' | 'live' | 'overlap' | 'archived';
 
 export type Shift = {
   id: ShiftId;

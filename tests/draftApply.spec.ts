@@ -13,19 +13,19 @@ vi.mock('@/db', () => ({
     Array.from(store.keys()).filter((k) => k.startsWith(prefix)),
 }));
 
-import { applyPendingToActive, KS, DB, type PendingShift } from '@/state';
+import { applyDraftToActive, KS, DB, type DraftShift } from '@/state';
 
 async function clearDB() {
   store.clear();
 }
 
-describe('applyPendingToActive', () => {
+describe('applyDraftToActive', () => {
   beforeEach(async () => {
     await clearDB();
   });
 
-  it('moves pending roster into active and clears pending entry', async () => {
-    const board: PendingShift = {
+  it('moves draft roster into active and clears draft entry', async () => {
+    const board: DraftShift = {
       dateISO: '2024-01-01',
       shift: 'day',
       charge: { nurseId: '1' },
@@ -35,12 +35,12 @@ describe('applyPendingToActive', () => {
       offgoing: [],
       support: { techs: [], vols: [], sitters: [] },
     };
-    const key = KS.PENDING(board.dateISO, board.shift);
+    const key = KS.DRAFT(board.dateISO, board.shift);
     await DB.set(key, board);
 
-    await applyPendingToActive(board.dateISO, board.shift);
+    await applyDraftToActive(board.dateISO, board.shift);
 
     expect(await DB.get(KS.ACTIVE(board.dateISO, board.shift))).toEqual(board);
-    expect(await DB.get(KS.PENDING(board.dateISO, board.shift))).toBeUndefined();
+    expect(await DB.get(KS.DRAFT(board.dateISO, board.shift))).toBeUndefined();
   });
 });

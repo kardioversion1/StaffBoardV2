@@ -26,7 +26,7 @@ function renderTypeLegend() {
     <div class="assignments">
       <div class="nurse-pill" data-type="home"><span class="nurse-name">Home</span></div>
       <div class="nurse-pill" data-type="travel"><span class="nurse-name">Travel</span></div>
-      <div class="nurse-pill" data-type="float"><span class="nurse-name">Float</span></div>
+      <div class="nurse-pill" data-type="flex"><span class="nurse-name">Flex</span></div>
       <div class="nurse-pill" data-type="charge"><span class="nurse-name">Charge</span></div>
       <div class="nurse-pill" data-type="triage"><span class="nurse-name">Triage</span></div>
       <div class="nurse-pill" data-type="other"><span class="nurse-name">Other</span></div>

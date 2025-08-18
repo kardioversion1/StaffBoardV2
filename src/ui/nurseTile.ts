@@ -1,6 +1,6 @@
 import type { Slot } from "../slots";
 import type { Staff } from "../state";
-import { formatShortName } from "../utils/formatName";
+import { formatShortName } from "@/utils/format";
 
 export function nurseTile(slot: Slot, staff: Staff): string {
   const chips: string[] = [];

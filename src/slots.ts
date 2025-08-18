@@ -16,14 +16,16 @@ export type Slot = {
 export interface Board {
   charge?: Slot;
   triage?: Slot;
+  admin?: Slot;
   zones: Record<string, Slot[]>;
 }
 
-type SlotTarget = "charge" | "triage" | { zone: string; index?: number };
+type SlotTarget = "charge" | "triage" | "admin" | { zone: string; index?: number };
 
 export function ensureUniqueAssignment(board: Board, nurseId: string): void {
   if (board.charge?.nurseId === nurseId) board.charge = undefined;
   if (board.triage?.nurseId === nurseId) board.triage = undefined;
+  if (board.admin?.nurseId === nurseId) board.admin = undefined;
   for (const zone of Object.keys(board.zones)) {
     board.zones[zone] = board.zones[zone].filter((s) => s.nurseId !== nurseId);
   }
@@ -35,6 +37,8 @@ export function upsertSlot(board: Board, target: SlotTarget, slot: Slot): void {
     board.charge = slot;
   } else if (target === "triage") {
     board.triage = slot;
+  } else if (target === "admin") {
+    board.admin = slot;
   } else {
     const arr = board.zones[target.zone] || (board.zones[target.zone] = []);
     if (target.index === undefined || target.index >= arr.length) {
@@ -47,10 +51,11 @@ export function upsertSlot(board: Board, target: SlotTarget, slot: Slot): void {
 
 export function removeSlot(
   board: Board,
-  target: "charge" | "triage" | { zone: string; index: number }
+  target: "charge" | "triage" | "admin" | { zone: string; index: number }
 ): void {
   if (target === "charge") board.charge = undefined;
   else if (target === "triage") board.triage = undefined;
+  else if (target === "admin") board.admin = undefined;
   else {
     const arr = board.zones[target.zone];
     if (arr) arr.splice(target.index, 1);
@@ -59,7 +64,7 @@ export function removeSlot(
 
 export function moveSlot(
   board: Board,
-  from: "charge" | "triage" | { zone: string; index: number },
+  from: "charge" | "triage" | "admin" | { zone: string; index: number },
   to: SlotTarget
 ): void {
   let slot: Slot | undefined;
@@ -69,6 +74,9 @@ export function moveSlot(
   } else if (from === "triage") {
     slot = board.triage;
     board.triage = undefined;
+  } else if (from === "admin") {
+    slot = board.admin;
+    board.admin = undefined;
   } else {
     slot = board.zones[from.zone]?.splice(from.index, 1)[0];
   }

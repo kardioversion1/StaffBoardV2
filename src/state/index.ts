@@ -1,6 +1,7 @@
 import { Shift, hhmmNowLocal, toDateISO, deriveShift } from '@/utils/time';
 import * as DB from '@/db';
 import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
+import { canonNurseType, type NurseType } from '@/domain/lexicon';
 
 export type WidgetsConfig = {
   show?: boolean;
@@ -36,15 +37,18 @@ export type Config = {
 
 export type Staff = {
   id: string;
-  name: string;
-  rf?: string;
-  type: 'home' | 'travel' | 'float' | 'charge' | 'triage' | 'other';
-  // merged fields from codex/add-auto-seed-next-shift-functionality
+  name?: string;
+  first?: string;
+  last?: string;
+  rf?: number;
+  type: NurseType;
   active?: boolean;
+  notes?: string;
   prefDay?: boolean;
   prefNight?: boolean;
-  eligibleRoles?: ('charge' | 'triage')[];
+  eligibleRoles?: ('charge' | 'triage' | 'admin')[];
   defaultZone?: string;
+  dtoEligible?: boolean;
 };
 
 import type { Slot } from "./slots";
@@ -55,6 +59,7 @@ export interface ActiveShift {
   shift: Shift;
   charge?: Slot;
   triage?: Slot;
+  admin?: Slot;
   zones: Record<string, Slot[]>;
   incoming: { nurseId: string; eta: string; arrived?: boolean }[];
   offgoing: { nurseId: string; ts: number }[];
@@ -62,7 +67,7 @@ export interface ActiveShift {
   comments: string;
 }
 
-export type PendingShift = Omit<ActiveShift, "comments">;
+export type DraftShift = Omit<ActiveShift, 'comments'>;
 
 export interface AppState {
   dateISO: string;
@@ -158,31 +163,35 @@ export const KS = {
   PHYS: (dateISO: string) => `PHYS:${dateISO}`,
   ACTIVE: (dateISO: string, shift: Shift) => `ACTIVE:${dateISO}:${shift}`,
   ONBAT: (dateISO: string, shift: Shift) => `ONBAT:${dateISO}:${shift}`,
-  PENDING: (dateISO: string, shift: Shift) => `PENDING:${dateISO}:${shift}`,
+  DRAFT: (dateISO: string, shift: Shift) => `DRAFT:${dateISO}:${shift}`,
 } as const;
 
 export async function loadStaff(): Promise<Staff[]> {
-  return (await DB.get<Staff[]>(KS.STAFF)) || [];
+  const list = (await DB.get<Staff[]>(KS.STAFF)) || [];
+  return list.map((s) => ({
+    ...s,
+    type: (canonNurseType((s as any).type) || (s as any).type) as NurseType,
+  }));
 }
 
 export async function saveStaff(list: Staff[]): Promise<void> {
   await DB.set(KS.STAFF, list);
 }
 
-export async function importHistoryFromJSON(json: string): Promise<PendingShift[]> {
-  const data = JSON.parse(json) as PendingShift[];
+export async function importHistoryFromJSON(json: string): Promise<DraftShift[]> {
+  const data = JSON.parse(json) as DraftShift[];
   await DB.set(KS.HISTORY, data);
   return data;
 }
 
-export async function applyPendingToActive(
+export async function applyDraftToActive(
   dateISO: string,
   shift: Shift
 ): Promise<void> {
-  const pending = await DB.get<PendingShift>(KS.PENDING(dateISO, shift));
-  if (!pending) return;
-  await DB.set(KS.ACTIVE(dateISO, shift), pending);
-  await DB.del(KS.PENDING(dateISO, shift));
+  const draft = await DB.get<DraftShift>(KS.DRAFT(dateISO, shift));
+  if (!draft) return;
+  await DB.set(KS.ACTIVE(dateISO, shift), draft);
+  await DB.del(KS.DRAFT(dateISO, shift));
 }
 
 export { DB };

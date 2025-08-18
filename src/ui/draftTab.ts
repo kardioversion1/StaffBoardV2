@@ -7,7 +7,7 @@ import {
   loadStaff,
   saveStaff,
   Staff,
-  PendingShift,
+  DraftShift,
 } from '@/state';
 import { upsertSlot, moveSlot, removeSlot } from '@/slots';
 import {
@@ -16,11 +16,12 @@ import {
   buildSeedBoard,
   DEFAULT_SEED_SETTINGS,
 } from '@/seed';
+import { t } from '@/i18n/en';
 
-export async function renderPendingTab(root: HTMLElement) {
+export async function renderDraftTab(root: HTMLElement) {
   await seedZonesIfNeeded();
   let staff: Staff[] = await loadStaff();
-  let board = await DB.get<PendingShift>(KS.PENDING(STATE.dateISO, STATE.shift));
+  let board = await DB.get<DraftShift>(KS.DRAFT(STATE.dateISO, STATE.shift));
   if (!board) {
     const roster = getDefaultRosterForLabel(staff, STATE.shift);
     const seed = buildSeedBoard(roster, DEFAULT_SEED_SETTINGS);
@@ -29,60 +30,66 @@ export async function renderPendingTab(root: HTMLElement) {
       shift: STATE.shift,
       charge: seed.charge,
       triage: seed.triage,
+      admin: seed.admin,
       zones: seed.zones,
       incoming: [],
       offgoing: [],
       support: { techs: [], vols: [], sitters: [] },
     };
-    await DB.set(KS.PENDING(STATE.dateISO, STATE.shift), board);
+    await DB.set(KS.DRAFT(STATE.dateISO, STATE.shift), board);
   } else {
     board.incoming ||= [];
     board.offgoing ||= [];
     board.support ||= { techs: [], vols: [], sitters: [] };
     board.dateISO ||= STATE.dateISO;
     board.shift ||= STATE.shift;
+    board.admin ||= undefined;
   }
   let selected: string | undefined;
 
   root.innerHTML = `
-    <div class="pending-layout">
+    <div class="draft-layout">
       <aside class="panel roster-panel">
         <div class="roster-controls">
           <input id="roster-search" type="search" placeholder="Search nurses" />
           <select id="roster-filter">
             <option value="">All Types</option>
-            <option value="home">Home</option>
-            <option value="travel">Travel</option>
-            <option value="float">Float</option>
-            <option value="charge">Charge</option>
-            <option value="triage">Triage</option>
-            <option value="other">Other</option>
+            <option value="home">${t('labels.home')}</option>
+            <option value="travel">${t('labels.travel')}</option>
+            <option value="flex">${t('labels.flex')}</option>
+            <option value="charge">${t('labels.charge')}</option>
+            <option value="triage">${t('labels.triage')}</option>
+            <option value="other">${t('labels.other') ?? 'Other'}</option>
           </select>
         </div>
         <ul id="roster-list"></ul>
-        <button id="nurse-edit" class="btn">+ Add Nurse</button>
+        <button id="nurse-edit" class="btn">+ ${t('actions.addNurse')}</button>
       </aside>
       <section class="panel board-panel">
         <div class="zone" data-zone="charge">
-          <h4>Charge</h4>
+          <h4>${t('labels.charge')}</h4>
           <div class="slots" id="zone-charge"></div>
         </div>
         <div class="zone" data-zone="triage">
-          <h4>Triage</h4>
+          <h4>${t('labels.triage')}</h4>
           <div class="slots" id="zone-triage"></div>
         </div>
+        <div class="zone" data-zone="admin" id="zone-admin-wrap" style="display:none">
+          <h4>${t('labels.adminOn')}</h4>
+          <div class="slots" id="zone-admin"></div>
+        </div>
         <div id="zones"></div>
-        <button id="add-zone" class="btn">+ Add Zone</button>
+        <button id="add-zone" class="btn">+ ${t('actions.createZone')}</button>
       </section>
       <aside class="panel flags-panel">
-        <h3>Flags</h3>
+        <h3>${t('labels.flags')}</h3>
         <ul id="flags-list"></ul>
       </aside>
     </div>
   `;
 
   const saveBoard = async () => {
-    await DB.set(KS.PENDING(STATE.dateISO, STATE.shift), board);
+    await DB.set(KS.DRAFT(STATE.dateISO, STATE.shift), board);
     renderFlags();
   };
 
@@ -111,7 +118,7 @@ export async function renderPendingTab(root: HTMLElement) {
         list.appendChild(li);
       });
     const btn = document.getElementById('nurse-edit') as HTMLButtonElement;
-    btn.textContent = selected ? 'Edit Nurse' : '+ Add Nurse';
+    btn.textContent = selected ? t('actions.editNurse') : `+ ${t('actions.addNurse')}`;
   }
 
   function placeholder(): HTMLElement {
@@ -170,6 +177,18 @@ export async function renderPendingTab(root: HTMLElement) {
     if (board.triage) triageEl.appendChild(renderSlot(board.triage, 'triage'));
     else triageEl.appendChild(placeholder());
 
+    const adminWrap = document.getElementById('zone-admin-wrap')!;
+    const adminEl = document.getElementById('zone-admin')!;
+    adminEl.innerHTML = '';
+    makeDroppable(adminEl, 'admin');
+    if (board.admin) {
+      adminWrap.style.display = '';
+      adminEl.appendChild(renderSlot(board.admin, 'admin'));
+    } else {
+      adminWrap.style.display = 'none';
+      adminEl.appendChild(placeholder());
+    }
+
     const zonesCont = document.getElementById('zones')!;
     zonesCont.innerHTML = '';
     for (const z of Object.keys(board.zones)) {
@@ -198,6 +217,11 @@ export async function renderPendingTab(root: HTMLElement) {
       const arr = counts.get(board.triage.nurseId) || [];
       arr.push('Triage');
       counts.set(board.triage.nurseId, arr);
+    }
+    if (board.admin) {
+      const arr = counts.get(board.admin.nurseId) || [];
+      arr.push('Admin on');
+      counts.set(board.admin.nurseId, arr);
     }
     for (const [zone, slots] of Object.entries(board.zones)) {
       slots.forEach((s) => {
@@ -239,7 +263,7 @@ export async function renderPendingTab(root: HTMLElement) {
         const name = prompt('Name?');
         if (!name) return;
         const type =
-          (prompt('Type? (home, travel, float, charge, triage, other)', 'home') as Staff['type']) ||
+          (prompt('Type? (home, travel, flex, charge, triage, other)', 'home') as Staff['type']) ||
           'home';
         staff.push({ id: crypto.randomUUID(), name, type });
       }

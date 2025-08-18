@@ -1,4 +1,5 @@
 import { renderAll } from '@/main';
+import { t } from '@/i18n/en';
 
 let active: string = 'Main';
 
@@ -16,9 +17,9 @@ export function renderTabs(): void {
   }
   nav.innerHTML = `
     <button data-tab="Main">Main</button>
-    <button data-tab="Pending">Pending</button>
+    <button data-tab="Draft">${t('nav.draft')}</button>
     <button data-tab="Settings">Settings</button>
-    <button data-tab="History">History</button>
+    <button data-tab="History">${t('nav.history')}</button>
   `;
   nav.querySelectorAll('button').forEach((btn) => {
     btn.onclick = () => {

@@ -1,54 +1,35 @@
-import { renderMainTab } from "./mainTab";
-import { renderPendingTab } from "./pendingTab";
-import { renderSettingsTab } from "./settingsTab";
-import { renderHistoryTab } from "./historyTab";
+import { renderAll } from '@/main';
 
-let active: string = "main";
+let active: string = 'Main';
 
-export function renderTabs() {
-  const app = document.getElementById("app")!;
-  let nav = document.getElementById("tabs");
+export function activeTab(): string {
+  return active;
+}
+
+export function renderTabs(): void {
+  const app = document.getElementById('app')!;
+  let nav = document.getElementById('tabs');
   if (!nav) {
-    nav = document.createElement("nav");
-    nav.id = "tabs";
+    nav = document.createElement('nav');
+    nav.id = 'tabs';
     app.appendChild(nav);
   }
   nav.innerHTML = `
-    <button data-tab="main">Main</button>
-    <button data-tab="pending">Pending</button>
-    <button data-tab="settings">Settings</button>
-    <button data-tab="history">History</button>
+    <button data-tab="Main">Main</button>
+    <button data-tab="Pending">Pending</button>
+    <button data-tab="Settings">Settings</button>
+    <button data-tab="History">History</button>
   `;
-  nav.querySelectorAll("button").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      active = btn.getAttribute("data-tab") || "main";
-      renderActiveTab();
-    });
+  nav.querySelectorAll('button').forEach((btn) => {
+    btn.onclick = () => {
+      active = btn.getAttribute('data-tab') || 'Main';
+      renderAll();
+    };
   });
-  renderActiveTab();
-}
-
-export function renderActiveTab() {
-  const app = document.getElementById("app")!;
-  let root = document.getElementById("tab-root");
-  if (!root) {
-    root = document.createElement("div");
-    root.id = "tab-root";
-    app.appendChild(root);
-  }
-  root.innerHTML = "";
-  switch (active) {
-    case "main":
-      renderMainTab(root);
-      break;
-    case "pending":
-      renderPendingTab(root);
-      break;
-    case "settings":
-      renderSettingsTab(root);
-      break;
-    case "history":
-      renderHistoryTab(root);
-      break;
+  let panel = document.getElementById('panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'panel';
+    app.appendChild(panel);
   }
 }

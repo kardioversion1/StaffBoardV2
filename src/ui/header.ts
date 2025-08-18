@@ -1,5 +1,5 @@
-import { STATE } from "../state";
-import { deriveShift, fmtLong } from "../utils/time";
+import { STATE } from '@/state';
+import { deriveShift, fmtLong } from '@/utils/time';
 
 export function renderHeader() {
   const app = document.getElementById("app")!;

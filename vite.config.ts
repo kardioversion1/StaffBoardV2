@@ -1,11 +1,6 @@
-import { defineConfig } from "vite";
-import path from "path";
+import { resolve } from 'path';
 
-export default defineConfig({
+export default {
+  resolve: { alias: { '@': resolve(__dirname, 'src') } },
   server: { open: true },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src"),
-    },
-  },
-});
+};

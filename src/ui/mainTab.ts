@@ -1,4 +1,5 @@
-import { DB, KS, getConfig, STATE } from '@/state';
+import { DB, KS, getConfig, STATE, loadStaff, Staff } from '@/state';
+import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWidgets } from './widgets';
 
 function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: string[]) {
@@ -22,6 +23,8 @@ export async function renderMain(
 ): Promise<void> {
   try {
     const cfg = getConfig();
+    const staff: Staff[] = await loadStaff();
+    setNurseCache(staff);
     let active: any = await DB.get(KS.ACTIVE(ctx.dateISO, ctx.shift));
     if (!active) active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones || []);
 
@@ -70,7 +73,7 @@ export async function renderMain(
         </section>
 
         <section class="panel">
-          <h3>Off-going (kept 40 min)</h3>
+          <h3>Offgoing (kept 40 min)</h3>
           <div id="offgoing"></div>
         </section>
 
@@ -119,13 +122,13 @@ export async function renderMain(
 
 function renderLeadership(active: any) {
   (document.getElementById('slot-charge') as HTMLElement).textContent =
-    active.charge?.nurseId || '';
+    labelFromId(active.charge?.nurseId);
   (document.getElementById('slot-triage') as HTMLElement).textContent =
-    active.triage?.nurseId || '';
+    labelFromId(active.triage?.nurseId);
   const adminEl = document.getElementById('slot-admin') as HTMLElement;
   if (active.admin?.nurseId) {
     adminEl.style.display = '';
-    adminEl.textContent = active.admin.nurseId;
+    adminEl.textContent = labelFromId(active.admin.nurseId);
   } else {
     adminEl.style.display = 'none';
     adminEl.textContent = '';
@@ -143,7 +146,7 @@ function renderZones(active: any, cfg: any) {
     const list = document.createElement('div');
     for (const s of active.zones[z] || []) {
       const item = document.createElement('div');
-      item.textContent = s.nurseId;
+      item.textContent = labelFromId(s.nurseId);
       list.appendChild(item);
     }
     div.appendChild(list);
@@ -182,7 +185,7 @@ function renderIncoming(active: any, save: () => void) {
   cont.innerHTML = '';
   active.incoming.forEach((inc: any) => {
     const div = document.createElement('div');
-    div.textContent = `${inc.nurseId} ${inc.eta}${inc.arrived ? ' ✓' : ''}`;
+    div.textContent = `${labelFromId(inc.nurseId)} ${inc.eta}${inc.arrived ? ' ✓' : ''}`;
     div.addEventListener('click', () => {
       if (STATE.locked) return;
       inc.arrived = !inc.arrived;
@@ -211,7 +214,7 @@ function renderOffgoing(active: any, save: () => void) {
   cont.innerHTML = '';
   for (const o of active.offgoing) {
     const div = document.createElement('div');
-    div.textContent = o.nurseId;
+    div.textContent = labelFromId(o.nurseId);
     cont.appendChild(div);
   }
   save();

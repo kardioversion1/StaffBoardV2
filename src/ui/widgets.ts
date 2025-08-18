@@ -1,4 +1,5 @@
 import { getConfig, saveConfig, mergeConfigDefaults } from '@/state';
+import { formatDateUS, formatTime24h } from '@/utils/format';
 
 function svgIcon(paths: string) {
   return `<svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">${paths}</svg>`;
@@ -105,10 +106,12 @@ export async function renderWidgets(container: HTMLElement): Promise<void> {
     const cur = wcfg.weather.current;
     const ic = ICONS[cur.icon || mapCondition(cur.condition)];
     icon = ic();
+    const ok = typeof cur.temp === 'number' && Number.isFinite(cur.temp);
     const upd = cur.updatedISO
-      ? `<div class="muted">Updated ${new Date(cur.updatedISO).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`
+      ? `<div class="muted">Updated ${formatDateUS(cur.updatedISO)} ${formatTime24h(cur.updatedISO)}</div>`
       : '';
-    weatherBody = `<div><span>${Math.round(cur.temp)}° ${wcfg.weather.units} ${cur.condition} • ${cur.location || ''}</span>${upd}</div>`;
+    const temp = ok ? Math.round(cur.temp) : '—';
+    weatherBody = `<div><span>${temp}° ${wcfg.weather.units} ${cur.condition} • ${cur.location || ''}</span>${upd}</div>`;
   }
   html += card('Weather', weatherBody, icon);
 

@@ -22,9 +22,9 @@
   --halo: 0 0 0 1px color-mix(in oklab, currentColor 50%, transparent) inset,
           0 0 18px color-mix(in oklab, currentColor 35%, transparent);
 
-  --z-base: 0;
+  --z-base: 1;
   --z-sticky: 100;
-  --z-dropdown: 200;
+  --z-dropdown: 500;
   --z-modal: 1000;
   --z-toast: 1100;
   --z-drag: 1200;
@@ -86,8 +86,9 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 
 @media print{#widgets,.widget{display:none!important}}
 
-.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .2s;z-index:var(--z-modal)}
-.backdrop.open{opacity:1;pointer-events:auto}
+.overlay,.backdrop,.modal-backdrop{position:fixed;inset:0;z-index:var(--z-modal)}
+.overlay:not(.open),.backdrop:not(.open),.modal-backdrop:not(.open){pointer-events:none;opacity:0}
+.backdrop{background:rgba(0,0,0,.6);transition:opacity .2s}
 
 .offcanvas{position:fixed;top:0;right:0;bottom:0;width:300px;background:var(--panel);transform:translateX(100%);pointer-events:none;transition:transform .3s;z-index:var(--z-modal)}
 .offcanvas.open{transform:translateX(0);pointer-events:auto}
@@ -96,3 +97,5 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 
 .dropdown{position:absolute;z-index:var(--z-dropdown)}
 .toast{position:fixed;z-index:var(--z-toast)}
+
+.pending-layout{display:grid;grid-template-columns:320px 1fr 320px;gap:12px;height:100%}

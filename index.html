@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ED Staffing Board — v3.6.1</title>
+<style>
+  :root{
+    --bg:#0e1117; --panel:#141925; --text:#f2f5fb; --muted:#aeb9cf; --accent:#4aa3ff;
+    --ok:#28c990; --warn:#f5a524; --danger:#ef5b5b; --line:#273044; --slot:#111726;
+    --gap:18px; --radius:14px; --cell: clamp(54px, 4.8vh, 70px);
+    --f: clamp(16px,1.05vw,19px); --f-lg: clamp(19px,1.5vw,24px); --f-xl: clamp(26px,2.4vw,34px);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial}
+  .wrap{max-width:1920px;margin:0 auto;padding:var(--gap)}
+  header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-items:center;margin-bottom:var(--gap)}
+  .title{font-size:var(--f-xl);font-weight:800;letter-spacing:.2px}
+  .subtitle{color:var(--muted);font-size:var(--f)}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn,.input,.select,textarea{border-radius:12px;border:1px solid var(--line);background:#101624;color:var(--text);padding:10px 12px;font-size:var(--f);}
+  .btn{height:44px;cursor:pointer;user-select:none}
+  .btn.accent{background:var(--accent);border-color:#2b84e6;color:#06121f;font-weight:700}
+  .btn.ok{background:var(--ok);border-color:#1b9a70;color:#04150f;font-weight:700}
+  .btn.warn{background:var(--warn);border-color:#c88415;color:#1b1203;font-weight:700}
+  .tabs{display:flex;gap:8px;margin-bottom:var(--gap)}
+  .tab{padding:10px 14px;border-radius:10px;border:1px solid var(--line);cursor:pointer;background:#0f1522}
+  .tab.active{background:#1a2132;box-shadow:inset 0 0 0 1px #2b3650}
+  .grid{display:grid;grid-template-columns: 1.5fr 2fr 1fr;gap:var(--gap)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:var(--gap);box-shadow:0 1px 0 rgba(0,0,0,.2)}
+  .section{margin-bottom:var(--gap)}
+  .section h3{margin:0 0 8px 0;font-size:var(--f-lg)}
+  .legend{display:flex;gap:14px;align-items:center;color:var(--muted);font-size:var(--f)}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .row{display:flex;gap:var(--gap);align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  .slot{flex:1;min-height:var(--cell);display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--slot);border:1px solid var(--line)}
+  .pill{font-size:.9em;color:var(--muted);background:#0d1422;border:1px solid var(--line);padding:4px 8px;border-radius:999px;white-space:nowrap}
+  .tile{display:flex;gap:10px;align-items:center;justify-content:space-between;width:100%}
+  .who{display:flex;gap:10px;align-items:center}
+  .name{font-size:var(--f-lg);font-weight:800}
+  .rf{font-size:.95em;color:var(--muted)}
+  .badges{display:flex;gap:6px;align-items:center}
+  .badge{font-size:.78em;border-radius:6px;border:1px solid var(--line);padding:3px 6px;color:#cfd3e4}
+  .badge.j{background:#0e2a1d;color:#7fe0b4;border-color:#204b36}
+  .badge.t{background:#0c2031;color:#8ecbff;border-color:#254a6d}
+  .badge.f{background:#2a1b15;color:#ffc6a1;border-color:#5b3929}
+  .badge.o{background:#26262b;color:#c7c7cf;border-color:#3a3a44}
+  .status{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .status .chip{font-size:.78em;border-radius:999px;border:1px solid var(--line);padding:3px 8px;color:#cbd3e4}
+  .chip.break{background:#33240f;color:#ffd9a1}
+  .chip.cover{background:#102635;color:#9ad7ff}
+  .chip.dto{background:#3a1212;color:#ffb1b1}
+  .dim{opacity:.5}
+  /* TV Landscape zones */
+  #zoneContainer{ display:grid; grid-template-columns: repeat(4, minmax(260px, 1fr)); gap: 12px; }
+  @media (max-width:1600px){ #zoneContainer{ grid-template-columns: repeat(3, minmax(260px, 1fr)); } }
+  @media (max-width:1200px){ #zoneContainer{ grid-template-columns: repeat(2, minmax(260px, 1fr)); } }
+  .zone{display:flex;flex-direction:column;gap:10px; min-height: calc(var(--cell) + 24px);}
+  .zone .zone-title{display:flex;justify-content:space-between;align-items:center;font-weight:800;margin-bottom:2px}
+  .zone .zone-title .mini-btns{display:flex;gap:6px}
+  .zone .drop{min-height:calc(var(--cell) + 8px);padding:8px;border:1px dashed #334057;border-radius:10px; background:#0f1522}
+  .subtle{color:var(--muted);font-size:1em}
+  .side{display:flex;flex-direction:column;gap:var(--gap)}
+  .side .list{display:flex;flex-direction:column;gap:8px}
+  .mini{display:flex;flex-direction:column;gap:4px;background:#151925;border:1px solid var(--line);padding:10px;border-radius:10px;cursor:pointer}
+  .mini .title{font-size:var(--f);font-weight:800}
+  .mini .meta{color:var(--muted);font-size:.95em}
+  .footer{margin-top:var(--gap);display:flex;justify-content:space-between;align-items:center;color:var(--muted)}
+  .clock{font-size:var(--f-lg);font-variant-numeric:tabular-nums}
+  .columns{display:grid;grid-template-columns:1.2fr 1.8fr 1fr;gap:var(--gap)}
+  .listbox{min-height:260px;background:#101623;border:1px solid var(--line);border-radius:10px;padding:10px}
+  .listbox .item{padding:10px;border-radius:8px;border:1px solid #2d3645;background:#0f131b;margin-bottom:8px;cursor:grab}
+  /* Scroll-locked roster */
+  #rosterWrap{max-height:60vh; overflow:auto; overscroll-behavior: contain; padding-right:4px;}
+  .kicker{font-size:.92em;color:#aeb9cf}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{border-bottom:1px solid var(--line);padding:10px 6px;text-align:left;font-size:0.98em}
+  .table th{color:#cdd6eb;font-weight:800}
+  .pill2{display:inline-block;padding:2px 6px;border-radius:6px;border:1px solid var(--line);background:#0f1420}
+  @media print{ body{background:#fff;color:#000} header,.tabs,.side .mini:nth-child(3),.btn{display:none !important} .panel{background:#fff;border-color:#999} .slot{background:#fff;border-color:#bbb} .wrap{max-width:100%;padding:8px} }
+  @media (max-width:1200px){ .grid{grid-template-columns:1fr} .columns{grid-template-columns:1fr} }
+  body.dimmed .wrap{opacity:0.95;filter:saturate(.9) brightness(.95)}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#1a2533;color:#e9f1ff;border:1px solid #2c3a4d;padding:10px 14px;border-radius:10px;display:none;z-index:9999}
+  #importLog{font-size:0.95em;white-space:pre-wrap;background:#0f1522;border:1px solid var(--line);padding:10px;border-radius:10px;min-height:44px}
+  /* Quick typeahead dialog */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9998}
+  .dialog{width:min(680px, 92vw);background:#101624;border:1px solid var(--line);border-radius:16px;padding:14px}
+  .dialog h3{margin:0 0 8px 0}
+  .ta-row{display:flex;gap:8px;margin-bottom:8px}
+  .ta-results{max-height:40vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px}
+  .ta-item{padding:8px;border-radius:8px;border:1px solid #2d3645;margin:4px 0;cursor:pointer}
+  .ta-item:hover{background:#162034}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="title">ED Staffing Board</div>
+      <div class="subtitle" id="dateLabel"></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="prevDay">◀︎ Prev</button>
+      <input class="input" type="date" id="datePicker">
+      <button class="btn" id="nextDay">Next ▶︎</button>
+    </div>
+    <div class="toolbar">
+      <span id="lockState" class="subtitle">Locked</span>
+      <button class="btn accent" id="unlockBtn">Unlock</button>
+      <button class="btn" id="undoBtn">Undo</button>
+      <button class="btn" id="redoBtn">Redo</button>
+      <button class="btn ok" id="printBtn">Print</button>
+      <button class="btn warn" id="startNewShiftBtn">Start New Shift</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="main">Main</div>
+    <div class="tab" data-tab="pending">Pending</div>
+    <div class="tab" data-tab="settings">Settings</div>
+    <div class="tab" data-tab="history">History</div>
+  </div>
+
+  <div id="tab-main">
+    <div class="panel" style="margin-bottom:var(--gap)">
+      <div class="legend">
+        <span class="dot" style="background:var(--ok)"></span> Charge
+        <span class="dot" style="background:var(--accent)"></span> Triage
+        <span class="badge j">J</span> Jewish ER
+        <span class="badge t">T</span> Travel
+        <span class="badge f">F</span> Float
+        <span class="badge o">O</span> Other
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="section">
+          <h3>Leadership</h3>
+          <div class="row">
+            <div class="slot" data-role="charge"></div>
+            <div class="slot" data-role="triage"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Assignments (TV Landscape)</h3>
+          <div id="zoneContainer"></div>
+        </div>
+
+        <div class="section">
+          <h3>Comments</h3>
+          <textarea id="comments" class="input" style="width:100%;height:90px" placeholder="Notes…"></textarea>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="section">
+          <h3>Physicians (read-only)</h3>
+          <div id="physList" class="list"></div>
+          <div class="kicker">Paste ICS in Settings or set an iCal URL.</div>
+        </div>
+
+        <div class="section">
+          <h3>Support Staff</h3>
+          <div class="row">
+            <div class="slot"><span class="pill">Techs</span><input id="techs" class="input" placeholder="Comma-separated…"></div>
+          </div>
+          <div class="row">
+            <div class="slot"><span class="pill">Volunteers</span><input id="vols" class="input" placeholder="Comma-separated…"></div>
+          </div>
+          <div class="row">
+            <div class="slot"><span class="pill">Sitters</span><input id="sitters" class="input" placeholder="Comma-separated…"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="panel mini">
+          <div class="title">Incoming (click to toggle arrived)</div>
+          <div class="row" style="margin:4px 0 8px 0">
+            <button class="btn" id="addIncomingBtn" style="height:36px">+ Add</button>
+          </div>
+          <div id="incomingList" class="list"></div>
+        </div>
+        <div class="panel mini">
+          <div class="title">Off-going (kept 40 min)</div>
+          <div id="offgoingList" class="list"></div>
+        </div>
+        <div class="panel mini">
+          <div class="title">Clock</div>
+          <div class="clock" id="clock">--:--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="subtle">Local, browser-only. PIN to edit. Default PIN: 4911</div>
+      <div class="subtle">v3.6.1</div>
+    </div>
+  </div>
+
+  <div id="tab-pending" style="display:none">
+    <div class="columns">
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3>Roster (Next Shift)</h3>
+          <div>
+            <input id="rosterSearch" class="input" placeholder="Search name / ID / RF" style="width:240px">
+            <select id="rosterSort" class="select">
+              <option value="name">Name (A–Z)</option>
+              <option value="class">Class → Name</option>
+              <option value="id">ID (ascending)</option>
+            </select>
+          </div>
+        </div>
+        <div class="kicker">Drag nurses from here into slots.</div>
+        <div id="rosterWrap"><!-- scroll-locked -->
+          <div id="pendingRoster" class="listbox"></div>
+        </div>
+        <div class="kicker">Select a nurse to view last 5 roles below.</div>
+        <div id="historyPane" class="panel" style="margin-top:12px">
+          <div class="subtle">Select a nurse…</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Pending Assignments</h3>
+        <div class="kicker" id="draftBanner"></div>
+        <div class="section">
+          <div class="row">
+            <div class="slot" data-pending="charge"></div>
+            <div class="slot" data-pending="triage"></div>
+          </div>
+        </div>
+        <div class="section">
+          <div id="pendingZones"></div>
+        </div>
+        <div class="row">
+          <button class="btn" id="saveDraft">Save Draft</button>
+          <button class="btn ok" id="startNext">Start Next Shift</button>
+          <button class="btn warn" id="resetDraft">Reset Draft</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Incoming (Next Shift)</h3>
+        <div class="listbox" id="pendingIncoming"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-settings" style="display:none">
+    <div class="columns">
+      <div class="panel">
+        <h3>Nurses</h3>
+        <div class="kicker">Double‑click a row to edit (including Employee ID).</div>
+        <div id="nurseList" class="listbox"></div>
+        <div class="row">
+          <input id="nId" class="input" placeholder="Employee ID (exact)">
+          <input id="nName" class="input" placeholder="Name (e.g., Alice Smith, RN)">
+          <input id="nRF" class="input" placeholder="RF# / extension">
+        </div>
+        <div class="row">
+          <select id="nClass" class="select">
+            <option value="jewish">Jewish ER</option>
+            <option value="travel">Travel</option>
+            <option value="float">Float</option>
+            <option value="other">Other</option>
+          </select>
+          <button class="btn ok" id="addNurse">Add Nurse</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Zones / Bed Groups</h3>
+        <div id="zoneList" class="listbox"></div>
+        <div class="row">
+          <input id="zName" class="input" placeholder="e.g., Beds 1–5">
+          <button class="btn ok" id="addZone">Add Zone</button>
+        </div>
+
+        <h3 style="margin-top:16px">Shifts</h3>
+        <div class="row">
+          <input id="dayAnchor" class="input" value="07:00" style="width:130px">
+          <input id="nightAnchor" class="input" value="19:00" style="width:130px">
+          <button class="btn" id="saveAnchors">Save</button>
+        </div>
+
+        <h3 style="margin-top:16px">PIN & Auto‑relock</h3>
+        <div class="row">
+          <input id="pinInput" class="input" placeholder="Set/Change PIN (4–6 digits)" style="width:240px">
+          <button class="btn ok" id="savePin">Save PIN</button>
+          <input id="relockMin" class="input" placeholder="Auto‑relock minutes (default 3)" style="width:240px">
+          <button class="btn" id="saveRelock">Save</button>
+        </div>
+
+        <h3 style="margin-top:16px">Physician iCal</h3>
+        <div class="row">
+          <input id="icsUrl" class="input" placeholder="https://… iCal URL">
+          <button class="btn" id="saveIcsUrl">Save URL</button>
+          <button class="btn" id="fetchIcsNow">Fetch Today</button>
+        </div>
+        <textarea id="icsText" class="input" style="width:100%;height:160px" placeholder="Paste raw .ics file text here…"></textarea>
+        <div class="row">
+          <button class="btn" id="parseIcs">Parse Pasted ICS</button>
+        </div>
+
+        <h3 style="margin-top:16px">Data</h3>
+        <div class="row">
+          <button class="btn" id="exportAll">Export JSON</button>
+          <label class="btn" for="importFile">Import JSON (smart)</label>
+          <input type="file" id="importFile" accept="application/json" style="display:none">
+          <label class="btn" for="importStaffFile">Import Staff (merge)</label>
+          <input type="file" id="importStaffFile" accept="application/json" style="display:none">
+          <button class="btn warn" id="clearAll">Clear All</button>
+        </div>
+        <div class="kicker">Import Log</div>
+        <div id="importLog"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-history" style="display:none">
+    <div class="panel">
+      <h3>Shift Archives</h3>
+      <table class="table" id="histTable">
+        <thead><tr><th>Date</th><th>Shift</th><th>Role</th><th>Nurse</th><th>DTO</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Typeahead overlay -->
+<div class="overlay" id="taOverlay">
+  <div class="dialog">
+    <h3 id="taTitle">Select nurse</h3>
+    <div class="ta-row">
+      <input class="input" id="taQuery" placeholder="Search name / ID / RF" style="flex:1">
+      <select class="select" id="taSort" style="width:190px">
+        <option value="name">Name (A–Z)</option>
+        <option value="class">Class → Name</option>
+        <option value="id">ID (ascending)</option>
+      </select>
+      <button class="btn" id="taClose">Close</button>
+    </div>
+    <div class="ta-results" id="taResults"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== Utilities ===== */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const pad2 = n=> String(n).padStart(2,'0');
+const todayISO = ()=> new Date().toISOString().slice(0,10);
+const toast = (msg)=>{ const t=$('#toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 2000); };
+function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+function humanTime(hm){ const [h,m]=hm.split(':').map(Number); const ampm=h>=12?'PM':'AM'; const hh=((h%12)||12); return `${hh}:${pad2(m)} ${ampm}`; }
+
+function currentShiftFor(date, nowClock=STATE.clockHHMM){
+  const dA=STATE.anchors.day||'07:00';
+  const nA=STATE.anchors.night||'19:00';
+  return (nowClock>=dA && nowClock<nA) ? 'day' : 'night';
+}
+function updateDateLabel(){
+  const d=new Date(STATE.date+'T00:00');
+  const base=d.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric',year:'numeric'});
+  const shiftLabel=STATE.shift==='day'?`Day (${STATE.anchors.day}–${STATE.anchors.night})`:`Night (${STATE.anchors.night}–${STATE.anchors.day})`;
+  $('#dateLabel').textContent=`${base} • Active: ${shiftLabel}`;
+}
+function deriveShift(){
+  const clock = STATE.date===todayISO()?STATE.clockHHMM:'12:00';
+  STATE.shift = currentShiftFor(STATE.date, clock);
+  updateDateLabel();
+}
+
+/* ===== IndexedDB (simple KV) ===== */
+const DB = (()=>{
+  const DB_NAME='edb-v28', STORE='kv'; let dbp;
+  function getDB(){ if (dbp) return dbp; dbp = new Promise((res,rej)=>{ const req=indexedDB.open(DB_NAME,1); req.onupgradeneeded=e=>e.target.result.createObjectStore(STORE); req.onsuccess=e=>res(e.target.result); req.onerror=e=>rej(e.target.error); }); return dbp; }
+  async function get(key){ const db=await getDB(); return new Promise((res,rej)=>{ const r=db.transaction(STORE,'readonly').objectStore(STORE).get(key); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+  async function set(key,val){ const db=await getDB(); return new Promise((res,rej)=>{ const r=db.transaction(STORE,'readwrite').objectStore(STORE).put(val,key); r.onsuccess=()=>res(true); r.onerror=()=>rej(r.error); }); }
+  async function del(key){ const db=await getDB(); return new Promise((res,rej)=>{ const r=db.transaction(STORE,'readwrite').objectStore(STORE).delete(key); r.onsuccess=()=>res(true); r.onerror=e=>rej(e.target.error); }); }
+  async function keys(){ const db=await getDB(); return new Promise((res,rej)=>{ const ks=[]; const c=db.transaction(STORE,'readonly').objectStore(STORE).openCursor(); c.onsuccess=e=>{ const cur=e.target.result; if(cur){ ks.push(cur.key); cur.continue(); } else res(ks); }; c.onerror=e=>rej(e.target.error); }); }
+  return {get,set,del,keys};
+})();
+
+/* ===== Keys & State ===== */
+const KS = { CONFIG:'config', STAFF:'staff', HISTORY:'history', ACTIVE:(d,s)=>`active:${d}:${s}`, PENDING:(d,s)=>`pending:${d}:${s}`, ARCHIVE:'archives', PHYS:(d)=>`phys:${d}` };
+let STATE = { date: todayISO(), shift:'day', locked:true, anchors:{day:'07:00',night:'19:00'}, zones:['Beds 1–5','Beds 6–10','Fast Track','Resus'], staff:[], pin:'4911', relockMin:3, clockHHMM:'00:00' };
+
+/* ===== Boot ===== */
+window.addEventListener('error', e => { toast('Error: '+(e.message||e.error||'')); });
+init();
+async function init(){
+  // load config & staff
+  const cfg = await DB.get(KS.CONFIG); if (cfg) Object.assign(STATE, cfg);
+  const staff = await DB.get(KS.STAFF); if (staff) STATE.staff = staff;
+  const now=new Date();
+  STATE.clockHHMM=pad2(now.getHours())+':'+pad2(now.getMinutes());
+  deriveShift();
+  // header
+  $('#datePicker').value = STATE.date;
+  // bind UI
+  bindNav(); bindTabs(); bindSettings(); bindPending();
+  // render
+  await renderAll();
+  // clock
+  setInterval(()=>{
+    const now=new Date();
+    const hhmm=pad2(now.getHours())+':'+pad2(now.getMinutes());
+    STATE.clockHHMM=hhmm;
+    $('#clock').textContent=hhmm;
+    if (STATE.date===todayISO()){
+      const sh=currentShiftFor(STATE.date, hhmm);
+      if (sh!==STATE.shift){ STATE.shift=sh; updateDateLabel(); renderAll(); }
+    }
+  },1000);
+}
+
+/* ===== Save helpers ===== */
+async function saveConfig(){ const {staff, clockHHMM, ...cfg} = STATE; await DB.set(KS.CONFIG, cfg); await DB.set(KS.STAFF, STATE.staff); }
+
+/* ===== Tabs ===== */
+function bindTabs(){
+  $$('.tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      $$('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active');
+      const tab=t.dataset.tab;
+      $('#tab-main').style.display = tab==='main'?'block':'none';
+      $('#tab-pending').style.display = tab==='pending'?'block':'none';
+      $('#tab-settings').style.display = tab==='settings'?'block':'none';
+      $('#tab-history').style.display = tab==='history'?'block':'none';
+    });
+  });
+}
+
+/* ===== Nav ===== */
+function bindNav(){
+  $('#prevDay').onclick = ()=> changeDateBy(-1);
+  $('#nextDay').onclick = ()=> changeDateBy(1);
+  $('#datePicker').onchange = ()=>{ STATE.date = $('#datePicker').value; deriveShift(); saveConfig(); renderAll(); };
+  $('#unlockBtn').onclick = ()=>{
+    const pin = prompt('PIN:');
+    if (pin && pin===String(STATE.pin)){ STATE.locked=false; $('#lockState').textContent='Unlocked'; toast('Unlocked'); }
+    else if (pin) alert('Wrong PIN');
+  };
+  $('#printBtn').onclick = ()=> window.print();
+  $('#startNewShiftBtn').onclick = async ()=>{
+    if (STATE.locked) return alert('Unlock first.');
+    const ns = nextShiftInfo();
+    if (!confirm('Start a NEW blank shift for the next shift?')) return;
+    await DB.set(KS.ACTIVE(ns.date, ns.shift), freshShift(ns.date, ns.shift));
+    toast('New blank shift started'); renderAll();
+  };
+}
+
+/* ===== Active / Pending objects ===== */
+function freshShift(date=STATE.date, shift=STATE.shift){
+  return { date, shift, charge:{}, triage:{}, zones:Object.fromEntries(STATE.zones.map(z=>[z,[]])), incoming:[], offgoing:[], support:{techs:[],vols:[],sitters:[]}, comments:'' };
+}
+async function loadActive(){ return (await DB.get(KS.ACTIVE(STATE.date, STATE.shift))) || freshShift(); }
+async function saveActive(obj){ return DB.set(KS.ACTIVE(STATE.date, STATE.shift), obj); }
+function nextShiftInfo(){
+  if (STATE.shift==='day') return {date:STATE.date, shift:'night'};
+  const d=new Date(STATE.date+'T00:00'); d.setDate(d.getDate()+1);
+  return {date:d.toISOString().slice(0,10), shift:'day'};
+}
+async function loadPending(){ const {date,shift}=nextShiftInfo(); return (await DB.get(KS.PENDING(date, shift))) || { date, shift, charge:{}, triage:{}, zones:Object.fromEntries(STATE.zones.map(z=>[z,[]])), incoming:[] }; }
+async function savePending(obj){ const {date,shift}=nextShiftInfo(); return DB.set(KS.PENDING(date, shift), obj); }
+
+/* ===== Render ===== */
+async function renderAll(){
+  $('#lockState').textContent = STATE.locked?'Locked':'Unlocked';
+  updateDateLabel();
+  await renderMain();
+  await renderPendingList();
+  renderSettingsLists();
+  renderHistory();
+}
+
+function nurseBadge(cls){
+  const map={jewish:'j',travel:'t',float:'f',other:'o'}; const code=map[cls]||'o'; const label={j:'J',t:'T',f:'F',o:'O'}[code];
+  return `<span class="badge ${code}" title="${cls}">${label}</span>`;
+}
+function nurseTile(n){
+  if (!n) return '<div class="subtle">—</div>';
+  return `<div class="tile"><div class="who">${nurseBadge(n.class||'other')}<div><div class="name">${n.name}</div>${n.rf?`<div class="rf">RF ${n.rf}</div>`:''}</div></div></div>`;
+}
+function getById(id){ return STATE.staff.find(s=>s.id===id); }
+
+async function renderMain(){
+  const act = await loadActive();
+  renderPhysicians();
+  // charge + triage
+  const chargeEl = document.querySelector(".slot[data-role='charge']");
+  const triageEl = document.querySelector(".slot[data-role='triage']");
+  chargeEl.innerHTML = nurseTile(getById(act?.charge?.nurseId));
+  triageEl.innerHTML = nurseTile(getById(act?.triage?.nurseId));
+  if (!STATE.locked){
+    chargeEl.onclick = ()=> openPicker('Set Charge', sel => setRole('charge', sel.id, true));
+    triageEl.onclick = ()=> openPicker('Set Triage', sel => setRole('triage', sel.id, true));
+  } else {
+    chargeEl.onclick = triageEl.onclick = null;
+  }
+
+  // zones
+  const zc = $('#zoneContainer'); zc.innerHTML='';
+  STATE.zones.forEach(z=>{
+    const wrap=document.createElement('div'); wrap.className='zone';
+    wrap.innerHTML = `<div class="zone-title"><span>${z}</span><span class="mini-btns"><button class="btn" style="height:32px;padding:4px 8px" data-add>+ Add</button></span></div><div class="drop"></div>`;
+    const drop = wrap.querySelector('.drop');
+    (act.zones[z]||[]).forEach(a=>{
+      const div=document.createElement('div'); div.className='slot'; div.innerHTML=nurseTile(getById(a.nurseId));
+      if (!STATE.locked){
+        div.onclick = async ()=>{
+          const action = prompt(`Edit ${getById(a.nurseId)?.name || a.nurseId}: 1) Remove  2) Replace`);
+          if (action==='1'){
+            act.zones[z]=act.zones[z].filter(x=>x.nurseId!==a.nurseId);
+            await saveActive(act); renderMain();
+          } else if (action==='2'){
+            openPicker('Replace nurse', async sel => { a.nurseId = sel.id; await saveActive(act); renderMain(); });
+          }
+        };
+      }
+      drop.appendChild(div);
+    });
+    if (!STATE.locked){
+      wrap.querySelector('[data-add]').onclick = ()=> openPicker('Add to '+z, async sel => { act.zones[z]=act.zones[z]||[]; act.zones[z].push({nurseId:sel.id}); await saveActive(act); renderMain(); });
+    }
+    zc.appendChild(wrap);
+  });
+
+  // comments & support
+  $('#comments').value = act.comments||'';
+  $('#comments').oninput = debounce(async e=>{ act.comments=e.target.value; await saveActive(act); }, 250);
+  ['techs','vols','sitters'].forEach(k=>{
+    const el = $('#'+k);
+    el.value = (act.support?.[k]||[]).join(', ');
+    el.oninput = debounce(async ()=>{
+      act.support = act.support||{};
+      act.support.techs = $('#techs').value.split(',').map(s=>s.trim()).filter(Boolean);
+      act.support.vols  = $('#vols').value.split(',').map(s=>s.trim()).filter(Boolean);
+      act.support.sitters=$('#sitters').value.split(',').map(s=>s.trim()).filter(Boolean);
+      await saveActive(act);
+    }, 300);
+  });
+
+  // incoming/offgoing
+  $('#incomingList').innerHTML='';
+  (act.incoming||[]).forEach((ent,i)=>{
+    const n=getById(ent.nurseId); const div=document.createElement('div'); div.className='mini';
+    div.innerHTML = `<div class="title">${n?.name||ent.nurseId}</div><div class="meta">${ent.arrived?'Arrived':'ETA '+humanTime(ent.eta||'15:00')}</div>`;
+    div.onclick = async ()=>{ ent.arrived = !ent.arrived; await saveActive(act); renderMain(); };
+    $('#incomingList').appendChild(div);
+  });
+  $('#addIncomingBtn').onclick = ()=>{
+    if (STATE.locked) return alert('Unlock first.');
+    openPicker('Add Incoming', async sel => {
+      const eta = prompt('ETA (HH:MM 24h)', '15:00'); if (!eta) return;
+      act.incoming = act.incoming||[]; act.incoming.push({nurseId:sel.id, eta});
+      await saveActive(act); renderMain();
+    });
+  };
+}
+
+async function setRole(which, nurseId, confirmReplace){
+  const act = await loadActive();
+  const current = act[which]?.nurseId;
+  if (confirmReplace && current && current!==nurseId){
+    if (!confirm(`Replace current ${which.toUpperCase()} (${getById(current)?.name||current}) with ${getById(nurseId)?.name||nurseId}?`)) return;
+  }
+  act[which] = nurseId ? {nurseId} : {};
+  await saveActive(act); renderMain();
+}
+
+/* ===== Pending / Roster ===== */
+function bindPending(){
+  $('#rosterSearch').oninput = debounce(renderPendingList, 150);
+  $('#rosterSort').onchange = renderPendingList;
+  $('[data-pending="charge"]')?.addEventListener('click', ()=> openPicker('Set Charge (pending)', async sel => { const p = await loadPending(); p.charge={nurseId:sel.id}; await savePending(p); renderPendingList(); }));
+  $('[data-pending="triage"]')?.addEventListener('click', ()=> openPicker('Set Triage (pending)', async sel => { const p = await loadPending(); p.triage={nurseId:sel.id}; await savePending(p); renderPendingList(); }));
+}
+async function renderPendingList(){
+  const {date:nd, shift:ns} = nextShiftInfo();
+  const p = await loadPending();
+  const banner = $('#draftBanner');
+  const shiftLabel = ns==='day'?`Day (${STATE.anchors.day}–${STATE.anchors.night})`:`Night (${STATE.anchors.night}–${STATE.anchors.day})`;
+  banner.textContent = `Drafting: ${shiftLabel} for ${new Date(nd+'T00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}`;
+  const q = ($('#rosterSearch').value||'').toLowerCase();
+  const sort = $('#rosterSort').value||'name';
+  let items = [...STATE.staff].filter(s=> !q || s.name.toLowerCase().includes(q) || (s.id||'').toLowerCase().includes(q) || (s.rf||'').toLowerCase().includes(q));
+  const order = {'jewish':0,'travel':1,'float':2,'other':3};
+  items.sort((a,b)=> sort==='name' ? a.name.localeCompare(b.name)
+            : sort==='id' ? String(a.id).localeCompare(String(b.id))
+            : (order[a.class||'other']-order[b.class||'other']) || a.name.localeCompare(b.name));
+  const roster = $('#pendingRoster'); roster.innerHTML='';
+  items.forEach(s=>{
+    const it=document.createElement('div'); it.className='item'; it.draggable=true;
+    it.textContent = `${s.name}  (${s.class||'other'} • RF ${s.rf||'—'} • ID ${s.id})`;
+    it.ondragstart = e=> e.dataTransfer.setData('nurseId', s.id);
+    it.onclick = ()=> showHistory(s.id);
+    roster.appendChild(it);
+  });
+  // render pending charge/triage
+  const setSlot = (sel, obj)=>{
+    const n = obj?.nurseId ? STATE.staff.find(x=>x.id===obj.nurseId) : null;
+    const el = document.querySelector(`.slot[data-pending="${sel}"]`);
+    el.innerHTML = nurseTile(n);
+  };
+  setSlot('charge', p.charge);
+  setSlot('triage', p.triage);
+  // zones
+  const pz = $('#pendingZones'); pz.innerHTML='';
+  STATE.zones.forEach(z=>{
+    const wrap=document.createElement('div'); wrap.className='zone';
+    wrap.innerHTML = `<div class="zone-title"><span>${z}</span></div><div class="drop" data-pz="${z}"></div>`;
+    const drop = wrap.querySelector('.drop');
+    (p.zones[z]||[]).forEach(a=>{
+      const d=document.createElement('div'); d.className='slot'; d.innerHTML=nurseTile(getById(a.nurseId)); drop.appendChild(d);
+    });
+    drop.ondragover = e=> e.preventDefault();
+    drop.ondrop = async e=>{
+      const id = e.dataTransfer.getData('nurseId'); if (!id) return;
+      // ensure unique
+      Object.keys(p.zones).forEach(k=> p.zones[k] = (p.zones[k]||[]).filter(x=>x.nurseId!==id));
+      p.zones[z] = p.zones[z]||[]; p.zones[z].push({nurseId:id});
+      await savePending(p); renderPendingList();
+    };
+    pz.appendChild(wrap);
+  });
+  // buttons
+  $('#saveDraft').onclick = async ()=>{ await savePending(p); toast('Draft saved'); };
+  $('#resetDraft').onclick = async ()=>{ const fresh = {date:nd, shift:ns, charge:{}, triage:{}, zones:Object.fromEntries(STATE.zones.map(z=>[z,[]])), incoming:[]}; await DB.set(KS.PENDING(nd, ns), fresh); renderPendingList(); };
+  $('#startNext').onclick = async ()=>{
+    if (STATE.locked) return alert('Unlock first.');
+    if (!confirm('Start Next Shift now?')) return;
+    await DB.set(KS.ACTIVE(nd, ns), {...p, comments:(await loadActive()).comments||''});
+    await DB.del(KS.PENDING(nd, ns));
+    toast('Next shift started');
+    if (nd !== STATE.date){ STATE.date = nd; $('#datePicker').value=STATE.date; }
+    await saveConfig();
+    deriveShift(); renderAll();
+  };
+}
+async function showHistory(nurseId){
+  const h = (await DB.get(KS.HISTORY))||{}; const L = h[nurseId]||[];
+  $('#historyPane').innerHTML = L.length ? (`<h4 style="margin:0 0 8px 0">${(STATE.staff.find(s=>s.id===nurseId)||{}).name||nurseId}</h4>` + L.map(it=>`<div class="kicker">${it.date} ${it.shift} — ${it.role}${it.dto?' (DTO)':''}</div>`).join('')) : `<div class="subtle">No history.</div>`;
+}
+
+/* ===== Settings ===== */
+function renderSettingsLists(){
+  const nl = $('#nurseList'); nl.innerHTML='';
+  STATE.staff.forEach(s=>{
+    const it=document.createElement('div'); it.className='item';
+    it.textContent = `${s.name} • ${s.class||'other'} • RF ${s.rf||'—'} • id: ${s.id}`;
+    it.ondblclick = async ()=>{
+      const name = prompt('Name:', s.name); if (name===null) return;
+      const rf   = prompt('RF:', s.rf||''); if (rf===null) return;
+      const cls  = prompt('Class (jewish|travel|float|other):', s.class||'other'); if (cls===null) return;
+      const newId = prompt('Employee ID:', s.id); if (newId===null) return;
+      if (!newId.trim()) return alert('ID cannot be blank.');
+      if (newId!==s.id && STATE.staff.some(x=>x!==s && x.id===newId)) return alert('Another nurse already has that ID.');
+      s.name=name; s.rf=rf; s.class=(cls||'other').toLowerCase(); s.id=newId.trim();
+      await saveConfig(); renderSettingsLists(); renderAll();
+    };
+    nl.appendChild(it);
+  });
+
+  const zl = $('#zoneList'); zl.innerHTML='';
+  STATE.zones.forEach((z,i)=>{
+    const it=document.createElement('div'); it.className='item'; it.textContent=z;
+    it.onclick = ()=>{
+      const nz = prompt('Rename zone (blank to delete):', z);
+      if (nz===null) return;
+      if (!nz) STATE.zones.splice(i,1); else STATE.zones[i]=nz;
+      saveConfig(); renderSettingsLists(); renderAll();
+    };
+    zl.appendChild(it);
+  });
+}
+function bindSettings(){
+  const add = async ()=>{
+    const id=$('#nId').value.trim(); const name=$('#nName').value.trim(); const rf=$('#nRF').value.trim(); const cls=$('#nClass').value;
+    if (!id || !name) return alert('Enter ID and name.');
+    if (STATE.staff.some(s=>s.id===id)) return alert('Employee ID already exists.');
+    STATE.staff.push({id,name,rf,class:cls});
+    $('#nId').value=''; $('#nName').value=''; $('#nRF').value='';
+    await saveConfig(); renderSettingsLists(); renderAll(); toast('Nurse added');
+  };
+  $('#addNurse').onclick = add;
+  ['nId','nName','nRF'].forEach(k=> $('#'+k).addEventListener('keydown', e=>{ if (e.key==='Enter') add(); }));
+
+  $('#saveAnchors').onclick = async ()=>{
+    STATE.anchors.day = $('#dayAnchor').value;
+    STATE.anchors.night = $('#nightAnchor').value;
+    await saveConfig(); deriveShift(); toast('Saved anchors');
+  };
+  $('#savePin').onclick = async ()=>{
+    const pin = $('#pinInput').value.trim();
+    if (!/^\d{4,6}$/.test(pin)) return alert('Enter 4–6 digits');
+    STATE.pin=pin; await saveConfig(); toast('PIN saved');
+  };
+  $('#saveRelock').onclick = async ()=>{
+    const m = parseInt($('#relockMin').value,10);
+    if (!m) return alert('Enter minutes');
+    STATE.relockMin=m; await saveConfig(); toast('Relock saved');
+  };
+
+  // Data actions
+  $('#exportAll').onclick = async ()=>{
+    const keys = await DB.keys(); const all={};
+    for (const k of keys){ all[k] = await DB.get(k); }
+    const blob = new Blob([JSON.stringify(all,null,2)], {type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`edb-export-${STATE.date}.json`; a.click(); URL.revokeObjectURL(a.href);
+  };
+  $('#importFile').addEventListener('change', onSmartImport);
+  $('#importStaffFile').addEventListener('change', onStaffMerge);
+  $('#clearAll').onclick = async ()=>{
+    if (!confirm('Clear ALL local data?')) return;
+    const keys = await DB.keys(); for (const k of keys) await DB.del(k);
+    location.reload();
+  };
+
+  // ICS
+  $('#saveIcsUrl').onclick = async ()=>{ const url=$('#icsUrl').value.trim(); if (!url) return alert('Enter URL'); STATE.icsUrl=url; await saveConfig(); toast('iCal URL saved'); };
+  $('#fetchIcsNow').onclick = ()=> alert('Fetching via CORS may be blocked; paste ICS instead.');
+  $('#parseIcs').onclick = async ()=>{
+    const txt = $('#icsText').value.trim(); if (!txt) return alert('Paste ICS first');
+    const entries = parseICSForDate(txt, STATE.date);
+    await DB.set(KS.PHYS(STATE.date), entries);
+    toast(`Parsed ${entries.length} entries`);
+    renderPhysicians();
+  };
+}
+function logImport(text){ const el=$('#importLog'); el.textContent = (el.textContent?el.textContent+'\n':'') + text; }
+
+/* ===== Importers ===== */
+function isFullDbExport(obj){
+  return !!(obj && typeof obj==='object' && (obj.config || obj.staff || obj.archives || obj.history));
+}
+function extractStaffArray(obj){
+  if (Array.isArray(obj)) return obj;
+  if (Array.isArray(obj?.staff)) return obj.staff;
+  if (Array.isArray(obj?.data?.staff)) return obj.data.staff;
+  if (Array.isArray(obj?.[KS.STAFF])) return obj[KS.STAFF];
+  return [];
+}
+function normalizeStaff(x){
+  if (!x || typeof x!=='object') return {id:'', name:''};
+  const id   = String(x.id ?? x.empId ?? x.employeeId ?? '').trim();
+  const name = String(x.name ?? x.fullName ?? `${x.firstName||''} ${x.lastName||''}`.trim()).trim();
+  const rf   = (x.rf ?? x.extension ?? '').toString();
+  let cls    = (x.class ?? x.cls ?? x.classification ?? x.type ?? x.category ?? 'other').toString().toLowerCase();
+  if (!['jewish','travel','float','other'].includes(cls)) cls = 'other';
+  return {id, name, rf, class: cls};
+}
+async function doMergeStaff(arr){
+  let added=0, updated=0;
+  for (const raw of arr){
+    const it = normalizeStaff(raw);
+    if (!it.id || !it.name) continue;
+    const ex = STATE.staff.find(s=>s.id===it.id);
+    if (ex){
+      if (it.name && it.name!==ex.name){ ex.name=it.name; updated++; }
+      if (it.rf!=null && it.rf!==ex.rf){ ex.rf=it.rf; updated++; }
+      if (it.class && it.class!==ex.class){ ex.class=it.class; updated++; }
+    } else {
+      STATE.staff.push(it); added++;
+    }
+  }
+  await saveConfig();
+  return {added, updated};
+}
+async function onSmartImport(e){
+  const f=e.target.files?.[0]; if (!f) return;
+  const txt = await f.text(); e.target.value='';
+  let data; try{ data=JSON.parse(txt); }catch{ alert('Invalid JSON'); return; }
+  if (isFullDbExport(data)){
+    const keys = await DB.keys(); for (const k of keys) await DB.del(k);
+    for (const [k,v] of Object.entries(data)) await DB.set(k,v);
+    logImport('Imported full DB snapshot. Reloading…'); location.reload(); return;
+  }
+  const arr = extractStaffArray(data);
+  if (!arr.length){ logImport('No staff array found in JSON.'); alert('No staff found (expect top‑level array, "staff", or "data.staff").'); return; }
+  const r = await doMergeStaff(arr);
+  logImport(`Smart import → added ${r.added}, updated ${r.updated}.`);
+  toast(`Added ${r.added}, updated ${r.updated}`);
+  renderSettingsLists(); renderAll();
+}
+async function onStaffMerge(e){
+  const f=e.target.files?.[0]; if (!f) return;
+  const txt = await f.text(); e.target.value='';
+  let data; try{ data=JSON.parse(txt); }catch{ alert('Invalid JSON'); return; }
+  const arr = extractStaffArray(data);
+  if (!arr.length){ logImport('Merge: no staff found.'); alert('No staff found (expect top‑level array, "staff", or "data.staff").'); return; }
+  const r = await doMergeStaff(arr);
+  logImport(`Merge staff → added ${r.added}, updated ${r.updated}.`);
+  toast(`Added ${r.added}, updated ${r.updated}`);
+  renderSettingsLists(); renderAll();
+}
+
+/* ===== Typeahead picker ===== */
+function openPicker(title, onSelect){
+  const ov = $('#taOverlay'); const q = $('#taQuery'); const res=$('#taResults'); const sort=$('#taSort');
+  $('#taTitle').textContent = title;
+  ov.style.display='flex'; q.value=''; q.focus();
+  function render(){
+    const s = q.value.toLowerCase();
+    const order={'jewish':0,'travel':1,'float':2,'other':3};
+    let list = [...STATE.staff].filter(x=> !s || x.name.toLowerCase().includes(s) || (x.id||'').toLowerCase().includes(s) || (x.rf||'').toLowerCase().includes(s));
+    list.sort((a,b)=> sort.value==='name' ? a.name.localeCompare(b.name)
+              : sort.value==='id' ? String(a.id).localeCompare(String(b.id))
+              : (order[a.class||'other']-order[b.class||'other']) || a.name.localeCompare(b.name));
+    res.innerHTML = list.slice(0, 50).map(x=> `<div class="ta-item" data-id="${x.id}">${x.name} — <span class="subtle">ID ${x.id}${x.rf?` · RF ${x.rf}`:''} · ${x.class||'other'}</span></div>`).join('');
+    $$('.ta-item').forEach(el=> el.onclick = ()=>{ ov.style.display='none'; onSelect({id:el.getAttribute('data-id')}); });
+  }
+  q.oninput = debounce(render, 100);
+  sort.onchange = render;
+  $('#taClose').onclick = ()=> ov.style.display='none';
+  render();
+}
+
+/* ===== History table (minimal) ===== */
+function renderHistory(){
+  const tb = $('#histTable tbody'); if (!tb) return;
+  tb.innerHTML=''; // placeholder: archives integration can be extended later
+}
+
+async function renderPhysicians(){
+  const list = $('#physList'); if (!list) return;
+  const entries = await DB.get(KS.PHYS(STATE.date)) || [];
+  list.innerHTML = entries.length ? entries.map(e=>`<div class="row"><span>${e.start}–${e.end}</span> <span>${e.title}</span></div>`).join('') : '<div class="subtle">No physicians</div>';
+}
+
+/* ===== ICS minimal parsing ===== */
+function parseICSForDate(icsText, ymd){
+  const lines = icsText.split(/\r?\n/); const events=[]; let cur=null;
+  const toHM = dt=>{ const m=dt.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/); if(!m) return '00:00'; const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5])); return pad2(d.getHours())+':'+pad2(d.getMinutes()); };
+  const toDate = dt=>{ const m=dt.match(/^(\d{4})(\d{2})(\d{2})T/); if(!m) return todayISO(); const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],0,0)); return d.toISOString().slice(0,10); };
+  for (const line of lines){
+    if (line.startsWith('BEGIN:VEVENT')) cur={};
+    else if (line.startsWith('END:VEVENT')){ if (cur?.start && cur?.end && cur?.title) events.push(cur); cur=null; }
+    else if (line.startsWith('DTSTART')){ const dt=line.split(':')[1]?.trim(); cur.start=toHM(dt); cur.date=toDate(dt); }
+    else if (line.startsWith('DTEND')){ const dt=line.split(':')[1]?.trim(); cur.end=toHM(dt); }
+    else if (line.startsWith('SUMMARY')){ cur.title=line.split(':').slice(1).join(':').trim(); }
+  }
+  return events.filter(e=> e.date===ymd);
+}
+
+/* ===== Date helpers ===== */
+function changeDateBy(n){
+  const d = new Date(STATE.date+'T00:00'); d.setDate(d.getDate()+n);
+  STATE.date = d.toISOString().slice(0,10);
+  $('#datePicker').value = STATE.date;
+  deriveShift();
+  renderAll();
+}
+</script>
+</body>
+</html>

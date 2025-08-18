@@ -9,6 +9,7 @@ import {
   Staff,
   DraftShift,
 } from '@/state';
+import { setNurseCache, labelFromId, formatShortName } from '@/utils/names';
 import { upsertSlot, moveSlot, removeSlot } from '@/slots';
 import {
   seedZonesIfNeeded,
@@ -21,6 +22,7 @@ import { t } from '@/i18n/en';
 export async function renderDraftTab(root: HTMLElement) {
   await seedZonesIfNeeded();
   let staff: Staff[] = await loadStaff();
+  setNurseCache(staff);
   let board = await DB.get<DraftShift>(KS.DRAFT(STATE.dateISO, STATE.shift));
   if (!board) {
     const roster = getDefaultRosterForLabel(staff, STATE.shift);
@@ -104,9 +106,13 @@ export async function renderDraftTab(root: HTMLElement) {
       )
       .forEach((s) => {
         const li = document.createElement('li');
-        li.textContent = s.name;
+        li.className = 'nurse-pill';
+        li.dataset.type = s.type;
         li.draggable = true;
         li.dataset.id = s.id;
+        const name = formatShortName(s.name || '');
+        const rf = s.rf != null ? `RF ${s.rf}` : '';
+        li.innerHTML = `<span class="nurse-name">${name}</span><span class="chip">${s.type[0].toUpperCase()}</span><span class="nurse-meta">${rf}</span>`;
         if (selected === s.id) li.classList.add('selected');
         li.addEventListener('click', () => {
           selected = selected === s.id ? undefined : s.id;
@@ -128,14 +134,11 @@ export async function renderDraftTab(root: HTMLElement) {
     return p;
   }
 
-  function nameById(id: string): string {
-    return staff.find((s) => s.id === id)?.name || id;
-  }
 
   function renderSlot(slot: any, target: any): HTMLElement {
     const div = document.createElement('div');
     div.className = 'slot';
-    div.textContent = nameById(slot.nurseId);
+    div.textContent = labelFromId(slot.nurseId);
     div.draggable = true;
     div.addEventListener('dragstart', (e) => {
       e.dataTransfer?.setData('slot', JSON.stringify(target));
@@ -155,6 +158,12 @@ export async function renderDraftTab(root: HTMLElement) {
       const nurse = e.dataTransfer?.getData('nurse');
       const from = e.dataTransfer?.getData('slot');
       if (nurse) {
+        if (
+          target === 'admin' &&
+          !staff.find((s) => s.id === nurse)?.eligibleRoles?.includes('admin')
+        ) {
+          return;
+        }
         upsertSlot(board, target, { nurseId: nurse });
       } else if (from) {
         moveSlot(board, JSON.parse(from), target);
@@ -179,13 +188,12 @@ export async function renderDraftTab(root: HTMLElement) {
 
     const adminWrap = document.getElementById('zone-admin-wrap')!;
     const adminEl = document.getElementById('zone-admin')!;
+    adminWrap.style.display = '';
     adminEl.innerHTML = '';
     makeDroppable(adminEl, 'admin');
     if (board.admin) {
-      adminWrap.style.display = '';
       adminEl.appendChild(renderSlot(board.admin, 'admin'));
     } else {
-      adminWrap.style.display = 'none';
       adminEl.appendChild(placeholder());
     }
 
@@ -242,7 +250,7 @@ export async function renderDraftTab(root: HTMLElement) {
     } else {
       flags.forEach(([id, arr]) => {
         const li = document.createElement('li');
-        li.textContent = `${nameById(id)} assigned to ${arr.join(', ')}`;
+        li.textContent = `${labelFromId(id)} assigned to ${arr.join(', ')}`;
         list.appendChild(li);
       });
     }
@@ -268,6 +276,7 @@ export async function renderDraftTab(root: HTMLElement) {
         staff.push({ id: crypto.randomUUID(), name, type });
       }
       await saveStaff(staff);
+      setNurseCache(staff);
       selected = undefined;
       renderRoster();
       renderBoard();

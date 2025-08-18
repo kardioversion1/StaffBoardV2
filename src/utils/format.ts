@@ -13,7 +13,3 @@ export function formatTime24h(d: Date | string | number) {
     minute: '2-digit',
   }).format(new Date(d));
 }
-export function formatShortName(full: string) {
-  const [f = '', l = ''] = full.trim().split(/\s+/);
-  return l ? `${f} ${l[0].toUpperCase()}.` : f;
-}

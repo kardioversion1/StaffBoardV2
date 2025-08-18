@@ -15,7 +15,7 @@ export function renderHeader() {
   header.innerHTML = `
     <div class="title">ED Staffing Board</div>
     <div class="subtitle">${fmtLong(STATE.dateISO)} • Active: ${shiftLabel}</div>
-    <button id="handoff" class="btn">Shift Signout</button>
+    <button id="handoff" class="btn">Sign-out</button>
   `;
   document.getElementById('handoff')!.addEventListener('click', manualHandoff);
 }

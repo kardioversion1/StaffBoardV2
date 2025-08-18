@@ -16,16 +16,15 @@ export type Staff = {
   class: "jewish" | "travel" | "float" | "other";
 };
 
-export interface RoleSlot {
-  nurseId: string;
-}
+import type { Slot } from "./slots";
+export type { Slot } from "./slots";
 
 export interface ActiveShift {
   dateISO: string;
   shift: Shift;
-  charge?: RoleSlot;
-  triage?: RoleSlot;
-  zones: Record<string, RoleSlot[]>;
+  charge?: Slot;
+  triage?: Slot;
+  zones: Record<string, Slot[]>;
   incoming: { nurseId: string; eta: string; arrived?: boolean }[];
   offgoing: { nurseId: string; ts: number }[];
   support: { techs: string[]; vols: string[]; sitters: string[] };

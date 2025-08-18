@@ -157,6 +157,7 @@ export const KS = {
   HISTORY: "HISTORY",
   PHYS: (dateISO: string) => `PHYS:${dateISO}`,
   ACTIVE: (dateISO: string, shift: Shift) => `ACTIVE:${dateISO}:${shift}`,
+  ONBAT: (dateISO: string, shift: Shift) => `ONBAT:${dateISO}:${shift}`,
   PENDING: (dateISO: string, shift: Shift) => `PENDING:${dateISO}:${shift}`,
 } as const;
 

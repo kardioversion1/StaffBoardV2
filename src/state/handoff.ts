@@ -55,6 +55,7 @@ const store: { state: HandoffState } = {
         startAt,
         endAt,
         assignments: [],
+        status: 'draft',
       };
       const list = loadShifts();
       list.push(shift);

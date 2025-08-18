@@ -1,5 +1,7 @@
 export type ShiftId = string;
 
+export type ShiftStatus = 'draft' | 'onbat' | 'live' | 'archived';
+
 export type Shift = {
   id: ShiftId;
   code: string; // e.g., 20250818-D
@@ -8,6 +10,7 @@ export type Shift = {
   endAt: string; // ISO string
   assignments: { nurseId: string; zoneId: string }[];
   notes?: string;
+  status: ShiftStatus;
 };
 
 export type Handoff = {

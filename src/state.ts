@@ -146,4 +146,10 @@ export const KS = {
   PENDING: (dateISO: string, shift: Shift) => `PENDING:${dateISO}:${shift}`,
 } as const;
 
+export async function importHistoryFromJSON(json: string): Promise<PendingShift[]> {
+  const data = JSON.parse(json) as PendingShift[];
+  await DB.set(KS.HISTORY, data);
+  return data;
+}
+
 export { DB };

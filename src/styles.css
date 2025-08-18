@@ -21,6 +21,13 @@
 
   --halo: 0 0 0 1px color-mix(in oklab, currentColor 50%, transparent) inset,
           0 0 18px color-mix(in oklab, currentColor 35%, transparent);
+
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-dropdown: 200;
+  --z-modal: 1000;
+  --z-toast: 1100;
+  --z-drag: 1200;
 }
 
 :root[data-theme='light']{
@@ -35,7 +42,7 @@
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text-high);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
 .wrap{max-width:1920px;margin:0 auto;padding:var(--gap)}
-header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-items:center;margin-bottom:var(--gap)}
+header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-items:center;margin-bottom:var(--gap);position:sticky;top:0;z-index:var(--z-sticky)}
 .title{font-size:var(--f-xl);font-weight:800;letter-spacing:.2px}
 .subtitle{color:var(--text-muted);font-size:var(--f)}
 .layout{display:grid;grid-template-columns:1.6fr 1fr;gap:var(--gap)}
@@ -78,3 +85,14 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .nurse-pill:focus-visible,.chip:focus-visible{outline:2px solid color-mix(in oklab,currentColor 60%,white 0%);outline-offset:2px}
 
 @media print{#widgets,.widget{display:none!important}}
+
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .2s;z-index:var(--z-modal)}
+.backdrop.open{opacity:1;pointer-events:auto}
+
+.offcanvas{position:fixed;top:0;right:0;bottom:0;width:300px;background:var(--panel);transform:translateX(100%);pointer-events:none;transition:transform .3s;z-index:var(--z-modal)}
+.offcanvas.open{transform:translateX(0);pointer-events:auto}
+
+.drag-layer{position:fixed;inset:0;pointer-events:none;z-index:var(--z-drag)}
+
+.dropdown{position:absolute;z-index:var(--z-dropdown)}
+.toast{position:fixed;z-index:var(--z-toast)}

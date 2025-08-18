@@ -84,6 +84,18 @@ export async function renderWidgets(container: HTMLElement): Promise<void> {
     container.innerHTML = '';
     return;
   }
+
+  if (
+    wcfg.weather.mode === 'openweather' &&
+    !wcfg.weather.current &&
+    wcfg.weather.apiKey &&
+    wcfg.weather.lat != null &&
+    wcfg.weather.lon != null
+  ) {
+    await fetchWeather();
+    mergeConfigDefaults();
+  }
+
   let html = '';
 
   // Weather card

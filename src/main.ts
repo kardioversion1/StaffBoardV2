@@ -6,6 +6,7 @@ import { renderHeader } from '@/ui/header';
 import { renderTabs, activeTab } from '@/ui/tabs';
 import { renderMain } from '@/ui/mainTab';
 import { renderSettingsTab } from '@/ui/settingsTab';
+import { outlineBlockers } from '@/utils/debug';
 
 export async function renderAll() {
   await renderHeader();
@@ -21,6 +22,7 @@ export async function renderAll() {
       break;
     // other tabs can be added here
   }
+  if (import.meta.env.DEV) outlineBlockers();
 }
 
 initState();

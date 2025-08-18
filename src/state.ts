@@ -1,5 +1,6 @@
 import { Shift, hhmmNowLocal, toDateISO, deriveShift } from '@/utils/time';
 import * as DB from '@/db';
+import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 
 export type WidgetsConfig = {
   show?: boolean;
@@ -84,6 +85,8 @@ const WIDGETS_DEFAULTS: WidgetsConfig = {
   weather: {
     mode: 'manual',
     units: 'F',
+    lat: DEFAULT_WEATHER_COORDS.lat,
+    lon: DEFAULT_WEATHER_COORDS.lon,
   },
   headlines: {
     internal: 'Congrats to RN Katie for Daisy Award',

@@ -122,6 +122,14 @@ function renderWidgetsPanel() {
           : w.weather.current.temp * 9 / 5 + 32;
     }
     await saveConfig({ widgets: w });
+    if (
+      w.weather.mode === 'openweather' &&
+      w.weather.apiKey &&
+      w.weather.lat != null &&
+      w.weather.lon != null
+    ) {
+      await fetchWeather();
+    }
     const body = document.getElementById('widgets-body');
     if (body) await renderWidgets(body);
   });

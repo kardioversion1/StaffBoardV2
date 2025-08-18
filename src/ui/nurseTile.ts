@@ -1,26 +1,31 @@
 import type { Slot } from "../slots";
 import type { Staff } from "../state";
-import { coveringDisplay } from "../slots";
+import { formatShortName } from "../utils/formatName";
 
 export function nurseTile(slot: Slot, staff: Staff): string {
   const chips: string[] = [];
-  if (slot.student) chips.push(`<span class="chip">S</span>`);
+  if (slot.break?.active)
+    chips.push(
+      `<span class="chip" aria-label="On break"><span class="icon">⏸️</span></span>`
+    );
+  if (slot.student)
+    chips.push(
+      `<span class="chip" aria-label="Has student"><span class="icon">🎓</span></span>`
+    );
   if (slot.comment)
     chips.push(
-      `<span class="chip comment" title="${slot.comment}">💬</span>`
+      `<span class="chip" aria-label="Has comment"><span class="icon">💬</span></span>`
     );
-  if (slot.break?.active) {
-    const cov = coveringDisplay(slot);
-    chips.push(
-      `<span class="chip break">Break${cov ? ` • Cov: ${cov}` : ""}</span>`
-    );
-  }
-  if (slot.dto) chips.push(`<span class="chip dto">DTO</span>`);
-  if (slot.endTimeOverrideHHMM)
-    chips.push(
-      `<span class="chip off-at">Off at ${slot.endTimeOverrideHHMM}</span>`
-    );
-  const chipStr = chips.length ? ` ${chips.join(" ")}` : "";
-  return `<div class="nurse-tile">${staff.name}${chipStr}</div>`;
+
+  const name = formatShortName(staff.name);
+  const statuses: string[] = [];
+  if (slot.break?.active) statuses.push('on break');
+  if (slot.student) statuses.push('has student');
+  if (slot.comment) statuses.push('has comment');
+  const aria = `${name}, ${staff.type} nurse${
+    statuses.length ? ', ' + statuses.join(', ') : ''
+  }`;
+  const chipStr = chips.length ? `<span class="chips">${chips.join('')}</span>` : '';
+  return `<div class="nurse-pill" data-type="${staff.type}" tabindex="0" aria-label="${aria}"><span class="nurse-name">${name}</span>${chipStr}</div>`;
 }
 

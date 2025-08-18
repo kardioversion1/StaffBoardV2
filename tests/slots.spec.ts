@@ -33,9 +33,9 @@ describe("break toggles", () => {
     const html = renderTile(slot, {
       id: "1",
       name: "Alice",
-      class: "other",
+      type: "other",
     });
-    expect(html).toContain("Cov: 55221712");
+    expect(html).toContain("⏸️");
     endBreak(slot);
     expect(slot.break?.active).toBe(false);
   });
@@ -44,8 +44,8 @@ describe("break toggles", () => {
 describe("employee ID uniqueness", () => {
   it("detects conflicts", () => {
     const staff = [
-      { id: "1", name: "A", class: "other" },
-      { id: "2", name: "B", class: "other" },
+      { id: "1", name: "A", type: "other" },
+      { id: "2", name: "B", type: "other" },
     ];
     expect(isEmployeeIdUnique(staff, "3")).toBe(true);
     expect(isEmployeeIdUnique(staff, "2")).toBe(false);
@@ -71,10 +71,10 @@ describe("nurse tile snapshot", () => {
     const html = renderTile(slot, {
       id: "1",
       name: "Alice",
-      class: "other",
+      type: "other",
     });
     expect(html).toMatchInlineSnapshot(
-      `"<div class=\"nurse-tile\">Alice <span class=\"chip\">S</span> <span class=\"chip comment\" title=\"note\">💬</span> <span class=\"chip break\">Break • Cov: 552</span> <span class=\"chip dto\">DTO</span> <span class=\"chip off-at\">Off at 13:00</span></div>"`
+      `"<div class=\"nurse-pill\" data-type=\"other\" tabindex=\"0\" aria-label=\"Alice, other nurse, on break, has student, has comment\"><span class=\"nurse-name\">Alice</span><span class=\"chips\"><span class=\"chip\" aria-label=\"On break\"><span class=\"icon\">⏸️</span></span><span class=\"chip\" aria-label=\"Has student\"><span class=\"icon\">🎓</span></span><span class=\"chip\" aria-label=\"Has comment\"><span class=\"icon\">💬</span></span></span></div>"`
     );
   });
 });

@@ -37,7 +37,7 @@ export type Staff = {
   id: string;
   name: string;
   rf?: string;
-  class: "jewish" | "travel" | "float" | "other";
+  type: 'home' | 'travel' | 'float' | 'charge' | 'triage' | 'other';
 };
 
 import type { Slot } from "./slots";

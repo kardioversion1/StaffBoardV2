@@ -35,9 +35,9 @@ function mapCondition(cond: string | undefined) {
 
 function card(title: string, bodyHTML: string, iconSVG = '') {
   return `
-    <div class="widget-card">
-      <div class="w-head">${iconSVG}<span>${title}</span><button class="w-menu" aria-label="More">⋯</button></div>
-      <div class="w-body">${bodyHTML}</div>
+    <div class="widget">
+      <div class="title">${iconSVG}<span>${title}</span></div>
+      <div class="sub">${bodyHTML}</div>
     </div>
   `;
 }

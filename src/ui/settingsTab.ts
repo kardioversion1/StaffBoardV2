@@ -13,8 +13,25 @@ function mapIcon(cond: string) {
 
 export function renderSettingsTab(root: HTMLElement) {
   mergeConfigDefaults();
-  root.innerHTML = `<div id="settings-widgets"></div>`;
+  root.innerHTML = `<div id="settings-widgets"></div><div id="type-legend"></div>`;
   renderWidgetsPanel();
+  renderTypeLegend();
+}
+
+function renderTypeLegend() {
+  const el = document.getElementById('type-legend')!;
+  el.innerHTML = `
+  <section class="panel">
+    <h3>Nurse Type Legend</h3>
+    <div class="assignments">
+      <div class="nurse-pill" data-type="home"><span class="nurse-name">Home</span></div>
+      <div class="nurse-pill" data-type="travel"><span class="nurse-name">Travel</span></div>
+      <div class="nurse-pill" data-type="float"><span class="nurse-name">Float</span></div>
+      <div class="nurse-pill" data-type="charge"><span class="nurse-name">Charge</span></div>
+      <div class="nurse-pill" data-type="triage"><span class="nurse-name">Triage</span></div>
+      <div class="nurse-pill" data-type="other"><span class="nurse-name">Other</span></div>
+    </div>
+  </section>`;
 }
 
 function renderWidgetsPanel() {

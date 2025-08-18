@@ -99,3 +99,16 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .toast{position:fixed;z-index:var(--z-toast)}
 
 .pending-layout{display:grid;grid-template-columns:320px 1fr 320px;gap:12px;height:100%}
+.pending-layout .panel{display:flex;flex-direction:column}
+.roster-panel{overflow:hidden}
+.roster-controls{display:flex;flex-direction:column;gap:6px}
+#roster-list{list-style:none;padding:0;margin:8px 0;flex:1;overflow:auto}
+#roster-list li{padding:4px 6px;border-radius:6px;cursor:grab}
+#roster-list li.selected{background:var(--control)}
+.board-panel{overflow:auto}
+.zone{margin-bottom:8px}
+.zone h4{display:flex;justify-content:space-between;align-items:center;margin:0}
+.zone .slots{min-height:40px;border:1px dashed var(--line);padding:4px;border-radius:8px}
+.slot{padding:4px 6px;margin:2px 0;background:var(--control);border-radius:6px;cursor:grab}
+.flags-panel ul{list-style:none;padding:0;margin:0;flex:1;overflow:auto}
+.flags-panel li{padding:4px 0}

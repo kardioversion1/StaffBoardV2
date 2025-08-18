@@ -149,6 +149,14 @@ export const KS = {
   PENDING: (dateISO: string, shift: Shift) => `PENDING:${dateISO}:${shift}`,
 } as const;
 
+export async function loadStaff(): Promise<Staff[]> {
+  return (await DB.get<Staff[]>(KS.STAFF)) || [];
+}
+
+export async function saveStaff(list: Staff[]): Promise<void> {
+  await DB.set(KS.STAFF, list);
+}
+
 export async function importHistoryFromJSON(json: string): Promise<PendingShift[]> {
   const data = JSON.parse(json) as PendingShift[];
   await DB.set(KS.HISTORY, data);

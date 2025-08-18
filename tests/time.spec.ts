@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveShift, nextShiftTuple } from "../src/utils/time";
+import { deriveShift, nextShiftTuple } from '@/utils/time';
 
 describe("deriveShift", () => {
   it("handles edges around anchors", () => {

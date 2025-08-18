@@ -1,5 +1,5 @@
-import { Shift, hhmmNowLocal, toDateISO } from "./utils/time";
-import { get, set } from "./db";
+import { Shift, hhmmNowLocal, toDateISO, deriveShift } from '@/utils/time';
+import * as DB from '@/db';
 
 export type Config = {
   dateISO: string;
@@ -38,32 +38,46 @@ export interface AppState {
   dateISO: string;
   locked: boolean;
   clockHHMM: string;
+  shift: Shift;
 }
 
+const _clock = hhmmNowLocal();
 export const STATE: AppState = {
   dateISO: toDateISO(new Date()),
   locked: true,
-  clockHHMM: hhmmNowLocal(),
+  clockHHMM: _clock,
+  shift: deriveShift(_clock),
 };
 
 export function initState() {
   STATE.dateISO = toDateISO(new Date());
   STATE.locked = true;
   STATE.clockHHMM = hhmmNowLocal();
+  STATE.shift = deriveShift(STATE.clockHHMM);
+}
+
+let CONFIG_CACHE: Config = {
+  dateISO: STATE.dateISO,
+  anchors: { day: '07:00', night: '19:00' },
+  zones: [],
+  pin: '4911',
+  relockMin: 0,
+};
+
+export function getConfig(): Config {
+  return CONFIG_CACHE;
+}
+
+export async function loadConfig(): Promise<Config> {
+  const existing = await DB.get<Config>(KS.CONFIG);
+  if (existing) CONFIG_CACHE = existing;
+  return CONFIG_CACHE;
 }
 
 export async function saveConfig(partial: Partial<Config>): Promise<Config> {
-  const existing: Config =
-    (await get<Config>(KS.CONFIG)) ||
-    ({
-      dateISO: STATE.dateISO,
-      anchors: { day: "07:00", night: "19:00" },
-      zones: [],
-      pin: "4911",
-      relockMin: 0,
-    } as Config);
-  const updated: Config = { ...existing, ...partial };
-  await set(KS.CONFIG, updated);
+  const updated: Config = { ...CONFIG_CACHE, ...partial };
+  CONFIG_CACHE = updated;
+  await DB.set(KS.CONFIG, updated);
   return updated;
 }
 
@@ -75,3 +89,5 @@ export const KS = {
   ACTIVE: (dateISO: string, shift: Shift) => `ACTIVE:${dateISO}:${shift}`,
   PENDING: (dateISO: string, shift: Shift) => `PENDING:${dateISO}:${shift}`,
 } as const;
+
+export { DB };

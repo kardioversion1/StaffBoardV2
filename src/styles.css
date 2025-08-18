@@ -11,6 +11,17 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-items:center;margin-bottom:var(--gap)}
 .title{font-size:var(--f-xl);font-weight:800;letter-spacing:.2px}
 .subtitle{color:var(--muted);font-size:var(--f)}
+.widgets{display:flex;flex-direction:column;gap:8px}
+.widget-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:8px;font-size:var(--f)}
+.widget-card .temp{font-size:var(--f-lg);margin-left:4px}
+.widget-card .updated{color:var(--muted);font-size:.8em}
+.widget-card svg{width:24px;height:24px;margin-right:4px}
+.widget-menu{float:right}
+.widget-menu summary{list-style:none;cursor:pointer}
+.widget-menu div{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);position:absolute;margin-top:4px}
+.widget-menu button{background:none;color:var(--text);border:0;padding:4px 8px;text-align:left}
+.widgets,.widget-card{print-color-adjust:exact}
 @media print {
   body{background:white;color:black}
+  #widgets{display:none!important}
 }

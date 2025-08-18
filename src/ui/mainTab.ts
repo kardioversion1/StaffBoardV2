@@ -1,4 +1,5 @@
 import { DB, KS, getConfig } from '@/state';
+import { renderWidgets } from './widgets';
 
 function buildEmptyActive(dateISO: string, shift: 'day' | 'night') {
   const cfg = getConfig();
@@ -26,6 +27,10 @@ export async function renderMain(
   for (const z of cfg.zones || []) if (!active.zones[z]) active.zones[z] = [];
   try {
     root.innerHTML = `<pre>${JSON.stringify(active, null, 2)}</pre>`;
+    const widgets = document.createElement('div');
+    widgets.id = 'widgets';
+    root.appendChild(widgets);
+    await renderWidgets(widgets);
   } catch (err) {
     console.error(err);
     root.innerHTML = '<p class="error">Failed to render</p>';

@@ -1,12 +1,36 @@
 import { Shift, hhmmNowLocal, toDateISO, deriveShift } from '@/utils/time';
 import * as DB from '@/db';
 
+export type WidgetsConfig = {
+  show?: boolean;
+  weather: {
+    mode: 'manual' | 'openweather';
+    units: 'F' | 'C';
+    city?: string;
+    lat?: number;
+    lon?: number;
+    apiKey?: string;
+    current?: {
+      temp: number;
+      condition: string;
+      icon?: 'sun' | 'cloud' | 'rain' | 'storm' | 'snow' | 'mist';
+      location?: string;
+      updatedISO?: string;
+    };
+  };
+  headlines: {
+    internal: string;
+    external: string;
+  };
+};
+
 export type Config = {
   dateISO: string;
   anchors: { day: string; night: string };
   zones: string[];
   pin: string;
   relockMin: number;
+  widgets: WidgetsConfig;
 };
 
 export type Staff = {
@@ -55,12 +79,25 @@ export function initState() {
   STATE.shift = deriveShift(STATE.clockHHMM);
 }
 
+const WIDGETS_DEFAULTS: WidgetsConfig = {
+  show: true,
+  weather: {
+    mode: 'manual',
+    units: 'F',
+  },
+  headlines: {
+    internal: 'Congrats to RN Katie for Daisy Award',
+    external: 'I-65 S Shutdown for repair',
+  },
+};
+
 let CONFIG_CACHE: Config = {
   dateISO: STATE.dateISO,
   anchors: { day: '07:00', night: '19:00' },
   zones: [],
   pin: '4911',
   relockMin: 0,
+  widgets: structuredClone(WIDGETS_DEFAULTS),
 };
 
 export function getConfig(): Config {
@@ -69,15 +106,35 @@ export function getConfig(): Config {
 
 export async function loadConfig(): Promise<Config> {
   const existing = await DB.get<Config>(KS.CONFIG);
-  if (existing) CONFIG_CACHE = existing;
-  return CONFIG_CACHE;
+  if (existing) CONFIG_CACHE = existing as Config;
+  return mergeConfigDefaults();
 }
 
 export async function saveConfig(partial: Partial<Config>): Promise<Config> {
-  const updated: Config = { ...CONFIG_CACHE, ...partial };
+  const updated: Config = { ...CONFIG_CACHE, ...partial } as Config;
   CONFIG_CACHE = updated;
-  await DB.set(KS.CONFIG, updated);
-  return updated;
+  mergeConfigDefaults();
+  await DB.set(KS.CONFIG, CONFIG_CACHE);
+  return CONFIG_CACHE;
+}
+
+export function mergeConfigDefaults(): Config {
+  const cfg: any = CONFIG_CACHE;
+  if (!cfg.widgets) cfg.widgets = structuredClone(WIDGETS_DEFAULTS);
+  else {
+    cfg.widgets.show = cfg.widgets.show === false ? false : true;
+    cfg.widgets.weather = {
+      ...WIDGETS_DEFAULTS.weather,
+      ...cfg.widgets.weather,
+      current: cfg.widgets.weather.current ? { ...cfg.widgets.weather.current } : undefined,
+    };
+    cfg.widgets.headlines = {
+      ...WIDGETS_DEFAULTS.headlines,
+      ...cfg.widgets.headlines,
+    };
+  }
+  CONFIG_CACHE = cfg as Config;
+  return CONFIG_CACHE;
 }
 
 export const KS = {

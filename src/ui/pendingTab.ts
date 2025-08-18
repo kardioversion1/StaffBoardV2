@@ -89,10 +89,14 @@ export async function renderPendingTab(root: HTMLElement) {
     return p;
   }
 
+  function nameById(id: string): string {
+    return staff.find((s) => s.id === id)?.name || id;
+  }
+
   function renderSlot(slot: any, target: any): HTMLElement {
     const div = document.createElement('div');
     div.className = 'slot';
-    div.textContent = slot.nurseId;
+    div.textContent = nameById(slot.nurseId);
     div.draggable = true;
     div.addEventListener('dragstart', (e) => {
       e.dataTransfer?.setData('slot', JSON.stringify(target));
@@ -182,7 +186,7 @@ export async function renderPendingTab(root: HTMLElement) {
     } else {
       flags.forEach(([id, arr]) => {
         const li = document.createElement('li');
-        li.textContent = `${id} assigned to ${arr.join(', ')}`;
+        li.textContent = `${nameById(id)} assigned to ${arr.join(', ')}`;
         list.appendChild(li);
       });
     }
@@ -210,6 +214,8 @@ export async function renderPendingTab(root: HTMLElement) {
       await saveStaff(staff);
       selected = undefined;
       renderRoster();
+      renderBoard();
+      renderFlags();
     });
 
     document.getElementById('add-zone')!.addEventListener('click', async () => {

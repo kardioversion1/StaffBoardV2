@@ -7,6 +7,7 @@ function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: string
     shift,
     charge: undefined,
     triage: undefined,
+    admin: undefined,
     zones: Object.fromEntries((zones || []).map((z) => [z, [] as any[]])),
     incoming: [],
     offgoing: [],
@@ -32,6 +33,7 @@ export async function renderMain(
           <div class="slots lead">
             <div id="slot-charge"></div>
             <div id="slot-triage"></div>
+            <div id="slot-admin" style="display:none"></div>
           </div>
         </section>
 
@@ -120,6 +122,14 @@ function renderLeadership(active: any) {
     active.charge?.nurseId || '';
   (document.getElementById('slot-triage') as HTMLElement).textContent =
     active.triage?.nurseId || '';
+  const adminEl = document.getElementById('slot-admin') as HTMLElement;
+  if (active.admin?.nurseId) {
+    adminEl.style.display = '';
+    adminEl.textContent = active.admin.nurseId;
+  } else {
+    adminEl.style.display = 'none';
+    adminEl.textContent = '';
+  }
 }
 
 function renderZones(active: any, cfg: any) {

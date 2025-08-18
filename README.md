@@ -35,3 +35,20 @@ await importHistoryFromJSON(
 
 The example above seeds a past day shift where a "robot" nurse was assigned to
 zone Alpha.
+
+## Language & Terminology
+
+- Nurse types: home, travel, flex, charge, triage, other
+- Special/pinned roles: Charge, Triage (always shown), Admin on (shown only if occupied)
+- Zone types: room, hallway (HW), waiting (WR), quick (T1/T2/2), special (Unassigned, Offgoing, Admin on)
+- Shift statuses: draft → onbat → live → overlap → archived
+- DTO = Discretionary Time Off (displayed as “DTO” in UI)
+- Privacy: main board shows First LastInitial
+- Region/time: US date (MM/DD/YYYY), 24-hour clock, America/Kentucky/Louisville timezone
+- US spelling throughout (color, organize, canceled)
+
+### Banned / Auto-corrected
+- “float” → flex
+- “pending” → draft
+- “traveler/contract” → travel
+- UK spellings (colour/favour/organise/cancelled) → US spelling

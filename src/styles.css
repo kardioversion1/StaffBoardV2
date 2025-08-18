@@ -14,7 +14,7 @@
 
   --accent-home: #4CC9F0;
   --accent-travel: #F72585;
-  --accent-float: #B8F35B;
+    --accent-flex: #B8F35B;
   --accent-charge: #FFB703;
   --accent-triage: #06D6A0;
   --accent-other: #A29BFE;
@@ -71,7 +71,7 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .nurse-pill{position:relative;display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:color-mix(in oklab,var(--control) 92%, black 8%);border:1px solid var(--line);color:var(--text-high)}
 .nurse-pill[data-type="home"]{--pill:var(--accent-home)}
 .nurse-pill[data-type="travel"]{--pill:var(--accent-travel)}
-.nurse-pill[data-type="float"]{--pill:var(--accent-float)}
+  .nurse-pill[data-type="flex"]{--pill:var(--accent-flex)}
 .nurse-pill[data-type="charge"]{--pill:var(--accent-charge)}
 .nurse-pill[data-type="triage"]{--pill:var(--accent-triage)}
 .nurse-pill[data-type="other"]{--pill:var(--accent-other)}
@@ -98,8 +98,8 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .dropdown{position:absolute;z-index:var(--z-dropdown)}
 .toast{position:fixed;z-index:var(--z-toast)}
 
-.pending-layout{display:grid;grid-template-columns:320px 1fr 320px;gap:12px;height:100%}
-.pending-layout .panel{display:flex;flex-direction:column}
+  .draft-layout{display:grid;grid-template-columns:320px 1fr 320px;gap:12px;height:100%}
+  .draft-layout .panel{display:flex;flex-direction:column}
 .roster-panel{overflow:hidden}
 .roster-controls{display:flex;flex-direction:column;gap:6px}
 #roster-list{list-style:none;padding:0;margin:8px 0;flex:1;overflow:auto}

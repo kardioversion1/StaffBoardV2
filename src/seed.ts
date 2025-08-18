@@ -58,6 +58,7 @@ export function buildSeedBoard(
   const board: Board = {
     charge: undefined,
     triage: undefined,
+    admin: undefined,
     zones: Object.fromEntries((cfg.zones || []).map((z) => [z, [] as Slot[]])),
   };
 
@@ -68,6 +69,10 @@ export function buildSeedBoard(
       (n) => n.eligibleRoles?.includes('triage') && n.id !== chargeCand?.id
     );
     if (triageCand) board.triage = { nurseId: triageCand.id };
+    const adminCand = roster.find(
+      (n) => n.eligibleRoles?.includes('admin') && n.id !== chargeCand?.id && n.id !== triageCand?.id
+    );
+    if (adminCand) board.admin = { nurseId: adminCand.id };
   }
 
   const unassigned = 'Unassigned';

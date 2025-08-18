@@ -33,6 +33,12 @@ export async function renderAll() {
   if (import.meta.env.DEV) outlineBlockers();
 }
 
+export async function manualHandoff() {
+  initState();
+  await applyPendingToActive(STATE.dateISO, STATE.shift);
+  renderAll();
+}
+
 initState();
 renderAll();
 setInterval(async () => {

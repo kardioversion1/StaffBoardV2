@@ -1,5 +1,6 @@
 import { STATE } from '@/state';
 import { deriveShift, fmtLong } from '@/utils/time';
+import { manualHandoff } from '@/main';
 
 export function renderHeader() {
   const app = document.getElementById("app")!;
@@ -14,5 +15,7 @@ export function renderHeader() {
   header.innerHTML = `
     <div class="title">ED Staffing Board</div>
     <div class="subtitle">${fmtLong(STATE.dateISO)} • Active: ${shiftLabel}</div>
+    <button id="handoff" class="btn">Shift Signout</button>
   `;
+  document.getElementById('handoff')!.addEventListener('click', manualHandoff);
 }

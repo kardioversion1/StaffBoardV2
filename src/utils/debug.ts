@@ -2,7 +2,7 @@ export function outlineBlockers(): void {
   const els = Array.from(document.querySelectorAll<HTMLElement>('body *'));
   els.forEach((el) => {
     const style = getComputedStyle(el);
-    if (style.display === 'none') return;
+    if (style.display === 'none' || style.pointerEvents === 'none') return;
     if (style.position === 'fixed' || style.position === 'absolute') {
       const rect = el.getBoundingClientRect();
       if (rect.width >= window.innerWidth && rect.height >= window.innerHeight) {

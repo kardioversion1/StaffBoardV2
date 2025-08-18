@@ -6,6 +6,8 @@ import { renderHeader } from '@/ui/header';
 import { renderTabs, activeTab } from '@/ui/tabs';
 import { renderMain } from '@/ui/mainTab';
 import { renderSettingsTab } from '@/ui/settingsTab';
+import { renderPendingTab } from '@/ui/pendingTab';
+import { renderHistoryTab } from '@/ui/historyTab';
 import { outlineBlockers } from '@/utils/debug';
 
 export async function renderAll() {
@@ -16,6 +18,12 @@ export async function renderAll() {
   switch (activeTab()) {
     case 'Main':
       await renderMain(root, { dateISO, shift });
+      break;
+    case 'Pending':
+      renderPendingTab(root);
+      break;
+    case 'History':
+      renderHistoryTab(root);
       break;
     case 'Settings':
       renderSettingsTab(root);

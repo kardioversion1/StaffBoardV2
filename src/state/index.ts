@@ -39,6 +39,12 @@ export type Staff = {
   name: string;
   rf?: string;
   type: 'home' | 'travel' | 'float' | 'charge' | 'triage' | 'other';
+  // merged fields from codex/add-auto-seed-next-shift-functionality
+  active?: boolean;
+  prefDay?: boolean;
+  prefNight?: boolean;
+  eligibleRoles?: ('charge' | 'triage')[];
+  defaultZone?: string;
 };
 
 import type { Slot } from "./slots";
@@ -122,20 +128,25 @@ export async function saveConfig(partial: Partial<Config>): Promise<Config> {
 }
 
 export function mergeConfigDefaults(): Config {
-  const cfg: any = CONFIG_CACHE;
-  if (!cfg.widgets) cfg.widgets = structuredClone(WIDGETS_DEFAULTS);
-  else {
+  const cfg = { ...CONFIG_CACHE } as Config & { widgets?: WidgetsConfig | undefined };
+
+  if (!cfg.widgets) {
+    cfg.widgets = structuredClone(WIDGETS_DEFAULTS);
+  } else {
     cfg.widgets.show = cfg.widgets.show === false ? false : true;
     cfg.widgets.weather = {
       ...WIDGETS_DEFAULTS.weather,
       ...cfg.widgets.weather,
-      current: cfg.widgets.weather.current ? { ...cfg.widgets.weather.current } : undefined,
+      current: cfg.widgets.weather.current
+        ? { ...cfg.widgets.weather.current }
+        : undefined,
     };
     cfg.widgets.headlines = {
       ...WIDGETS_DEFAULTS.headlines,
       ...cfg.widgets.headlines,
     };
   }
+
   CONFIG_CACHE = cfg as Config;
   return CONFIG_CACHE;
 }

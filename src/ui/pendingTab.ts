@@ -1,15 +1,21 @@
 import { STATE, DB, KS, getConfig, saveConfig, loadStaff, saveStaff, Staff } from '@/state';
 import { Board, upsertSlot, moveSlot, removeSlot } from '@/slots';
+import {
+  seedZonesIfNeeded,
+  getDefaultRosterForLabel,
+  buildSeedBoard,
+  DEFAULT_SEED_SETTINGS,
+} from '@/seed';
 
 export async function renderPendingTab(root: HTMLElement) {
-  const cfg = getConfig();
+  await seedZonesIfNeeded();
   let staff: Staff[] = await loadStaff();
-  let board: Board =
-    (await DB.get<Board>(KS.PENDING(STATE.dateISO, STATE.shift))) || {
-      charge: undefined,
-      triage: undefined,
-      zones: Object.fromEntries((cfg.zones || []).map((z) => [z, [] as any[]])),
-    };
+  let board = await DB.get<Board>(KS.PENDING(STATE.dateISO, STATE.shift));
+  if (!board) {
+    const roster = getDefaultRosterForLabel(staff, STATE.shift);
+    board = buildSeedBoard(roster, DEFAULT_SEED_SETTINGS);
+    await DB.set(KS.PENDING(STATE.dateISO, STATE.shift), board);
+  }
   let selected: string | undefined;
 
   root.innerHTML = `

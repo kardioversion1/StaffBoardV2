@@ -39,6 +39,11 @@ export type Staff = {
   name: string;
   rf?: string;
   type: 'home' | 'travel' | 'float' | 'charge' | 'triage' | 'other';
+  active?: boolean;
+  prefDay?: boolean;
+  prefNight?: boolean;
+  eligibleRoles?: ('charge' | 'triage')[];
+  defaultZone?: string;
 };
 
 import type { Slot } from "./slots";

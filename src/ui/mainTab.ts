@@ -149,6 +149,7 @@ function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
       tileWrapper.innerHTML = nurseTile(s, {
         id: st?.id || s.nurseId,
         name: st?.name,
+        role: st?.role || 'nurse',
         type: st?.type || 'other',
       } as Staff);
 
@@ -219,7 +220,7 @@ function renderIncoming(active: any, save: () => void) {
 
 function renderOffgoing(active: any, save: () => void) {
   const cont = document.getElementById('offgoing')!;
-  const cutoff = Date.now() - 40 * 60 * 1000;
+  const cutoff = Date.now() - 60 * 60 * 1000;
   active.offgoing = active.offgoing.filter((o: any) => o.ts > cutoff);
   cont.innerHTML = '';
   for (const o of active.offgoing) {
@@ -248,8 +249,7 @@ function manageSlot(
 ): void {
   if (!st) return;
 
-  // Normalize role for selection (some data may use "nurse" instead of "rn")
-  const currentRole = (st.role === 'nurse' ? 'rn' : st.role) as Staff['role'];
+  const currentRole = st.role;
 
   const overlay = document.createElement('div');
   overlay.className = 'manage-overlay';
@@ -258,13 +258,10 @@ function manageSlot(
     <label>Name <input id="mg-name" value="${st.name || ''}"></label>
     <label>RF <input id="mg-rf" type="number" value="${st.rf ?? ''}"></label>
     <label>Role <select id="mg-role">
-      <option value="rn"${currentRole === 'rn' ? ' selected' : ''}>RN</option>
+      <option value="nurse"${currentRole === 'nurse' ? ' selected' : ''}>Nurse</option>
       <option value="tech"${currentRole === 'tech' ? ' selected' : ''}>Tech</option>
-      <option value="sitter"${currentRole === 'sitter' ? ' selected' : ''}>Sitter</option>
-      <option value="ancillary"${currentRole === 'ancillary' ? ' selected' : ''}>Ancillary</option>
-      <option value="admin"${currentRole === 'admin' ? ' selected' : ''}>Admin</option>
     </select></label>
-    <div id="mg-type-wrap" style="display:${currentRole === 'rn' ? '' : 'none'}">
+    <div id="mg-type-wrap" style="display:${currentRole === 'nurse' ? '' : 'none'}">
       <label>Type <select id="mg-type">
         <option value="home"${st.type === 'home' ? ' selected' : ''}>home</option>
         <option value="travel"${st.type === 'travel' ? ' selected' : ''}>travel</option>
@@ -286,6 +283,7 @@ function manageSlot(
       .join('')}</select></label>
     <div class="dialog-actions">
       <button id="mg-save" class="btn">Save</button>
+      <button id="mg-dto" class="btn">DTO</button>
       <button id="mg-cancel" class="btn">Cancel</button>
     </div>
   </div>`;
@@ -294,21 +292,30 @@ function manageSlot(
   const roleSel = overlay.querySelector('#mg-role') as HTMLSelectElement;
   const typeWrap = overlay.querySelector('#mg-type-wrap') as HTMLElement;
   roleSel.addEventListener('change', () => {
-    typeWrap.style.display = roleSel.value === 'rn' ? '' : 'none';
+    typeWrap.style.display = roleSel.value === 'nurse' ? '' : 'none';
   });
 
   overlay.querySelector('#mg-cancel')!.addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#mg-dto')!.addEventListener('click', async () => {
+    board.zones[zone].splice(index, 1);
+    board.offgoing.push({ nurseId: st.id, ts: Date.now() });
+    const hist = (await DB.get<any[]>(KS.HISTORY)) || [];
+    hist.push({ nurseId: st.id, dateISO: board.dateISO, shift: board.shift, endedISO: new Date().toISOString() });
+    await DB.set(KS.HISTORY, hist);
+    save();
+    overlay.remove();
+    rerender();
+  });
   overlay.querySelector('#mg-save')!.addEventListener('click', () => {
     st.name = (overlay.querySelector('#mg-name') as HTMLInputElement).value.trim() || undefined;
 
     const rfVal = (overlay.querySelector('#mg-rf') as HTMLInputElement).value.trim();
     st.rf = rfVal ? Number(rfVal) : undefined;
 
-    // Save role (normalize "nurse" -> "rn")
     const selectedRole = roleSel.value as Staff['role'];
-    st.role = (selectedRole === 'nurse' ? 'rn' : selectedRole) as Staff['role'];
+    st.role = selectedRole;
 
-    if (st.role === 'rn') {
+    if (st.role === 'nurse') {
       const tval = (overlay.querySelector('#mg-type') as HTMLSelectElement).value;
       const canon = canonNurseType(tval) || st.type;
       st.type = canon as any;

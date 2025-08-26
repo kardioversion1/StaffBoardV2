@@ -2,6 +2,7 @@ import { Shift, hhmmNowLocal, toDateISO, deriveShift } from '@/utils/time';
 import * as DB from '@/db';
 import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
+import { ensureStaffId } from '@/utils/id';
 
 export type WidgetsConfig = {
   show?: boolean;
@@ -44,7 +45,7 @@ export type Staff = {
   first?: string;
   last?: string;
   rf?: number;
-  role?: 'rn' | 'tech' | 'sitter' | 'ancillary' | 'admin';
+  role: 'nurse' | 'tech';
   type: NurseType;
   active?: boolean;
   notes?: string;
@@ -185,13 +186,16 @@ export const KS = {
 
 export async function loadStaff(): Promise<Staff[]> {
   const list = (await DB.get<Staff[]>(KS.STAFF)) || [];
-  return list.map((s) => ({
-    ...s,
-    role: ['tech', 'sitter', 'ancillary', 'admin'].includes((s as any).role)
-      ? ((s as any).role as Staff['role'])
-      : 'rn',
-    type: (canonNurseType((s as any).type) || (s as any).type) as NurseType,
-  }));
+  let changed = false;
+  const normalized = list.map((s) => {
+    const id = ensureStaffId(s.id);
+    const role = (s as any).role === 'tech' ? 'tech' : 'nurse';
+    const type = (canonNurseType((s as any).type) || (s as any).type) as NurseType;
+    if (id !== s.id || role !== (s as any).role) changed = true;
+    return { ...s, id, role, type } as Staff;
+  });
+  if (changed) await DB.set(KS.STAFF, normalized);
+  return normalized;
 }
 
 export async function saveStaff(list: Staff[]): Promise<void> {

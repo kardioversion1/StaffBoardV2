@@ -11,6 +11,8 @@ import {
 } from '@/state';
 import { setNurseCache, labelFromId, formatShortName } from '@/utils/names';
 import { upsertSlot, moveSlot, removeSlot } from '@/slots';
+import { createStaffId } from '@/utils/id';
+import { CANONICAL_ZONES } from '@/seedDefaults';
 import {
   seedZonesIfNeeded,
   getDefaultRosterForLabel,
@@ -300,7 +302,7 @@ export async function renderDraftTab(root: HTMLElement) {
         const type =
           (prompt('Type? (home, travel, flex, charge, triage, other)', 'home') as Staff['type']) ||
           'home';
-        staff.push({ id: crypto.randomUUID(), name, type });
+        staff.push({ id: createStaffId(), name, type });
       }
       await saveStaff(staff);
       setNurseCache(staff);
@@ -325,6 +327,7 @@ export async function renderDraftTab(root: HTMLElement) {
       const btn = (ev.target as HTMLElement).closest('.remove-zone') as HTMLElement | null;
       if (btn) {
         const z = btn.dataset.zone!;
+        if (CANONICAL_ZONES.includes(z)) return;
         if (confirm(`Remove zone ${z}?`)) {
           delete board.zones[z];
           const cfg = getConfig();

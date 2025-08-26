@@ -7,6 +7,7 @@ import {
   saveStaff,
   Staff,
 } from '@/state';
+import { createStaffId, ensureStaffId } from '@/utils/id';
 import { fetchWeather, renderWidgets } from './widgets';
 
 function mapIcon(cond: string) {
@@ -55,11 +56,8 @@ async function renderRosterSettings(): Promise<void> {
         <td><input data-id="${s.id}" data-field="name" value="${s.name || ''}"></td>
         <td><input data-id="${s.id}" data-field="rf" type="number" value="${s.rf ?? ''}"></td>
         <td><select data-id="${s.id}" data-field="role">
-          <option value="rn"${(s.role === 'rn' || s.role === 'nurse') ? ' selected' : ''}>RN</option>
+          <option value="nurse"${s.role === 'nurse' ? ' selected' : ''}>Nurse</option>
           <option value="tech"${s.role === 'tech' ? ' selected' : ''}>Tech</option>
-          <option value="sitter"${s.role === 'sitter' ? ' selected' : ''}>Sitter</option>
-          <option value="ancillary"${s.role === 'ancillary' ? ' selected' : ''}>Ancillary</option>
-          <option value="admin"${s.role === 'admin' ? ' selected' : ''}>Admin</option>
         </select></td>
         <td><select data-id="${s.id}" data-field="type">
           <option value="home"${s.type === 'home' ? ' selected' : ''}>home</option>
@@ -73,9 +71,9 @@ async function renderRosterSettings(): Promise<void> {
       `;
       const roleSel = tr.querySelector('select[data-field="role"]') as HTMLSelectElement;
       const typeSel = tr.querySelector('select[data-field="type"]') as HTMLSelectElement;
-      typeSel.disabled = (roleSel.value !== 'rn');
+      typeSel.disabled = roleSel.value !== 'nurse';
       roleSel.addEventListener('change', () => {
-        typeSel.disabled = roleSel.value !== 'rn';
+        typeSel.disabled = roleSel.value !== 'nurse';
       });
       tbody.appendChild(tr);
     });
@@ -92,8 +90,7 @@ async function renderRosterSettings(): Promise<void> {
       else if (field === 'name') entry.name = target.value;
       else if (field === 'role') {
         const v = (target as HTMLSelectElement).value as Staff['role'];
-        // normalize any legacy/externally-imported "nurse" to "rn"
-        entry.role = (v === 'nurse' ? 'rn' : v) as Staff['role'];
+        entry.role = v;
       } else if (field === 'type') entry.type = target.value as any;
 
       await saveStaff(staff);
@@ -108,7 +105,7 @@ async function renderRosterSettings(): Promise<void> {
     });
 
     (el.querySelector('#staff-add') as HTMLButtonElement).onclick = async () => {
-      staff.push({ id: crypto.randomUUID(), role: 'rn', type: 'other' } as Staff);
+      staff.push({ id: createStaffId(), role: 'nurse', type: 'other' } as Staff);
       await saveStaff(staff);
       renderTable();
     };
@@ -131,11 +128,10 @@ async function renderRosterSettings(): Promise<void> {
       try {
         const arr = JSON.parse(text) as Partial<Staff>[];
         staff = arr.map((s) => ({
-          id: s.id || crypto.randomUUID(),
+          id: s.id ? ensureStaffId(s.id) : createStaffId(),
           name: s.name || '',
           rf: s.rf,
-          // accept either 'rn' or 'nurse' from imports
-          role: ((s.role === 'nurse' ? 'rn' : s.role) || 'rn') as Staff['role'],
+          role: s.role === 'tech' ? 'tech' : 'nurse',
           type: (s.type as any) ?? 'other',
         }));
         await saveStaff(staff);

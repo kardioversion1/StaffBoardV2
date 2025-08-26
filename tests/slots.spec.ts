@@ -33,6 +33,7 @@ describe("break toggles", () => {
     const html = renderTile(slot, {
       id: "1",
       name: "Alice",
+      role: "nurse",
       type: "other",
     });
     expect(html).toContain("⏸️");
@@ -44,8 +45,8 @@ describe("break toggles", () => {
 describe("employee ID uniqueness", () => {
   it("detects conflicts", () => {
     const staff = [
-      { id: "1", name: "A", type: "other" },
-      { id: "2", name: "B", type: "other" },
+      { id: "1", name: "A", role: "nurse", type: "other" },
+      { id: "2", name: "B", role: "nurse", type: "other" },
     ];
     expect(isEmployeeIdUnique(staff, "3")).toBe(true);
     expect(isEmployeeIdUnique(staff, "2")).toBe(false);
@@ -72,10 +73,11 @@ describe("nurse tile snapshot", () => {
     const html = renderTile(slot, {
       id: "1",
       name: "Alice",
+      role: "nurse",
       type: "other",
     });
     expect(html).toMatchInlineSnapshot(
-      `"<div class=\"nurse-pill\" data-type=\"other\" tabindex=\"0\" aria-label=\"Alice, other nurse, on break, has student, has comment, marked bad\"><span class=\"nurse-name\">Alice</span><span class=\"chips\"><span class=\"chip\" aria-label=\"On break\"><span class=\"icon\">⏸️</span></span><span class=\"chip\" aria-label=\"Has student\"><span class=\"icon\">🎓</span></span><span class=\"chip\" aria-label=\"Has comment\"><span class=\"icon\">💬</span></span><span class=\"chip\" aria-label=\"Marked bad\"><span class=\"icon\">⚠️</span></span></span></div>"`
+      `"<div class=\"nurse-pill\" data-type=\"other\" data-role=\"nurse\" tabindex=\"0\" aria-label=\"Alice, other nurse, on break, has student, has comment, marked bad\"><span class=\"nurse-name\">Alice</span><span class=\"chips\"><span class=\"chip\" aria-label=\"On break\"><span class=\"icon\">⏸️</span></span><span class=\"chip\" aria-label=\"Has student\"><span class=\"icon\">🎓</span></span><span class=\"chip\" aria-label=\"Has comment\"><span class=\"icon\">💬</span></span><span class=\"chip\" aria-label=\"Marked bad\"><span class=\"icon\">⚠️</span></span></span></div>"`
     );
   });
 });

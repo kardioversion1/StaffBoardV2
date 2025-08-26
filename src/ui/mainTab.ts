@@ -102,7 +102,7 @@ export async function renderMain(
           </section>
         </div>
       </div>
-    ";
+    `;
 
     // Debounced save
     let saveTimer: any;

@@ -37,6 +37,12 @@ export type Config = {
   theme?: 'light' | 'dark';
   fontScale?: number;
   highContrast?: boolean;
+  zoneColors?: Record<string, string>;
+  shiftDurations?: { day: number; night: number };
+  dtoMinutes?: number;
+  showPinned?: { charge: boolean; triage: boolean };
+  rss?: { url: string; enabled: boolean };
+  privacy?: boolean;
 };
 
 export type Staff = {
@@ -119,6 +125,12 @@ let CONFIG_CACHE: Config = {
   theme: 'dark',
   fontScale: 1,
   highContrast: false,
+  zoneColors: {},
+  shiftDurations: { day: 12, night: 12 },
+  dtoMinutes: 60,
+  showPinned: { charge: true, triage: true },
+  rss: { url: '', enabled: false },
+  privacy: true,
 };
 
 export function getConfig(): Config {
@@ -165,6 +177,22 @@ export function mergeConfigDefaults(): Config {
       ...cfg.widgets.headlines,
     };
   }
+
+  cfg.zoneColors = cfg.zoneColors || {};
+  cfg.shiftDurations = {
+    day: cfg.shiftDurations?.day || 12,
+    night: cfg.shiftDurations?.night || 12,
+  };
+  cfg.dtoMinutes = typeof cfg.dtoMinutes === 'number' ? cfg.dtoMinutes : 60;
+  cfg.showPinned = {
+    charge: cfg.showPinned?.charge !== false,
+    triage: cfg.showPinned?.triage !== false,
+  };
+  cfg.rss = {
+    url: cfg.rss?.url || '',
+    enabled: cfg.rss?.enabled === true,
+  };
+  cfg.privacy = cfg.privacy !== false;
 
   cfg.theme = cfg.theme === 'light' ? 'light' : 'dark';
   cfg.fontScale = cfg.fontScale && !isNaN(cfg.fontScale) ? cfg.fontScale : 1;

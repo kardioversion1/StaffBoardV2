@@ -118,6 +118,14 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
   .draft-layout{display:grid;grid-template-columns:320px 1fr 320px;gap:12px;height:100%}
   .draft-layout .panel{display:flex;flex-direction:column}
 .roster-panel{overflow:hidden}
+
+.settings-grid{display:grid;grid-template-columns:minmax(320px,420px) 1fr;gap:16px}
+.roster-box{max-height:60vh;overflow-y:auto}
+.roster-row{display:flex;align-items:center;justify-content:space-between;padding:4px;cursor:pointer}
+.roster-row.selected{background:var(--tab)}
+.settings-pane{display:flex;flex-direction:column;gap:16px}
+.zone-card{border:1px solid var(--line);border-radius:8px;padding:6px;background:var(--panel)}
+.zone-card h4{margin:0 0 4px}
 .roster-controls{display:flex;flex-direction:column;gap:6px}
 #roster-list{list-style:none;padding:0;margin:8px 0;flex:1;overflow:auto}
 #roster-list li{padding:4px 6px;border-radius:6px;cursor:grab}

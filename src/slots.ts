@@ -3,6 +3,7 @@ export type Slot = {
   nurseId: string;
   student?: string | boolean;
   comment?: string;
+  bad?: boolean;
   break?: {
     active: boolean;
     startISO?: string;

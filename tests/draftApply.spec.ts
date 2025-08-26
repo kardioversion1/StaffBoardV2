@@ -33,7 +33,6 @@ describe('applyDraftToActive', () => {
       zones: { A: [{ nurseId: '2' }] },
       incoming: [],
       offgoing: [],
-      support: { techs: [], vols: [], sitters: [] },
     };
     const key = KS.DRAFT(board.dateISO, board.shift);
     await DB.set(key, board);

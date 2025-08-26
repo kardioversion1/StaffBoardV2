@@ -18,15 +18,20 @@ import {
   DEFAULT_SEED_SETTINGS,
 } from '@/seed';
 import { t } from '@/i18n/en';
+import { manualHandoff } from '@/main';
 
+/** Render the draft board allowing schedule edits before publishing. */
 export async function renderDraftTab(root: HTMLElement) {
   await seedZonesIfNeeded();
+  const cfg = getConfig();
+  if (!cfg.zones.includes('Bullpen')) cfg.zones.push('Bullpen');
   let staff: Staff[] = await loadStaff();
   setNurseCache(staff);
   let board = await DB.get<DraftShift>(KS.DRAFT(STATE.dateISO, STATE.shift));
   if (!board) {
     const roster = getDefaultRosterForLabel(staff, STATE.shift);
     const seed = buildSeedBoard(roster, DEFAULT_SEED_SETTINGS);
+    seed.zones['Bullpen'] ||= [];
     board = {
       dateISO: STATE.dateISO,
       shift: STATE.shift,
@@ -36,13 +41,12 @@ export async function renderDraftTab(root: HTMLElement) {
       zones: seed.zones,
       incoming: [],
       offgoing: [],
-      support: { techs: [], vols: [], sitters: [] },
     };
     await DB.set(KS.DRAFT(STATE.dateISO, STATE.shift), board);
   } else {
+    board.zones['Bullpen'] ||= [];
     board.incoming ||= [];
     board.offgoing ||= [];
-    board.support ||= { techs: [], vols: [], sitters: [] };
     board.dateISO ||= STATE.dateISO;
     board.shift ||= STATE.shift;
     board.admin ||= undefined;
@@ -68,6 +72,7 @@ export async function renderDraftTab(root: HTMLElement) {
         <button id="nurse-edit" class="btn">+ ${t('actions.addNurse')}</button>
       </aside>
       <section class="panel board-panel">
+        <div class="board-actions"><button id="publish-draft" class="btn">Publish</button></div>
         <div class="zone" data-zone="charge">
           <h4>${t('labels.charge')}</h4>
           <div class="slots" id="zone-charge"></div>
@@ -256,6 +261,28 @@ export async function renderDraftTab(root: HTMLElement) {
     }
   }
 
+  function openPublishModal() {
+    const overlay = document.createElement('div');
+    overlay.className = 'manage-overlay';
+    let html = '<ul>';
+    if (board.charge) html += `<li>Charge: ${labelFromId(board.charge.nurseId)}</li>`;
+    if (board.triage) html += `<li>Triage: ${labelFromId(board.triage.nurseId)}</li>`;
+    if (board.admin) html += `<li>Admin: ${labelFromId(board.admin.nurseId)}</li>`;
+    for (const [zone, slots] of Object.entries(board.zones)) {
+      const names = slots.map((s) => labelFromId(s.nurseId)).join(', ');
+      html += `<li>${zone}: ${names}</li>`;
+    }
+    html += '</ul>';
+    overlay.innerHTML = `<div class="manage-dialog"><h3>Publish draft?</h3>${html}<div class="dialog-actions"><button id="pub-go" class="btn">Post Live</button><button id="pub-cancel" class="btn">Cancel</button></div></div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#pub-cancel')!.addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#pub-go')!.addEventListener('click', async () => {
+      await manualHandoff();
+      overlay.remove();
+      document.querySelector('#tabs [data-tab="Main"]')?.dispatchEvent(new Event('click'));
+    });
+  }
+
   function wireUI() {
     (document.getElementById('roster-search') as HTMLInputElement).addEventListener('input', renderRoster);
     (document.getElementById('roster-filter') as HTMLSelectElement).addEventListener('change', renderRoster);
@@ -308,6 +335,7 @@ export async function renderDraftTab(root: HTMLElement) {
         }
       }
     });
+    document.getElementById('publish-draft')!.addEventListener('click', openPublishModal);
   }
 
   renderRoster();

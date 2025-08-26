@@ -1,4 +1,4 @@
-import { getConfig, saveConfig, mergeConfigDefaults } from '@/state';
+import { getConfig, saveConfig, mergeConfigDefaults, applyThemeAndScale } from '@/state';
 import { fetchWeather, renderWidgets } from './widgets';
 
 function mapIcon(cond: string) {
@@ -13,7 +13,8 @@ function mapIcon(cond: string) {
 
 export function renderSettingsTab(root: HTMLElement) {
   mergeConfigDefaults();
-  root.innerHTML = `<div id="settings-widgets"></div><div id="type-legend"></div>`;
+  root.innerHTML = `<div id="display-settings"></div><div id="settings-widgets"></div><div id="type-legend"></div>`;
+  renderDisplaySettings();
   renderWidgetsPanel();
   renderTypeLegend();
 }
@@ -167,5 +168,29 @@ function renderWidgetsPanel() {
     await saveConfig({ widgets: cfg.widgets });
     const body = document.getElementById('widgets-body');
     if (body) await renderWidgets(body);
+  });
+}
+
+function renderDisplaySettings() {
+  const cfg = getConfig();
+  const el = document.getElementById('display-settings')!;
+  el.innerHTML = `
+  <section class="panel">
+    <h3>Display</h3>
+    <div class="form-row">
+      <label>Font size
+        <select id="font-scale">
+          <option value="1">Normal</option>
+          <option value="1.2">Large</option>
+          <option value="1.4">Extra Large</option>
+        </select>
+      </label>
+    </div>
+  </section>`;
+  (document.getElementById('font-scale') as HTMLSelectElement).value = (cfg.fontScale || 1).toString();
+  document.getElementById('font-scale')!.addEventListener('change', async (e) => {
+    const scale = parseFloat((e.target as HTMLSelectElement).value);
+    await saveConfig({ fontScale: scale });
+    applyThemeAndScale({ ...cfg, fontScale: scale });
   });
 }

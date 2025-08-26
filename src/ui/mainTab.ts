@@ -1,6 +1,9 @@
-import { DB, KS, getConfig, STATE, loadStaff, Staff } from '@/state';
+import { DB, KS, getConfig, STATE, loadStaff, saveStaff, Staff } from '@/state';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWidgets } from './widgets';
+import { nurseTile } from './nurseTile';
+import { startBreak, endBreak, moveSlot, type Slot } from '@/slots';
+import { canonNurseType } from '@/domain/lexicon';
 
 function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: string[]) {
   return {
@@ -9,10 +12,11 @@ function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: string
     charge: undefined,
     triage: undefined,
     admin: undefined,
-    zones: Object.fromEntries((zones || []).map((z) => [z, [] as any[]])),
+    zones: Object.fromEntries(
+      [...zones, 'Bullpen'].map((z) => [z, [] as any[]])
+    ),
     incoming: [],
     offgoing: [],
-    support: { techs: [], vols: [], sitters: [] },
     comments: '',
   };
 }
@@ -23,6 +27,7 @@ export async function renderMain(
 ): Promise<void> {
   try {
     const cfg = getConfig();
+    if (!cfg.zones.includes('Bullpen')) cfg.zones.push('Bullpen');
     const staff: Staff[] = await loadStaff();
     setNurseCache(staff);
     let active: any = await DB.get(KS.ACTIVE(ctx.dateISO, ctx.shift));
@@ -58,15 +63,6 @@ export async function renderMain(
         </section>
 
         <section class="panel">
-          <h3>Support Staff</h3>
-          <div class="support">
-            <label>Techs <input id="techs" placeholder="Comma-separated..."></label>
-            <label>Volunteers <input id="vols" placeholder="Comma-separated..."></label>
-            <label>Sitters <input id="sitters" placeholder="Comma-separated..."></label>
-          </div>
-        </section>
-
-        <section class="panel">
           <h3>Incoming (click to toggle arrived)</h3>
           <button id="add-incoming" class="btn">+ Add</button>
           <div id="incoming"></div>
@@ -98,9 +94,8 @@ export async function renderMain(
     };
 
     renderLeadership(active);
-    renderZones(active, cfg);
+    renderZones(active, cfg, staff, queueSave);
     wireComments(active, queueSave);
-    renderSupport(active, queueSave);
     renderIncoming(active, queueSave);
     renderOffgoing(active, queueSave);
     renderClock();
@@ -135,7 +130,7 @@ function renderLeadership(active: any) {
   }
 }
 
-function renderZones(active: any, cfg: any) {
+function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
   const cont = document.getElementById('zones')!;
   cont.innerHTML = '';
   for (const z of cfg.zones || []) {
@@ -144,11 +139,35 @@ function renderZones(active: any, cfg: any) {
     h.textContent = z;
     div.appendChild(h);
     const list = document.createElement('div');
-    for (const s of active.zones[z] || []) {
+    (active.zones[z] || []).forEach((s: Slot, idx: number) => {
       const item = document.createElement('div');
-      item.textContent = labelFromId(s.nurseId);
+      const st = staff.find((n) => n.id === s.nurseId);
+      const tileWrapper = document.createElement('div');
+      tileWrapper.innerHTML = nurseTile(s, {
+        id: st?.id || s.nurseId,
+        name: st?.name,
+        type: st?.type || 'other',
+      } as Staff);
+      item.appendChild(tileWrapper.firstElementChild!);
+      const btn = document.createElement('button');
+      btn.textContent = 'Manage';
+      btn.className = 'btn';
+      btn.addEventListener('click', () =>
+        manageSlot(
+          s,
+          st,
+          staff,
+          save,
+          () => renderZones(active, cfg, staff, save),
+          z,
+          idx,
+          active,
+          cfg
+        )
+      );
+      item.appendChild(btn);
       list.appendChild(item);
-    }
+    });
     div.appendChild(list);
     cont.appendChild(div);
   }
@@ -162,22 +181,6 @@ function wireComments(active: any, save: () => void) {
     active.comments = el.value;
     save();
   });
-}
-
-function renderSupport(active: any, save: () => void) {
-  const map: Record<string, string> = { techs: 'techs', vols: 'vols', sitters: 'sitters' };
-  for (const [id, key] of Object.entries(map)) {
-    const input = document.getElementById(id) as HTMLInputElement;
-    input.value = active.support[key].join(', ');
-    input.disabled = STATE.locked;
-    input.addEventListener('input', () => {
-      active.support[key] = input.value
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-      save();
-    });
-  }
 }
 
 function renderIncoming(active: any, save: () => void) {
@@ -223,4 +226,98 @@ function renderOffgoing(active: any, save: () => void) {
 function renderClock() {
   const el = document.getElementById('clock');
   if (el) el.textContent = STATE.clockHHMM;
+}
+
+function manageSlot(
+  slot: Slot,
+  st: Staff | undefined,
+  staffList: Staff[],
+  save: () => void,
+  rerender: () => void,
+  zone: string,
+  index: number,
+  board: any,
+  cfg: any
+): void {
+  if (!st) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'manage-overlay';
+  overlay.innerHTML = `<div class="manage-dialog">
+    <h3>Manage ${st.name || labelFromId(st.id)}</h3>
+    <label>Name <input id="mg-name" value="${st.name || ''}"></label>
+    <label>RF <input id="mg-rf" type="number" value="${st.rf ?? ''}"></label>
+    <label>Role <select id="mg-role">
+      <option value="rn"${st.role === 'rn' ? ' selected' : ''}>RN</option>
+      <option value="tech"${st.role === 'tech' ? ' selected' : ''}>Tech</option>
+      <option value="sitter"${st.role === 'sitter' ? ' selected' : ''}>Sitter</option>
+      <option value="ancillary"${st.role === 'ancillary' ? ' selected' : ''}>Ancillary</option>
+      <option value="admin"${st.role === 'admin' ? ' selected' : ''}>Admin</option>
+    </select></label>
+    <div id="mg-type-wrap" style="display:${st.role === 'rn' ? '' : 'none'}">
+      <label>Type <select id="mg-type">
+        <option value="home"${st.type === 'home' ? ' selected' : ''}>home</option>
+        <option value="travel"${st.type === 'travel' ? ' selected' : ''}>travel</option>
+        <option value="flex"${st.type === 'flex' ? ' selected' : ''}>flex</option>
+        <option value="charge"${st.type === 'charge' ? ' selected' : ''}>charge</option>
+        <option value="triage"${st.type === 'triage' ? ' selected' : ''}>triage</option>
+        <option value="other"${st.type === 'other' ? ' selected' : ''}>other</option>
+      </select></label>
+    </div>
+    <label>Student <input id="mg-student" value="${
+      typeof slot.student === 'string' ? slot.student : ''
+    }"></label>
+    <label>Comment <input id="mg-comment" value="${slot.comment || ''}"></label>
+    <label><input type="checkbox" id="mg-break" ${
+      slot.break?.active ? 'checked' : ''
+    } /> On break</label>
+    <label><input type="checkbox" id="mg-bad" ${slot.bad ? 'checked' : ''}/> Bad</label>
+    <label>End time <input id="mg-end" type="time" value="${
+      slot.endTimeOverrideHHMM || ''
+    }"></label>
+    <label>Zone <select id="mg-zone">${cfg.zones
+      .map((z: string) => `<option value="${z}"${z === zone ? ' selected' : ''}>${z}</option>`)
+      .join('')}</select></label>
+    <div class="dialog-actions">
+      <button id="mg-save" class="btn">Save</button>
+      <button id="mg-cancel" class="btn">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+
+  const roleSel = overlay.querySelector('#mg-role') as HTMLSelectElement;
+  const typeWrap = overlay.querySelector('#mg-type-wrap') as HTMLElement;
+  roleSel.addEventListener('change', () => {
+    typeWrap.style.display = roleSel.value === 'rn' ? '' : 'none';
+  });
+
+  overlay.querySelector('#mg-cancel')!.addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#mg-save')!.addEventListener('click', () => {
+    st.name = (overlay.querySelector('#mg-name') as HTMLInputElement).value.trim() || undefined;
+    const rfVal = (overlay.querySelector('#mg-rf') as HTMLInputElement).value.trim();
+    st.rf = rfVal ? Number(rfVal) : undefined;
+    st.role = roleSel.value as Staff['role'];
+    if (st.role === 'rn') {
+      const tval = (overlay.querySelector('#mg-type') as HTMLSelectElement).value;
+      const canon = canonNurseType(tval) || st.type;
+      st.type = canon as any;
+    }
+    const studVal = (overlay.querySelector('#mg-student') as HTMLInputElement).value.trim();
+    slot.student = studVal ? studVal : undefined;
+    const commentVal = (overlay.querySelector('#mg-comment') as HTMLInputElement).value.trim();
+    slot.comment = commentVal ? commentVal : undefined;
+    const breakChecked = (overlay.querySelector('#mg-break') as HTMLInputElement).checked;
+    if (breakChecked && !slot.break?.active) startBreak(slot, {});
+    if (!breakChecked && slot.break?.active) endBreak(slot);
+    slot.bad = (overlay.querySelector('#mg-bad') as HTMLInputElement).checked;
+    const endVal = (overlay.querySelector('#mg-end') as HTMLInputElement).value;
+    slot.endTimeOverrideHHMM = endVal ? endVal : undefined;
+    const zoneSel = overlay.querySelector('#mg-zone') as HTMLSelectElement;
+    if (zoneSel.value !== zone) {
+      moveSlot(board, { zone, index }, { zone: zoneSel.value });
+    }
+    saveStaff(staffList);
+    save();
+    overlay.remove();
+    rerender();
+  });
 }

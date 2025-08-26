@@ -16,12 +16,17 @@ export function nurseTile(slot: Slot, staff: Staff): string {
     chips.push(
       `<span class="chip" aria-label="Has comment"><span class="icon">💬</span></span>`
     );
+  if (slot.bad)
+    chips.push(
+      `<span class="chip" aria-label="Marked bad"><span class="icon">⚠️</span></span>`
+    );
 
   const name = formatShortName(staff.name);
   const statuses: string[] = [];
   if (slot.break?.active) statuses.push('on break');
   if (slot.student) statuses.push('has student');
   if (slot.comment) statuses.push('has comment');
+  if (slot.bad) statuses.push('marked bad');
   const aria = `${name}, ${staff.type} nurse${
     statuses.length ? ', ' + statuses.join(', ') : ''
   }`;

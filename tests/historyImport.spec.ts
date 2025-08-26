@@ -10,8 +10,7 @@ describe('history import', () => {
         shift: 'day',
         zones: { Alpha: [{ nurseId: 'robot-01' }] },
         incoming: [],
-        offgoing: [],
-        support: { techs: [], vols: [], sitters: [] }
+        offgoing: []
       }
     ]);
     const result = await importHistoryFromJSON(json);
@@ -21,8 +20,7 @@ describe('history import', () => {
         shift: 'day',
         zones: { Alpha: [{ nurseId: 'robot-01' }] },
         incoming: [],
-        offgoing: [],
-        support: { techs: [], vols: [], sitters: [] }
+        offgoing: []
       }
     ]);
     expect(spy).toHaveBeenCalledWith(KS.HISTORY, result);

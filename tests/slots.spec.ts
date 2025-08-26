@@ -67,6 +67,7 @@ describe("nurse tile snapshot", () => {
       },
       endTimeOverrideHHMM: "13:00",
       dto: true,
+      bad: true,
     };
     const html = renderTile(slot, {
       id: "1",
@@ -74,7 +75,7 @@ describe("nurse tile snapshot", () => {
       type: "other",
     });
     expect(html).toMatchInlineSnapshot(
-      `"<div class=\"nurse-pill\" data-type=\"other\" tabindex=\"0\" aria-label=\"Alice, other nurse, on break, has student, has comment\"><span class=\"nurse-name\">Alice</span><span class=\"chips\"><span class=\"chip\" aria-label=\"On break\"><span class=\"icon\">⏸️</span></span><span class=\"chip\" aria-label=\"Has student\"><span class=\"icon\">🎓</span></span><span class=\"chip\" aria-label=\"Has comment\"><span class=\"icon\">💬</span></span></span></div>"`
+      `"<div class=\"nurse-pill\" data-type=\"other\" tabindex=\"0\" aria-label=\"Alice, other nurse, on break, has student, has comment, marked bad\"><span class=\"nurse-name\">Alice</span><span class=\"chips\"><span class=\"chip\" aria-label=\"On break\"><span class=\"icon\">⏸️</span></span><span class=\"chip\" aria-label=\"Has student\"><span class=\"icon\">🎓</span></span><span class=\"chip\" aria-label=\"Has comment\"><span class=\"icon\">💬</span></span><span class=\"chip\" aria-label=\"Marked bad\"><span class=\"icon\">⚠️</span></span></span></div>"`
     );
   });
 });

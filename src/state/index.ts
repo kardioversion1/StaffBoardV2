@@ -43,6 +43,12 @@ export type Config = {
   showPinned?: { charge: boolean; triage: boolean };
   rss?: { url: string; enabled: boolean };
   privacy?: boolean;
+  ui?: {
+    signoutMode?: 'shiftHuddle' | 'disabled' | 'legacySignout';
+    rightSidebarWidthPx?: number;
+    rightSidebarMinPx?: number;
+    rightSidebarMaxPx?: number;
+  };
 };
 
 export type Staff = {
@@ -131,6 +137,12 @@ let CONFIG_CACHE: Config = {
   showPinned: { charge: true, triage: true },
   rss: { url: '', enabled: false },
   privacy: true,
+  ui: {
+    signoutMode: 'shiftHuddle',
+    rightSidebarWidthPx: 300,
+    rightSidebarMinPx: 260,
+    rightSidebarMaxPx: 420,
+  },
 };
 
 export function getConfig(): Config {
@@ -193,6 +205,16 @@ export function mergeConfigDefaults(): Config {
     enabled: cfg.rss?.enabled === true,
   };
   cfg.privacy = cfg.privacy !== false;
+
+  cfg.ui = {
+    signoutMode: cfg.ui?.signoutMode || 'shiftHuddle',
+    rightSidebarWidthPx:
+      typeof cfg.ui?.rightSidebarWidthPx === 'number'
+        ? cfg.ui.rightSidebarWidthPx
+        : 300,
+    rightSidebarMinPx: cfg.ui?.rightSidebarMinPx || 260,
+    rightSidebarMaxPx: cfg.ui?.rightSidebarMaxPx || 420,
+  };
 
   cfg.theme = cfg.theme === 'light' ? 'light' : 'dark';
   cfg.fontScale = cfg.fontScale && !isNaN(cfg.fontScale) ? cfg.fontScale : 1;

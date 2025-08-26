@@ -1,6 +1,9 @@
-import { DB, KS, getConfig, STATE, loadStaff, Staff } from '@/state';
+import { DB, KS, getConfig, STATE, loadStaff, saveStaff, Staff } from '@/state';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWidgets } from './widgets';
+import { nurseTile } from './nurseTile';
+import { startBreak, endBreak, type Slot } from '@/slots';
+import { canonNurseType } from '@/domain/lexicon';
 
 function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: string[]) {
   return {
@@ -98,7 +101,7 @@ export async function renderMain(
     };
 
     renderLeadership(active);
-    renderZones(active, cfg);
+    renderZones(active, cfg, staff, queueSave);
     wireComments(active, queueSave);
     renderSupport(active, queueSave);
     renderIncoming(active, queueSave);
@@ -135,7 +138,7 @@ function renderLeadership(active: any) {
   }
 }
 
-function renderZones(active: any, cfg: any) {
+function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
   const cont = document.getElementById('zones')!;
   cont.innerHTML = '';
   for (const z of cfg.zones || []) {
@@ -146,7 +149,21 @@ function renderZones(active: any, cfg: any) {
     const list = document.createElement('div');
     for (const s of active.zones[z] || []) {
       const item = document.createElement('div');
-      item.textContent = labelFromId(s.nurseId);
+      const st = staff.find((n) => n.id === s.nurseId);
+      const tileWrapper = document.createElement('div');
+      tileWrapper.innerHTML = nurseTile(s, {
+        id: st?.id || s.nurseId,
+        name: st?.name,
+        type: st?.type || 'other',
+      } as Staff);
+      item.appendChild(tileWrapper.firstElementChild!);
+      const btn = document.createElement('button');
+      btn.textContent = 'Manage';
+      btn.className = 'btn';
+      btn.addEventListener('click', () =>
+        manageSlot(s, st, staff, save, () => renderZones(active, cfg, staff, save))
+      );
+      item.appendChild(btn);
       list.appendChild(item);
     }
     div.appendChild(list);
@@ -223,4 +240,54 @@ function renderOffgoing(active: any, save: () => void) {
 function renderClock() {
   const el = document.getElementById('clock');
   if (el) el.textContent = STATE.clockHHMM;
+}
+
+function manageSlot(
+  slot: Slot,
+  st: Staff | undefined,
+  staffList: Staff[],
+  save: () => void,
+  rerender: () => void
+): void {
+  if (!st) return;
+  const name = prompt('Name', st.name || '');
+  if (name !== null) st.name = name.trim() || undefined;
+
+  const rfStr = prompt('RF number', st.rf ? String(st.rf) : '');
+  if (rfStr !== null) st.rf = rfStr.trim() ? Number(rfStr) : undefined;
+
+  const roleIn = prompt('Role (rn/tech/admin)', st.role || 'rn');
+  if (roleIn !== null) {
+    const r = (roleIn || '').toLowerCase();
+    st.role = r === 'tech' ? 'tech' : r === 'admin' ? 'admin' : 'rn';
+  }
+
+  if (st.role === 'rn') {
+    const typeIn = prompt('Nurse type (home/travel/flex/charge/triage/other)', st.type);
+    if (typeIn !== null) {
+      const canon = canonNurseType(typeIn) || st.type;
+      st.type = canon as any;
+    }
+  }
+
+  const stud = prompt(
+    'Student (blank for none)',
+    typeof slot.student === 'string' ? slot.student : ''
+  );
+  if (stud !== null) slot.student = stud.trim() ? stud.trim() : undefined;
+
+  if (slot.break?.active) {
+    if (confirm('End break?')) endBreak(slot);
+  } else {
+    if (confirm('Start break?')) startBreak(slot, {});
+  }
+
+  if (confirm(slot.bad ? 'Clear BAD?' : 'Mark BAD?')) slot.bad = !slot.bad;
+
+  const comment = prompt('Comment', slot.comment || '');
+  if (comment !== null) slot.comment = comment.trim() || undefined;
+
+  saveStaff(staffList);
+  save();
+  rerender();
 }

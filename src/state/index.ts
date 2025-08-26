@@ -33,6 +33,8 @@ export type Config = {
   pin: string;
   relockMin: number;
   widgets: WidgetsConfig;
+  theme?: 'light' | 'dark';
+  fontScale?: number;
 };
 
 export type Staff = {
@@ -41,6 +43,7 @@ export type Staff = {
   first?: string;
   last?: string;
   rf?: number;
+  role?: 'rn' | 'tech' | 'admin';
   type: NurseType;
   active?: boolean;
   notes?: string;
@@ -112,10 +115,18 @@ let CONFIG_CACHE: Config = {
   pin: '4911',
   relockMin: 0,
   widgets: structuredClone(WIDGETS_DEFAULTS),
+  theme: 'dark',
+  fontScale: 1,
 };
 
 export function getConfig(): Config {
   return CONFIG_CACHE;
+}
+
+export function applyThemeAndScale(cfg: Config = CONFIG_CACHE) {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', cfg.theme === 'light' ? 'light' : 'dark');
+  root.style.setProperty('--scale', String(cfg.fontScale ?? 1));
 }
 
 export async function loadConfig(): Promise<Config> {
@@ -152,6 +163,9 @@ export function mergeConfigDefaults(): Config {
     };
   }
 
+  cfg.theme = cfg.theme === 'light' ? 'light' : 'dark';
+  cfg.fontScale = cfg.fontScale && !isNaN(cfg.fontScale) ? cfg.fontScale : 1;
+
   CONFIG_CACHE = cfg as Config;
   return CONFIG_CACHE;
 }
@@ -170,6 +184,7 @@ export async function loadStaff(): Promise<Staff[]> {
   const list = (await DB.get<Staff[]>(KS.STAFF)) || [];
   return list.map((s) => ({
     ...s,
+    role: (s as any).role === 'tech' || (s as any).role === 'admin' ? (s as any).role : 'rn',
     type: (canonNurseType((s as any).type) || (s as any).type) as NurseType,
   }));
 }

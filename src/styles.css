@@ -30,6 +30,16 @@
   --z-modal: 1000;
   --z-toast: 1100;
   --z-drag: 1200;
+
+  --zone-fg: #0a0a0a;
+  --card-border: rgba(0,0,0,.08);
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
+  --ring: rgba(0,120,212,.45);
+
+  --zone-bg-1:#f2f7ff; --zone-bg-2:#f6fff2; --zone-bg-3:#fff7f2;
+  --zone-bg-4:#f7f2ff; --zone-bg-5:#f2fffb; --zone-bg-6:#fff2f7; --zone-bg-7:#f9f9f9;
+  --nurse-bg-1:#e7f0ff; --nurse-bg-2:#ecffe7; --nurse-bg-3:#ffece7;
+  --nurse-bg-4:#ece7ff; --nurse-bg-5:#e7fff8; --nurse-bg-6:#ffe7f0; --nurse-bg-7:#ededed;
 }
 
 :root[data-theme='light']{
@@ -61,13 +71,12 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .clock-big{font-size:var(--f-xl);font-weight:700;line-height:1}
 .date-small{font-size:var(--f);color:var(--text-muted)}
 .actions{display:flex;gap:var(--gap);align-items:center}
-.layout{display:grid;grid-template-columns:1.6fr 1fr;gap:var(--gap)}
+.layout{display:grid;grid-template-columns:1fr clamp(280px,25vw,320px);gap:var(--gap)}
 .panel{background:var(--panel);color:var(--text-high);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--elev-1)}
 .panel h3{color:var(--text-high);font-size:clamp(14px,.95vw,16px)}
 .panel .muted{color:var(--text-muted)}
-.zones-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-@media (max-width:1200px){.zones-grid{grid-template-columns:repeat(3,1fr);}}
-@media (max-width:900px){.layout{grid-template-columns:1fr}.zones-grid{grid-template-columns:repeat(2,1fr);}}
+.zones-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:clamp(8px,1.5vw,12px);max-width:1520px;margin:0 auto}
+@media (max-width:900px){.layout{grid-template-columns:1fr}.zones-grid{grid-template-columns:1fr}}
 
 .widget{background:color-mix(in oklab,var(--control) 96%, black 4%);border:1px dashed var(--line);border-radius:12px;padding:8px 10px;margin-top:8px}
 .widget .title{font-weight:600;color:var(--text-high);display:flex;align-items:center;gap:6px}
@@ -101,7 +110,10 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 
 .nurse-pill:focus-visible,.chip:focus-visible{outline:2px solid color-mix(in oklab,currentColor 60%,white 0%);outline-offset:2px}
 
-@media print{#widgets,.widget{display:none!important}}
+@media print{
+  #widgets,.widget{display:none!important}
+  .zone-card,.nurse-card{background:#fff!important;color:#000!important;box-shadow:none!important}
+}
 
 .overlay,.backdrop,.modal-backdrop{position:fixed;inset:0;z-index:var(--z-modal)}
 .overlay:not(.open),.backdrop:not(.open),.modal-backdrop:not(.open){pointer-events:none;opacity:0}

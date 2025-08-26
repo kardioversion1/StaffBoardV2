@@ -7,7 +7,7 @@ import {
   type Board,
 } from "../src/slots";
 import { isEmployeeIdUnique } from "../src/utils/staff";
-import { nurseTile as renderTile } from "../src/ui/nurseTile";
+import { nurseTile as renderTile } from "@/ui/nurseTile";
 
 describe("ensureUniqueAssignment", () => {
   it("removes duplicates across board", () => {
@@ -77,7 +77,7 @@ describe("nurse tile snapshot", () => {
       type: "other",
     });
     expect(html).toMatchInlineSnapshot(
-      `"<div class=\"nurse-pill\" data-type=\"other\" data-role=\"nurse\" tabindex=\"0\" aria-label=\"Alice, other nurse, on break, has student, has comment, marked bad\"><span class=\"nurse-name\">Alice</span><span class=\"chips\"><span class=\"chip\" aria-label=\"On break\"><span class=\"icon\">⏸️</span></span><span class=\"chip\" aria-label=\"Has student\"><span class=\"icon\">🎓</span></span><span class=\"chip\" aria-label=\"Has comment\"><span class=\"icon\">💬</span></span><span class=\"chip\" aria-label=\"Marked bad\"><span class=\"icon\">⚠️</span></span></span></div>"`
+      `"<div class=\"nurse-card\" data-type=\"other\" data-role=\"nurse\" tabindex=\"0\" aria-label=\"Alice, other nurse, on break, has student, has comment, marked bad\"><div class=\"nurse-card__text\"><div class=\"nurse-card__name\">Alice</div><div class=\"nurse-card__meta\">other nurse</div></div><span class=\"chips\"><span class=\"chip\" aria-label=\"On break\"><span class=\"icon\">⏸️</span></span><span class=\"chip\" aria-label=\"Has student\"><span class=\"icon\">🎓</span></span><span class=\"chip\" aria-label=\"Has comment\"><span class=\"icon\">💬</span></span><span class=\"chip\" aria-label=\"Marked bad\"><span class=\"icon\">⚠️</span></span></span></div>"`
     );
   });
 });

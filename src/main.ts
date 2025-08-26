@@ -1,6 +1,15 @@
 import './styles.css';
 
-import { STATE, initState, applyDraftToActive, loadConfig, applyThemeAndScale } from '@/state';
+import {
+  STATE,
+  initState,
+  applyDraftToActive,
+  loadConfig,
+  applyThemeAndScale,
+  getConfig,
+} from '@/state';
+import { seedDefaults } from '@/seedDefaults';
+import { fetchWeather, renderWidgets } from '@/ui/widgets';
 import { hhmmNowLocal, deriveShift } from '@/utils/time';
 import { renderHeader } from '@/ui/header';
 import { renderTabs, activeTab } from '@/ui/tabs';
@@ -41,18 +50,38 @@ export async function manualHandoff() {
 }
 
 initState();
-loadConfig().then(() => {
+loadConfig().then(async () => {
+  await seedDefaults();
   applyThemeAndScale();
   renderAll();
-  setInterval(async () => {
+
+  const clockTimer = setInterval(async () => {
     const hhmm = hhmmNowLocal();
     const shift = deriveShift(hhmm);
     if (shift !== STATE.shift) {
       initState();
       await applyDraftToActive(STATE.dateISO, STATE.shift);
-    } else {
+      renderAll();
+    } else if (STATE.clockHHMM !== hhmm) {
       STATE.clockHHMM = hhmm;
+      const el = document.getElementById('clock');
+      if (el) el.textContent = hhmm;
     }
-    renderAll();
   }, 1000);
+
+  const weatherTimer = setInterval(async () => {
+    const body = document.getElementById('widgets-body');
+    const cfg = getConfig();
+    if (body && cfg.widgets.weather.mode === 'openweather' && cfg.widgets.weather.apiKey) {
+      await fetchWeather();
+      await renderWidgets(body);
+    }
+  }, 10 * 60 * 1000);
+
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      clearInterval(clockTimer);
+      clearInterval(weatherTimer);
+    });
+  }
 });

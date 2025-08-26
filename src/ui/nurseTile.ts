@@ -27,10 +27,10 @@ export function nurseTile(slot: Slot, staff: Staff): string {
   if (slot.student) statuses.push('has student');
   if (slot.comment) statuses.push('has comment');
   if (slot.bad) statuses.push('marked bad');
-  const aria = `${name}, ${staff.type} nurse${
+  const aria = `${name}, ${staff.type} ${staff.role}${
     statuses.length ? ', ' + statuses.join(', ') : ''
   }`;
   const chipStr = chips.length ? `<span class="chips">${chips.join('')}</span>` : '';
-  return `<div class="nurse-pill" data-type="${staff.type}" tabindex="0" aria-label="${aria}"><span class="nurse-name">${name}</span>${chipStr}</div>`;
+  return `<div class="nurse-pill" data-type="${staff.type}" data-role="${staff.role}" tabindex="0" aria-label="${aria}"><span class="nurse-name">${name}</span>${chipStr}</div>`;
 }
 

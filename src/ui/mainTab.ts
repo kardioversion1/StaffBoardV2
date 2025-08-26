@@ -315,6 +315,7 @@ function manageSlot(
     if (zoneSel.value !== zone) {
       moveSlot(board, { zone, index }, { zone: zoneSel.value });
     }
+    // best-effort save; not awaiting to keep UI snappy
     saveStaff(staffList);
     save();
     overlay.remove();

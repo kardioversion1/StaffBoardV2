@@ -244,7 +244,7 @@ function renderWidgetsPanel() {
       w.weather.current.temp =
         w.weather.units === 'C'
           ? ((w.weather.current.temp - 32) * 5) / 9
-          : w.weather.current.temp * 9 / 5 + 32;
+          : (w.weather.current.temp * 9) / 5 + 32;
     }
     await saveConfig({ widgets: w });
     if (
@@ -328,12 +328,14 @@ function renderDisplaySettings() {
     await saveConfig({ fontScale: scale });
     applyThemeAndScale({ ...cfg, fontScale: scale });
   });
+
   (document.getElementById('theme-select') as HTMLSelectElement).value = cfg.theme || 'dark';
   document.getElementById('theme-select')!.addEventListener('change', async (e) => {
     const theme = (e.target as HTMLSelectElement).value as 'light' | 'dark';
     await saveConfig({ theme });
     applyThemeAndScale({ ...cfg, theme });
   });
+
   (document.getElementById('high-contrast') as HTMLInputElement).checked = !!cfg.highContrast;
   document.getElementById('high-contrast')!.addEventListener('change', async (e) => {
     const hc = (e.target as HTMLInputElement).checked;

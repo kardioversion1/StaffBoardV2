@@ -50,11 +50,5 @@ export function nurseTile(slot: Slot, staff: Staff): string {
 
   const chipStr = chips.length ? `<span class="chips">${chips.join('')}</span>` : '';
 
-  return `<div class="nurse-card" data-type="${staff.type ?? 'other'}" data-role="${staff.role ?? 'nurse'}" tabindex="0" aria-label="${aria}">
-    <div class="nurse-card__text">
-      <div class="nurse-card__name">${name}</div>
-      <div class="nurse-card__meta">${meta}</div>
-    </div>
-    ${chipStr}
-  </div>`;
+  return `<div class="nurse-card" data-type="${staff.type ?? 'other'}" data-role="${staff.role ?? 'nurse'}" tabindex="0" aria-label="${aria}"><div class="nurse-card__text"><div class="nurse-card__name">${name}</div><div class="nurse-card__meta">${meta}</div></div>${chipStr}</div>`;
 }

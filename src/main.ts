@@ -8,6 +8,7 @@ import {
   applyThemeAndScale,
   getConfig,
 } from '@/state';
+import { applyUI } from '@/state/uiConfig';
 import { seedDefaults } from '@/seedDefaults';
 import { fetchWeather, renderWidgets } from '@/ui/widgets';
 import { hhmmNowLocal, deriveShift } from '@/utils/time';
@@ -53,6 +54,7 @@ initState();
 loadConfig().then(async () => {
   await seedDefaults();
   applyThemeAndScale();
+  applyUI();
   renderAll();
 
   const clockTimer = setInterval(async () => {
@@ -64,8 +66,9 @@ loadConfig().then(async () => {
       renderAll();
     } else if (STATE.clockHHMM !== hhmm) {
       STATE.clockHHMM = hhmm;
-      const el = document.getElementById('clock');
-      if (el) el.textContent = hhmm;
+      document.querySelectorAll('.clock-big').forEach((el) => {
+        (el as HTMLElement).textContent = hhmm;
+      });
     }
   }, 1000);
 

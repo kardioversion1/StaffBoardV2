@@ -1,6 +1,7 @@
 import { STATE, getConfig, saveConfig, applyThemeAndScale } from '@/state';
 import { deriveShift, fmtLong } from '@/utils/time';
 import { manualHandoff } from '@/main';
+import { openHuddle } from '@/ui/huddle';
 
 export function renderHeader() {
   const app = document.getElementById("app")!;
@@ -12,6 +13,13 @@ export function renderHeader() {
   }
   const shift = deriveShift(STATE.clockHHMM);
   const shiftLabel = shift === "day" ? "Day (07–19)" : "Night (19–07)";
+  const mode = getConfig().ui?.signoutMode || 'shiftHuddle';
+  const actionBtn =
+    mode === 'shiftHuddle'
+      ? '<button id="huddle-btn" class="btn">Shift Huddle</button>'
+      : mode === 'legacySignout'
+        ? '<button id="handoff" class="btn">Sign-out</button>'
+        : '';
   header.innerHTML = `
     <div class="title-block">
       <div class="title">ED Staffing Board</div>
@@ -23,10 +31,13 @@ export function renderHeader() {
     </div>
     <div class="actions">
       <button id="theme-toggle" class="btn">🌓</button>
-      <button id="handoff" class="btn">Sign-out</button>
+      ${actionBtn}
     </div>
   `;
-  document.getElementById('handoff')!.addEventListener('click', manualHandoff);
+  if (mode === 'shiftHuddle')
+    document.getElementById('huddle-btn')?.addEventListener('click', openHuddle);
+  else if (mode === 'legacySignout')
+    document.getElementById('handoff')?.addEventListener('click', manualHandoff);
   document.getElementById('theme-toggle')!.addEventListener('click', async () => {
     const cfg = getConfig();
     const next = cfg.theme === 'light' ? 'dark' : 'light';

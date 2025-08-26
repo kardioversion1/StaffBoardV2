@@ -8,6 +8,8 @@ import {
 } from '@/state';
 import { createStaffId, ensureStaffId } from '@/utils/id';
 import { fetchWeather, renderWidgets } from './widgets';
+import { getUIConfig, saveUIConfig, applyUI } from '@/state/uiConfig';
+import { renderHeader } from '@/ui/header';
 
 function mapIcon(cond: string) {
   const c = (cond || '').toLowerCase();
@@ -177,6 +179,7 @@ async function renderRosterPane() {
 
 function renderGeneralSettings() {
   const cfg = getConfig();
+  const ui = getUIConfig();
   const el = document.getElementById('general-settings')!;
   const palette = ['#FDE2E4','#E2F0CB','#CDE7FB','#FFF1A8','#EAD7FF','#FAD4C0','#E0E0E0'];
   const zoneOptions = (z: string) =>
@@ -201,6 +204,20 @@ function renderGeneralSettings() {
       <div class="form-row"><label><input type="checkbox" id="gs-privacy"${cfg.privacy!==false?' checked':''}> Privacy mode: First LastInitial</label></div>
       <div class="form-row"><label>RSS URL <input id="gs-rss" value="${cfg.rss?.url || ''}"></label></div>
       <div class="form-row"><label><input type="checkbox" id="gs-rss-en"${cfg.rss?.enabled?' checked':''}> Enable feed</label></div>
+      <div class="form-row">
+        <label>Signout Button Mode</label>
+        <div>
+          <label><input type="radio" name="signout-mode" value="shiftHuddle"${ui.signoutMode==='shiftHuddle'?' checked':''}> Shift Huddle</label>
+          <label><input type="radio" name="signout-mode" value="disabled"${ui.signoutMode==='disabled'?' checked':''}> Disabled</label>
+          <label><input type="radio" name="signout-mode" value="legacySignout"${ui.signoutMode==='legacySignout'?' checked':''}> Legacy Signout</label>
+        </div>
+        <div class="muted">Controls Signout button behavior.</div>
+      </div>
+      <div class="form-row">
+        <label for="gs-sidebar-width">Right Sidebar Width</label>
+        <input id="gs-sidebar-width" type="range" min="${ui.rightSidebarMinPx}" max="${ui.rightSidebarMaxPx}" value="${ui.rightSidebarWidthPx}">
+        <input id="gs-sidebar-width-num" type="number" min="${ui.rightSidebarMinPx}" max="${ui.rightSidebarMaxPx}" value="${ui.rightSidebarWidthPx}">
+      </div>
     </section>
   `;
 
@@ -246,6 +263,30 @@ function renderGeneralSettings() {
   (document.getElementById('gs-rss-en') as HTMLInputElement).addEventListener('change', async (e) => {
     cfg.rss!.enabled = (e.target as HTMLInputElement).checked;
     await saveConfig({ rss: cfg.rss });
+  });
+
+  el.querySelectorAll('input[name="signout-mode"]').forEach((r) => {
+    r.addEventListener('change', async (e) => {
+      const mode = (e.target as HTMLInputElement).value as any;
+      await saveUIConfig({ signoutMode: mode });
+      renderHeader();
+    });
+  });
+  const range = document.getElementById('gs-sidebar-width') as HTMLInputElement;
+  const num = document.getElementById('gs-sidebar-width-num') as HTMLInputElement;
+  const sync = (val: number) => {
+    range.value = num.value = String(val);
+    applyUI({ ...ui, rightSidebarWidthPx: val });
+  };
+  range.addEventListener('input', () => sync(parseInt(range.value)));
+  range.addEventListener('change', async () => {
+    ui.rightSidebarWidthPx = parseInt(range.value);
+    await saveUIConfig({ rightSidebarWidthPx: ui.rightSidebarWidthPx });
+  });
+  num.addEventListener('input', () => sync(parseInt(num.value)));
+  num.addEventListener('change', async () => {
+    ui.rightSidebarWidthPx = parseInt(num.value);
+    await saveUIConfig({ rightSidebarWidthPx: ui.rightSidebarWidthPx });
   });
 }
 

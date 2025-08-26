@@ -8,3 +8,6 @@
 - fix: ensure assigned nurses render in zone cards with graceful missing-id handling.
 - feat: settings two-panel layout with scrollable roster and nurse editor.
 - feat: zone color palette, DTO minutes, pinned roles toggle, privacy toggle, RSS field.
+- feat: Shift Huddle mode replaces/controls Signout button (configurable).
+- feat: Right sidebar width is now adjustable in Settings.
+- chore: removed redundant small clock from right column.

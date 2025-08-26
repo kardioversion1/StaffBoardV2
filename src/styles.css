@@ -20,6 +20,7 @@
   --accent-charge: #FFB703;
   --accent-triage: #06D6A0;
   --accent-other: #A29BFE;
+  --right-sidebar-w:clamp(260px,300px,420px);
 
   --halo: 0 0 0 1px color-mix(in oklab, currentColor 50%, transparent) inset,
           0 0 18px color-mix(in oklab, currentColor 35%, transparent);
@@ -61,7 +62,7 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .clock-big{font-size:var(--f-xl);font-weight:700;line-height:1}
 .date-small{font-size:var(--f);color:var(--text-muted)}
 .actions{display:flex;gap:var(--gap);align-items:center}
-.layout{display:grid;grid-template-columns:1.6fr 1fr;gap:var(--gap)}
+.layout{display:grid;grid-template-columns:1fr var(--right-sidebar-w);gap:var(--gap)}
 .panel{background:var(--panel);color:var(--text-high);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--elev-1)}
 .panel h3{color:var(--text-high);font-size:clamp(14px,.95vw,16px)}
 .panel .muted{color:var(--text-muted)}
@@ -109,6 +110,7 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 
 .offcanvas{position:fixed;top:0;right:0;bottom:0;width:300px;background:var(--panel);transform:translateX(100%);pointer-events:none;transition:transform .3s;z-index:var(--z-modal)}
 .offcanvas.open{transform:translateX(0);pointer-events:auto}
+@media (prefers-reduced-motion: reduce){.offcanvas{transition:none}}
 
 .drag-layer{position:fixed;inset:0;pointer-events:none;z-index:var(--z-drag)}
 

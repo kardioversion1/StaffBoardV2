@@ -73,11 +73,6 @@ export async function renderMain(
           <div id="offgoing"></div>
         </section>
 
-        <section class="panel">
-          <h3>Clock</h3>
-          <div id="clock" class="clock"></div>
-        </section>
-
         <section id="widgets" class="panel">
           <h3>Ops Widgets</h3>
           <div id="widgets-body"></div>
@@ -98,7 +93,6 @@ export async function renderMain(
     wireComments(active, queueSave);
     renderIncoming(active, queueSave);
     renderOffgoing(active, queueSave);
-    renderClock();
     await renderWidgets(document.getElementById('widgets-body')!);
 
     document.addEventListener('config-changed', () => {
@@ -248,11 +242,6 @@ function renderOffgoing(active: any, save: () => void) {
     cont.appendChild(div);
   }
   save();
-}
-
-function renderClock() {
-  const el = document.getElementById('clock');
-  if (el) el.textContent = STATE.clockHHMM;
 }
 
 function manageSlot(

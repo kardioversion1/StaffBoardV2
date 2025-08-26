@@ -24,6 +24,7 @@ describe('config round trip', () => {
       showPinned: { charge: false, triage: true },
       rss: { url: 'http://x', enabled: true },
       privacy: false,
+      ui: { signoutMode: 'legacySignout', rightSidebarWidthPx: 350 },
     });
     const cfg = await loadConfig();
     expect(cfg.zoneColors?.A).toBe('#fff');
@@ -31,5 +32,7 @@ describe('config round trip', () => {
     expect(cfg.showPinned?.charge).toBe(false);
     expect(cfg.rss?.url).toBe('http://x');
     expect(cfg.privacy).toBe(false);
+    expect(cfg.ui?.signoutMode).toBe('legacySignout');
+    expect(cfg.ui?.rightSidebarWidthPx).toBe(350);
   });
 });

@@ -9,7 +9,7 @@ import {
   Staff,
   DraftShift,
 } from '@/state';
-import { setNurseCache, labelFromId, formatShortName } from '@/utils/names';
+import { setNurseCache, labelFromId, formatDisplayName } from '@/utils/names';
 import { upsertSlot, moveSlot, removeSlot } from '@/slots';
 import { createStaffId } from '@/utils/id';
 import { CANONICAL_ZONES } from '@/seedDefaults';
@@ -117,7 +117,7 @@ export async function renderDraftTab(root: HTMLElement) {
         li.dataset.type = s.type;
         li.draggable = true;
         li.dataset.id = s.id;
-        const name = formatShortName(s.name || '');
+        const name = formatDisplayName(s.name || '');
         const rf = s.rf != null ? `RF ${s.rf}` : '';
         li.innerHTML = `<span class="nurse-name">${name}</span><span class="chip">${s.type[0].toUpperCase()}</span><span class="nurse-meta">${rf}</span>`;
         if (selected === s.id) li.classList.add('selected');

@@ -1,4 +1,5 @@
 import type { Staff } from '@/state';
+import { getConfig } from '@/state';
 
 let NURSES: Staff[] = [];
 
@@ -13,9 +14,15 @@ export function setNurseCache(list: Staff[]): void {
  * Format a short name from a full name.
  * Returns "First L." given "First Last".
  */
-export function formatShortName(full: string): string {
+export function formatName(full: string, privacy = true): string {
   const [f = '', l = ''] = (full || '').trim().split(/\s+/);
+  if (!privacy) return [f, l].filter(Boolean).join(' ').trim();
   return l ? `${f} ${l[0].toUpperCase()}.` : f;
+}
+
+export function formatDisplayName(full: string): string {
+  const cfg = getConfig();
+  return formatName(full, cfg.privacy !== false);
 }
 
 /**
@@ -34,5 +41,5 @@ export function labelFromId(id?: string): string {
   const n = getNurseById(id);
   if (!n) return '';
   const full = n.name || `${n.first || ''} ${n.last || ''}`.trim();
-  return formatShortName(full);
+  return formatDisplayName(full);
 }

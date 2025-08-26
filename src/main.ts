@@ -1,6 +1,6 @@
 import './styles.css';
 
-import { STATE, initState, applyDraftToActive } from '@/state';
+import { STATE, initState, applyDraftToActive, loadConfig, applyThemeAndScale } from '@/state';
 import { hhmmNowLocal, deriveShift } from '@/utils/time';
 import { renderHeader } from '@/ui/header';
 import { renderTabs, activeTab } from '@/ui/tabs';
@@ -11,6 +11,7 @@ import { renderHistoryTab } from '@/ui/historyTab';
 import { outlineBlockers } from '@/utils/debug';
 
 export async function renderAll() {
+  applyThemeAndScale();
   await renderHeader();
   await renderTabs();
   const root = document.getElementById('panel')!;
@@ -40,15 +41,18 @@ export async function manualHandoff() {
 }
 
 initState();
-renderAll();
-setInterval(async () => {
-  const hhmm = hhmmNowLocal();
-  const shift = deriveShift(hhmm);
-  if (shift !== STATE.shift) {
-    initState();
-    await applyDraftToActive(STATE.dateISO, STATE.shift);
-  } else {
-    STATE.clockHHMM = hhmm;
-  }
+loadConfig().then(() => {
+  applyThemeAndScale();
   renderAll();
-}, 1000);
+  setInterval(async () => {
+    const hhmm = hhmmNowLocal();
+    const shift = deriveShift(hhmm);
+    if (shift !== STATE.shift) {
+      initState();
+      await applyDraftToActive(STATE.dateISO, STATE.shift);
+    } else {
+      STATE.clockHHMM = hhmm;
+    }
+    renderAll();
+  }, 1000);
+});

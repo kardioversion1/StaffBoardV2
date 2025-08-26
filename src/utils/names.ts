@@ -15,9 +15,18 @@ export function setNurseCache(list: Staff[]): void {
  * Returns "First L." given "First Last".
  */
 export function formatName(full: string, privacy = true): string {
-  const [f = '', l = ''] = (full || '').trim().split(/\s+/);
-  if (!privacy) return [f, l].filter(Boolean).join(' ').trim();
-  return l ? `${f} ${l[0].toUpperCase()}.` : f;
+  const parts = (full || '').trim().split(/\s+/).filter(Boolean);
+  const first = parts[0] || '';
+  const last = parts.length > 1 ? parts[parts.length - 1] : '';
+  if (!privacy) return [first, last].filter(Boolean).join(' ').trim();
+  return last ? `${first} ${last[0].toUpperCase()}.` : first;
+}
+
+/**
+ * Convenience wrapper for privacy-on short names.
+ */
+export function formatShortName(full: string): string {
+  return formatName(full, true);
 }
 
 export function formatDisplayName(full: string): string {

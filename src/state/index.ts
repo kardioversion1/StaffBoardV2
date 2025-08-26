@@ -43,6 +43,7 @@ export type Staff = {
   first?: string;
   last?: string;
   rf?: number;
+  role?: 'rn' | 'tech' | 'admin';
   type: NurseType;
   active?: boolean;
   notes?: string;
@@ -183,6 +184,7 @@ export async function loadStaff(): Promise<Staff[]> {
   const list = (await DB.get<Staff[]>(KS.STAFF)) || [];
   return list.map((s) => ({
     ...s,
+    role: (s as any).role === 'tech' || (s as any).role === 'admin' ? (s as any).role : 'rn',
     type: (canonNurseType((s as any).type) || (s as any).type) as NurseType,
   }));
 }

@@ -27,7 +27,7 @@ export async function renderAll() {
       renderHistoryTab(root);
       break;
     case 'Settings':
-      renderSettingsTab(root);
+      await renderSettingsTab(root);
       break;
     // other tabs can be added here
   }

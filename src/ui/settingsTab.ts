@@ -1,8 +1,16 @@
-import { getConfig, saveConfig, mergeConfigDefaults, applyThemeAndScale } from '@/state';
+import {
+  getConfig,
+  saveConfig,
+  mergeConfigDefaults,
+  applyThemeAndScale,
+  loadStaff,
+  saveStaff,
+  Staff,
+} from '@/state';
 import { fetchWeather, renderWidgets } from './widgets';
 
 function mapIcon(cond: string) {
-  const c = cond.toLowerCase();
+  const c = (cond || '').toLowerCase();
   if (c.includes('storm') || c.includes('thunder')) return 'storm';
   if (c.includes('snow')) return 'snow';
   if (c.includes('rain') || c.includes('drizzle')) return 'rain';
@@ -11,12 +19,134 @@ function mapIcon(cond: string) {
   return 'sun';
 }
 
-export function renderSettingsTab(root: HTMLElement) {
+/** Render the Settings tab including roster and display options. */
+export async function renderSettingsTab(root: HTMLElement): Promise<void> {
   mergeConfigDefaults();
-  root.innerHTML = `<div id="display-settings"></div><div id="settings-widgets"></div><div id="type-legend"></div>`;
+  root.innerHTML = `<div id="roster-settings"></div><div id="display-settings"></div><div id="settings-widgets"></div><div id="type-legend"></div>`;
+  await renderRosterSettings();
   renderDisplaySettings();
   renderWidgetsPanel();
   renderTypeLegend();
+}
+
+async function renderRosterSettings(): Promise<void> {
+  const el = document.getElementById('roster-settings')!;
+  let staff = await loadStaff();
+
+  const renderTable = () => {
+    el.innerHTML = `
+    <section class="panel">
+      <h3>Staff Roster</h3>
+      <div class="btn-row">
+        <button id="staff-add" class="btn">Add</button>
+        <button id="staff-export" class="btn">Export JSON</button>
+        <input id="staff-file" type="file" accept="application/json" style="display:none">
+        <button id="staff-import" class="btn">Import JSON</button>
+      </div>
+      <table id="staff-table">
+        <thead><tr><th>Name</th><th>RF</th><th>Role</th><th>Type</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>`;
+    const tbody = el.querySelector('#staff-table tbody')!;
+    staff.forEach((s) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input data-id="${s.id}" data-field="name" value="${s.name || ''}"></td>
+        <td><input data-id="${s.id}" data-field="rf" type="number" value="${s.rf ?? ''}"></td>
+        <td><select data-id="${s.id}" data-field="role">
+          <option value="rn"${(s.role === 'rn' || s.role === 'nurse') ? ' selected' : ''}>RN</option>
+          <option value="tech"${s.role === 'tech' ? ' selected' : ''}>Tech</option>
+          <option value="sitter"${s.role === 'sitter' ? ' selected' : ''}>Sitter</option>
+          <option value="ancillary"${s.role === 'ancillary' ? ' selected' : ''}>Ancillary</option>
+          <option value="admin"${s.role === 'admin' ? ' selected' : ''}>Admin</option>
+        </select></td>
+        <td><select data-id="${s.id}" data-field="type">
+          <option value="home"${s.type === 'home' ? ' selected' : ''}>home</option>
+          <option value="travel"${s.type === 'travel' ? ' selected' : ''}>travel</option>
+          <option value="flex"${s.type === 'flex' ? ' selected' : ''}>flex</option>
+          <option value="charge"${s.type === 'charge' ? ' selected' : ''}>charge</option>
+          <option value="triage"${s.type === 'triage' ? ' selected' : ''}>triage</option>
+          <option value="other"${s.type === 'other' ? ' selected' : ''}>other</option>
+        </select></td>
+        <td><button class="btn" data-del="${s.id}">×</button></td>
+      `;
+      const roleSel = tr.querySelector('select[data-field="role"]') as HTMLSelectElement;
+      const typeSel = tr.querySelector('select[data-field="type"]') as HTMLSelectElement;
+      typeSel.disabled = (roleSel.value !== 'rn');
+      roleSel.addEventListener('change', () => {
+        typeSel.disabled = roleSel.value !== 'rn';
+      });
+      tbody.appendChild(tr);
+    });
+
+    tbody.addEventListener('input', async (e) => {
+      const target = e.target as HTMLInputElement | HTMLSelectElement;
+      const id = target.getAttribute('data-id');
+      const field = target.getAttribute('data-field') as keyof Staff | null;
+      if (!id || !field) return;
+      const entry = staff.find((s) => s.id === id);
+      if (!entry) return;
+
+      if (field === 'rf') entry.rf = target.value ? Number(target.value) : undefined;
+      else if (field === 'name') entry.name = target.value;
+      else if (field === 'role') {
+        const v = (target as HTMLSelectElement).value as Staff['role'];
+        // normalize any legacy/externally-imported "nurse" to "rn"
+        entry.role = (v === 'nurse' ? 'rn' : v) as Staff['role'];
+      } else if (field === 'type') entry.type = target.value as any;
+
+      await saveStaff(staff);
+    });
+
+    tbody.addEventListener('click', async (e) => {
+      const id = (e.target as HTMLElement).getAttribute('data-del');
+      if (!id) return;
+      staff = staff.filter((s) => s.id !== id);
+      await saveStaff(staff);
+      renderTable();
+    });
+
+    (el.querySelector('#staff-add') as HTMLButtonElement).onclick = async () => {
+      staff.push({ id: crypto.randomUUID(), role: 'rn', type: 'other' } as Staff);
+      await saveStaff(staff);
+      renderTable();
+    };
+
+    (el.querySelector('#staff-export') as HTMLButtonElement).onclick = () => {
+      const blob = new Blob([JSON.stringify(staff, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'staff-roster.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    const fileInput = el.querySelector('#staff-file') as HTMLInputElement;
+    (el.querySelector('#staff-import') as HTMLButtonElement).onclick = () => fileInput.click();
+    fileInput.onchange = async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      try {
+        const arr = JSON.parse(text) as Partial<Staff>[];
+        staff = arr.map((s) => ({
+          id: s.id || crypto.randomUUID(),
+          name: s.name || '',
+          rf: s.rf,
+          // accept either 'rn' or 'nurse' from imports
+          role: ((s.role === 'nurse' ? 'rn' : s.role) || 'rn') as Staff['role'],
+          type: (s.type as any) ?? 'other',
+        }));
+        await saveStaff(staff);
+        renderTable();
+      } catch {
+        alert('Invalid JSON');
+      }
+    };
+  };
+
+  renderTable();
 }
 
 function renderTypeLegend() {
@@ -84,7 +214,8 @@ function renderWidgetsPanel() {
 `;
 
   (document.getElementById('w-show') as HTMLInputElement).checked = w.show !== false;
-  (document.getElementById('w-mode') as HTMLSelectElement).value = w.weather.mode === 'openweather' ? 'OpenWeather' : 'Manual';
+  (document.getElementById('w-mode') as HTMLSelectElement).value =
+    w.weather.mode === 'openweather' ? 'OpenWeather' : 'Manual';
   (document.getElementById('w-units') as HTMLSelectElement).value = w.weather.units;
   (document.getElementById('w-city') as HTMLInputElement).value = w.weather.city || '';
   (document.getElementById('w-lat') as HTMLInputElement).value = w.weather.lat?.toString() || '';
@@ -93,8 +224,8 @@ function renderWidgetsPanel() {
   (document.getElementById('w-temp') as HTMLInputElement).value = w.weather.current?.temp?.toString() || '';
   (document.getElementById('w-cond') as HTMLInputElement).value = w.weather.current?.condition || '';
   (document.getElementById('w-loc') as HTMLInputElement).value = w.weather.current?.location || '';
-  (document.getElementById('h-int') as HTMLInputElement).value = w.headlines.internal;
-  (document.getElementById('h-ext') as HTMLInputElement).value = w.headlines.external;
+  (document.getElementById('h-int') as HTMLInputElement).value = w.headlines.internal || '';
+  (document.getElementById('h-ext') as HTMLInputElement).value = w.headlines.external || '';
 
   const manual = document.getElementById('w-manual')!;
   manual.style.display = w.weather.mode === 'manual' ? 'grid' : 'none';
@@ -120,7 +251,7 @@ function renderWidgetsPanel() {
       w.weather.current.temp =
         w.weather.units === 'C'
           ? ((w.weather.current.temp - 32) * 5) / 9
-          : w.weather.current.temp * 9 / 5 + 32;
+          : (w.weather.current.temp * 9) / 5 + 32;
     }
     await saveConfig({ widgets: w });
     if (
@@ -186,11 +317,36 @@ function renderDisplaySettings() {
         </select>
       </label>
     </div>
+    <div class="form-row">
+      <label>Theme
+        <select id="theme-select">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-row">
+      <label><input type="checkbox" id="high-contrast"> High contrast</label>
+    </div>
   </section>`;
   (document.getElementById('font-scale') as HTMLSelectElement).value = (cfg.fontScale || 1).toString();
   document.getElementById('font-scale')!.addEventListener('change', async (e) => {
     const scale = parseFloat((e.target as HTMLSelectElement).value);
     await saveConfig({ fontScale: scale });
     applyThemeAndScale({ ...cfg, fontScale: scale });
+  });
+
+  (document.getElementById('theme-select') as HTMLSelectElement).value = cfg.theme || 'dark';
+  document.getElementById('theme-select')!.addEventListener('change', async (e) => {
+    const theme = (e.target as HTMLSelectElement).value as 'light' | 'dark';
+    await saveConfig({ theme });
+    applyThemeAndScale({ ...cfg, theme });
+  });
+
+  (document.getElementById('high-contrast') as HTMLInputElement).checked = !!cfg.highContrast;
+  document.getElementById('high-contrast')!.addEventListener('change', async (e) => {
+    const hc = (e.target as HTMLInputElement).checked;
+    await saveConfig({ highContrast: hc });
+    applyThemeAndScale({ ...cfg, highContrast: hc });
   });
 }

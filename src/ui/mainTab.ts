@@ -2,6 +2,7 @@ import { DB, KS, getConfig, STATE, loadStaff, saveStaff, Staff } from '@/state';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWidgets } from './widgets';
 import { nurseTile } from './nurseTile';
+import './mainBoard/boardLayout.css';
 import { startBreak, endBreak, moveSlot, type Slot } from '@/slots';
 import { canonNurseType } from '@/domain/lexicon';
 
@@ -34,7 +35,7 @@ export async function renderMain(
     if (!active) active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones || []);
 
     root.innerHTML = `
-    <div class="layout">
+    <div class="layout" data-testid="main-board">
       <div class="col col-left">
         <section class="panel">
           <h3>Leadership</h3>
@@ -133,27 +134,35 @@ function renderLeadership(active: any) {
 function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
   const cont = document.getElementById('zones')!;
   cont.innerHTML = '';
-  for (const z of cfg.zones || []) {
-    const div = document.createElement('div');
-    const h = document.createElement('h4');
-    h.textContent = z;
-    div.appendChild(h);
-    const list = document.createElement('div');
+  (cfg.zones || []).forEach((z: string, i: number) => {
+    const section = document.createElement('section');
+    section.className = 'zone-card';
+    section.setAttribute('data-testid', 'zone-card');
+    const zi = (i % 7) + 1;
+    const ni = ((i + 1) % 7) + 1;
+    section.style.setProperty('--zone-bg', `var(--zone-bg-${zi})`);
+    section.style.setProperty('--nurse-bg', `var(--nurse-bg-${ni})`);
+
+    const title = document.createElement('h2');
+    title.className = 'zone-card__title';
+    title.textContent = z;
+    section.appendChild(title);
+
+    const body = document.createElement('div');
+    body.className = 'zone-card__body';
 
     (active.zones[z] || []).forEach((s: Slot, idx: number) => {
-      const item = document.createElement('div');
+      const row = document.createElement('div');
+      row.className = 'nurse-row';
       const st = staff.find((n) => n.id === s.nurseId);
       const tileWrapper = document.createElement('div');
-
-      // Ensure nurseTile gets a consistent role/type shape
       tileWrapper.innerHTML = nurseTile(s, {
         id: st?.id || s.nurseId,
         name: st?.name,
         role: st?.role || 'nurse',
         type: st?.type || 'other',
       } as Staff);
-
-      item.appendChild(tileWrapper.firstElementChild!);
+      row.appendChild(tileWrapper.firstElementChild!);
 
       const btn = document.createElement('button');
       btn.textContent = 'Manage';
@@ -171,13 +180,13 @@ function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
           cfg
         )
       );
-      item.appendChild(btn);
-      list.appendChild(item);
+      row.appendChild(btn);
+      body.appendChild(row);
     });
 
-    div.appendChild(list);
-    cont.appendChild(div);
-  }
+    section.appendChild(body);
+    cont.appendChild(section);
+  });
 }
 
 function wireComments(active: any, save: () => void) {

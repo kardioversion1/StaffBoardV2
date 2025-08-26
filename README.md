@@ -10,6 +10,10 @@ for the UI.
 - `npm run build` – build for production
 - `npm test` – run unit tests
 
+## Roster management
+
+The Settings tab includes an editable staff roster with JSON import/export for nurses, techs, sitters, ancillary staff, and administrators.
+
 ## Importing historical shifts
 
 Historical board data can be preloaded by importing a JSON string.  The helper
@@ -26,8 +30,7 @@ await importHistoryFromJSON(
       shift: 'day',
       zones: { Alpha: [{ nurseId: 'robot-01' }] },
       incoming: [],
-      offgoing: [],
-      support: { techs: [], vols: [], sitters: [] }
+      offgoing: []
     }
   ])
 );

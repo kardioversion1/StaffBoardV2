@@ -35,6 +35,7 @@ export type Config = {
   widgets: WidgetsConfig;
   theme?: 'light' | 'dark';
   fontScale?: number;
+  highContrast?: boolean;
 };
 
 export type Staff = {
@@ -43,7 +44,7 @@ export type Staff = {
   first?: string;
   last?: string;
   rf?: number;
-  role?: 'rn' | 'tech' | 'admin';
+  role?: 'rn' | 'tech' | 'sitter' | 'ancillary' | 'admin';
   type: NurseType;
   active?: boolean;
   notes?: string;
@@ -66,7 +67,6 @@ export interface ActiveShift {
   zones: Record<string, Slot[]>;
   incoming: { nurseId: string; eta: string; arrived?: boolean }[];
   offgoing: { nurseId: string; ts: number }[];
-  support: { techs: string[]; vols: string[]; sitters: string[] };
   comments: string;
 }
 
@@ -117,6 +117,7 @@ let CONFIG_CACHE: Config = {
   widgets: structuredClone(WIDGETS_DEFAULTS),
   theme: 'dark',
   fontScale: 1,
+  highContrast: false,
 };
 
 export function getConfig(): Config {
@@ -127,6 +128,7 @@ export function applyThemeAndScale(cfg: Config = CONFIG_CACHE) {
   const root = document.documentElement;
   root.setAttribute('data-theme', cfg.theme === 'light' ? 'light' : 'dark');
   root.style.setProperty('--scale', String(cfg.fontScale ?? 1));
+  root.setAttribute('data-contrast', cfg.highContrast ? 'high' : 'normal');
 }
 
 export async function loadConfig(): Promise<Config> {
@@ -165,6 +167,7 @@ export function mergeConfigDefaults(): Config {
 
   cfg.theme = cfg.theme === 'light' ? 'light' : 'dark';
   cfg.fontScale = cfg.fontScale && !isNaN(cfg.fontScale) ? cfg.fontScale : 1;
+  cfg.highContrast = cfg.highContrast === true;
 
   CONFIG_CACHE = cfg as Config;
   return CONFIG_CACHE;
@@ -184,7 +187,9 @@ export async function loadStaff(): Promise<Staff[]> {
   const list = (await DB.get<Staff[]>(KS.STAFF)) || [];
   return list.map((s) => ({
     ...s,
-    role: (s as any).role === 'tech' || (s as any).role === 'admin' ? (s as any).role : 'rn',
+    role: ['tech', 'sitter', 'ancillary', 'admin'].includes((s as any).role)
+      ? ((s as any).role as Staff['role'])
+      : 'rn',
     type: (canonNurseType((s as any).type) || (s as any).type) as NurseType,
   }));
 }

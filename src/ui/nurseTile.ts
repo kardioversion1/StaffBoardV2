@@ -1,6 +1,6 @@
 import type { Slot } from "../slots";
 import type { Staff } from "../state";
-import { formatShortName } from "@/utils/names";
+import { formatDisplayName } from "@/utils/names";
 
 export function nurseTile(slot: Slot, staff: Staff): string {
   const chips: string[] = [];
@@ -21,7 +21,7 @@ export function nurseTile(slot: Slot, staff: Staff): string {
       `<span class="chip" aria-label="Marked bad"><span class="icon">⚠️</span></span>`
     );
 
-  const name = formatShortName(staff.name);
+  const name = formatDisplayName(staff.name || '');
   const statuses: string[] = [];
   if (slot.break?.active) statuses.push('on break');
   if (slot.student) statuses.push('has student');

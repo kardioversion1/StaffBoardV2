@@ -2,7 +2,6 @@ import {
   getConfig,
   saveConfig,
   mergeConfigDefaults,
-  applyThemeAndScale,
   loadStaff,
   saveStaff,
   Staff,
@@ -23,95 +22,78 @@ function mapIcon(cond: string) {
 /** Render the Settings tab including roster and display options. */
 export async function renderSettingsTab(root: HTMLElement): Promise<void> {
   mergeConfigDefaults();
-  root.innerHTML = `<div id="roster-settings"></div><div id="display-settings"></div><div id="settings-widgets"></div><div id="type-legend"></div>`;
-  await renderRosterSettings();
-  renderDisplaySettings();
+  root.innerHTML = `
+    <div class="settings-grid">
+      <div id="roster-pane" class="panel roster-box" data-testid="roster-pane"></div>
+      <div class="settings-pane">
+        <div id="nurse-editor" data-testid="nurse-editor"></div>
+        <div id="general-settings" data-testid="general-settings"></div>
+      </div>
+    </div>
+    <div id="settings-widgets"></div>
+    <div id="type-legend"></div>
+  `;
+  await renderRosterPane();
+  renderGeneralSettings();
   renderWidgetsPanel();
   renderTypeLegend();
 }
 
-async function renderRosterSettings(): Promise<void> {
-  const el = document.getElementById('roster-settings')!;
+async function renderRosterPane() {
+  const el = document.getElementById('roster-pane')!;
   let staff = await loadStaff();
+  let selected: string | null = null;
 
-  const renderTable = () => {
+  const renderList = (filter = '') => {
+    const rows = staff
+      .filter((s) => (s.name || '').toLowerCase().includes(filter))
+      .map(
+        (s) => `
+        <div class="roster-row${s.id === selected ? ' selected' : ''}" data-id="${s.id}">
+          <span>${s.name || ''}</span>
+          <span class="muted">${s.role}</span>
+          <span class="muted">${s.type}</span>
+        </div>`
+      )
+      .join('');
     el.innerHTML = `
-    <section class="panel">
-      <h3>Staff Roster</h3>
+      <h3>Nurse Roster</h3>
+      <input id="roster-search" class="input" placeholder="Search">
+      <div id="roster-list" class="roster-box">${rows}</div>
       <div class="btn-row">
         <button id="staff-add" class="btn">Add</button>
-        <button id="staff-export" class="btn">Export JSON</button>
+        <button id="staff-export" class="btn">Export</button>
         <input id="staff-file" type="file" accept="application/json" style="display:none">
-        <button id="staff-import" class="btn">Import JSON</button>
+        <button id="staff-import" class="btn">Import</button>
       </div>
-      <table id="staff-table">
-        <thead><tr><th>Name</th><th>RF</th><th>Role</th><th>Type</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>`;
-    const tbody = el.querySelector('#staff-table tbody')!;
-    staff.forEach((s) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input data-id="${s.id}" data-field="name" value="${s.name || ''}"></td>
-        <td><input data-id="${s.id}" data-field="rf" type="number" value="${s.rf ?? ''}"></td>
-        <td><select data-id="${s.id}" data-field="role">
-          <option value="nurse"${s.role === 'nurse' ? ' selected' : ''}>Nurse</option>
-          <option value="tech"${s.role === 'tech' ? ' selected' : ''}>Tech</option>
-        </select></td>
-        <td><select data-id="${s.id}" data-field="type">
-          <option value="home"${s.type === 'home' ? ' selected' : ''}>home</option>
-          <option value="travel"${s.type === 'travel' ? ' selected' : ''}>travel</option>
-          <option value="flex"${s.type === 'flex' ? ' selected' : ''}>flex</option>
-          <option value="charge"${s.type === 'charge' ? ' selected' : ''}>charge</option>
-          <option value="triage"${s.type === 'triage' ? ' selected' : ''}>triage</option>
-          <option value="other"${s.type === 'other' ? ' selected' : ''}>other</option>
-        </select></td>
-        <td><button class="btn" data-del="${s.id}">×</button></td>
-      `;
-      const roleSel = tr.querySelector('select[data-field="role"]') as HTMLSelectElement;
-      const typeSel = tr.querySelector('select[data-field="type"]') as HTMLSelectElement;
-      typeSel.disabled = roleSel.value !== 'nurse';
-      roleSel.addEventListener('change', () => {
-        typeSel.disabled = roleSel.value !== 'nurse';
+    `;
+
+    const search = document.getElementById('roster-search') as HTMLInputElement;
+    let t: any;
+    search.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => renderList(search.value.toLowerCase()), 200);
+    });
+
+    el.querySelectorAll('.roster-row').forEach((row) => {
+      row.addEventListener('click', () => {
+        selected = row.getAttribute('data-id');
+        renderList(search.value.toLowerCase());
+        renderEditor();
       });
-      tbody.appendChild(tr);
     });
 
-    tbody.addEventListener('input', async (e) => {
-      const target = e.target as HTMLInputElement | HTMLSelectElement;
-      const id = target.getAttribute('data-id');
-      const field = target.getAttribute('data-field') as keyof Staff | null;
-      if (!id || !field) return;
-      const entry = staff.find((s) => s.id === id);
-      if (!entry) return;
-
-      if (field === 'rf') entry.rf = target.value ? Number(target.value) : undefined;
-      else if (field === 'name') entry.name = target.value;
-      else if (field === 'role') {
-        const v = (target as HTMLSelectElement).value as Staff['role'];
-        entry.role = v;
-      } else if (field === 'type') entry.type = target.value as any;
-
+    (document.getElementById('staff-add') as HTMLButtonElement).onclick = async () => {
+      const n = { id: createStaffId(), role: 'nurse', type: 'other' } as Staff;
+      staff.push(n);
       await saveStaff(staff);
-    });
-
-    tbody.addEventListener('click', async (e) => {
-      const id = (e.target as HTMLElement).getAttribute('data-del');
-      if (!id) return;
-      staff = staff.filter((s) => s.id !== id);
-      await saveStaff(staff);
-      renderTable();
-    });
-
-    (el.querySelector('#staff-add') as HTMLButtonElement).onclick = async () => {
-      staff.push({ id: createStaffId(), role: 'nurse', type: 'other' } as Staff);
-      await saveStaff(staff);
-      renderTable();
+      renderList(search.value.toLowerCase());
     };
 
-    (el.querySelector('#staff-export') as HTMLButtonElement).onclick = () => {
-      const blob = new Blob([JSON.stringify(staff, null, 2)], { type: 'application/json' });
+    (document.getElementById('staff-export') as HTMLButtonElement).onclick = () => {
+      const blob = new Blob([JSON.stringify(staff, null, 2)], {
+        type: 'application/json',
+      });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'staff-roster.json';
@@ -119,30 +101,152 @@ async function renderRosterSettings(): Promise<void> {
       URL.revokeObjectURL(a.href);
     };
 
-    const fileInput = el.querySelector('#staff-file') as HTMLInputElement;
-    (el.querySelector('#staff-import') as HTMLButtonElement).onclick = () => fileInput.click();
+    const fileInput = document.getElementById('staff-file') as HTMLInputElement;
+    (document.getElementById('staff-import') as HTMLButtonElement).onclick = () =>
+      fileInput.click();
     fileInput.onchange = async () => {
       const file = fileInput.files?.[0];
       if (!file) return;
       const text = await file.text();
       try {
-        const arr = JSON.parse(text) as Partial<Staff>[];
-        staff = arr.map((s) => ({
-          id: s.id ? ensureStaffId(s.id) : createStaffId(),
-          name: s.name || '',
-          rf: s.rf,
-          role: s.role === 'tech' ? 'tech' : 'nurse',
-          type: (s.type as any) ?? 'other',
-        }));
+        const arr = JSON.parse(text) as Staff[];
+        staff = arr.map((s) => ({ ...s, id: ensureStaffId(s.id) }));
         await saveStaff(staff);
-        renderTable();
+        renderList(search.value.toLowerCase());
       } catch {
         alert('Invalid JSON');
       }
     };
   };
 
-  renderTable();
+  const renderEditor = () => {
+    const wrap = document.getElementById('nurse-editor')!;
+    const st = staff.find((s) => s.id === selected);
+    if (!st) {
+      wrap.innerHTML = '';
+      return;
+    }
+    wrap.innerHTML = `
+      <section class="panel">
+        <h3>Edit Nurse</h3>
+        <div class="form-grid">
+          <label>First <input id="ne-first" value="${st.first || ''}"></label>
+          <label>Last <input id="ne-last" value="${st.last || ''}"></label>
+          <label>Role
+            <select id="ne-role">
+              <option value="nurse"${st.role === 'nurse' ? ' selected' : ''}>nurse</option>
+              <option value="tech"${st.role === 'tech' ? ' selected' : ''}>tech</option>
+            </select>
+          </label>
+          <label>Type
+            <select id="ne-type">
+              <option>home</option><option>travel</option><option>flex</option><option>charge</option><option>triage</option><option>other</option>
+            </select>
+          </label>
+        </div>
+        <label>Notes <textarea id="ne-notes">${st.notes || ''}</textarea></label>
+        <div class="btn-row"><button id="ne-save" class="btn">Save</button><button id="ne-cancel" class="btn">Cancel</button></div>
+        <div id="ne-err" class="muted"></div>
+      </section>
+    `;
+    (document.getElementById('ne-type') as HTMLSelectElement).value = st.type;
+    (document.getElementById('ne-save') as HTMLButtonElement).onclick = async () => {
+      const first = (document.getElementById('ne-first') as HTMLInputElement).value.trim();
+      if (!first) {
+        (document.getElementById('ne-err') as HTMLElement).textContent = 'First required';
+        return;
+      }
+      st.first = first;
+      st.last = (document.getElementById('ne-last') as HTMLInputElement).value.trim();
+      st.name = `${st.first} ${st.last}`.trim();
+      st.role = (document.getElementById('ne-role') as HTMLSelectElement).value as Staff['role'];
+      st.type = (document.getElementById('ne-type') as HTMLSelectElement).value as any;
+      st.notes = (document.getElementById('ne-notes') as HTMLTextAreaElement).value || undefined;
+      await saveStaff(staff);
+      renderList((document.getElementById('roster-search') as HTMLInputElement).value.toLowerCase());
+      document.dispatchEvent(new Event('config-changed'));
+    };
+    (document.getElementById('ne-cancel') as HTMLButtonElement).onclick = () => {
+      renderList((document.getElementById('roster-search') as HTMLInputElement).value.toLowerCase());
+      renderEditor();
+    };
+  };
+
+  renderList();
+}
+
+function renderGeneralSettings() {
+  const cfg = getConfig();
+  const el = document.getElementById('general-settings')!;
+  const palette = ['#FDE2E4','#E2F0CB','#CDE7FB','#FFF1A8','#EAD7FF','#FAD4C0','#E0E0E0'];
+  const zoneOptions = (z: string) =>
+    `<select data-zone="${z}" class="zone-sel">` +
+    '<option value="">Default</option>' +
+    palette
+      .map((c) => `<option value="${c}"${cfg.zoneColors?.[z]===c?' selected':''} style="background:${c}">${c}</option>`)
+      .join('') +
+    '</select>';
+  const zonesHTML = cfg.zones
+    .map((z) => `<div class="form-row"><label>${z} ${zoneOptions(z)}</label></div>`)
+    .join('');
+  el.innerHTML = `
+    <section class="panel">
+      <h3>General</h3>
+      ${zonesHTML}
+      <div class="form-row"><label>Day hours <input id="gs-day" type="number" value="${cfg.shiftDurations?.day}"></label></div>
+      <div class="form-row"><label>Night hours <input id="gs-night" type="number" value="${cfg.shiftDurations?.night}"></label></div>
+      <div class="form-row"><label>DTO minutes <input id="gs-dto" type="number" value="${cfg.dtoMinutes}"></label></div>
+      <div class="form-row"><label><input type="checkbox" id="gs-charge"${cfg.showPinned?.charge!==false?' checked':''}> Show Charge panel when empty</label></div>
+      <div class="form-row"><label><input type="checkbox" id="gs-triage"${cfg.showPinned?.triage!==false?' checked':''}> Show Triage panel when empty</label></div>
+      <div class="form-row"><label><input type="checkbox" id="gs-privacy"${cfg.privacy!==false?' checked':''}> Privacy mode: First LastInitial</label></div>
+      <div class="form-row"><label>RSS URL <input id="gs-rss" value="${cfg.rss?.url || ''}"></label></div>
+      <div class="form-row"><label><input type="checkbox" id="gs-rss-en"${cfg.rss?.enabled?' checked':''}> Enable feed</label></div>
+    </section>
+  `;
+
+  el.querySelectorAll('.zone-sel').forEach((sel) => {
+    sel.addEventListener('change', async () => {
+      const zone = (sel as HTMLSelectElement).getAttribute('data-zone')!;
+      cfg.zoneColors![zone] = (sel as HTMLSelectElement).value;
+      await saveConfig({ zoneColors: cfg.zoneColors });
+      document.dispatchEvent(new Event('config-changed'));
+    });
+  });
+  (document.getElementById('gs-day') as HTMLInputElement).addEventListener('change', async (e) => {
+    cfg.shiftDurations!.day = parseInt((e.target as HTMLInputElement).value) || 12;
+    await saveConfig({ shiftDurations: cfg.shiftDurations });
+  });
+  (document.getElementById('gs-night') as HTMLInputElement).addEventListener('change', async (e) => {
+    cfg.shiftDurations!.night = parseInt((e.target as HTMLInputElement).value) || 12;
+    await saveConfig({ shiftDurations: cfg.shiftDurations });
+  });
+  (document.getElementById('gs-dto') as HTMLInputElement).addEventListener('change', async (e) => {
+    cfg.dtoMinutes = parseInt((e.target as HTMLInputElement).value) || 60;
+    await saveConfig({ dtoMinutes: cfg.dtoMinutes });
+  });
+  (document.getElementById('gs-charge') as HTMLInputElement).addEventListener('change', async (e) => {
+    cfg.showPinned!.charge = (e.target as HTMLInputElement).checked;
+    await saveConfig({ showPinned: cfg.showPinned });
+    document.dispatchEvent(new Event('config-changed'));
+  });
+  (document.getElementById('gs-triage') as HTMLInputElement).addEventListener('change', async (e) => {
+    cfg.showPinned!.triage = (e.target as HTMLInputElement).checked;
+    await saveConfig({ showPinned: cfg.showPinned });
+    document.dispatchEvent(new Event('config-changed'));
+  });
+  (document.getElementById('gs-privacy') as HTMLInputElement).addEventListener('change', async (e) => {
+    cfg.privacy = (e.target as HTMLInputElement).checked;
+    await saveConfig({ privacy: cfg.privacy });
+    document.dispatchEvent(new Event('config-changed'));
+  });
+  (document.getElementById('gs-rss') as HTMLInputElement).addEventListener('input', async (e) => {
+    cfg.rss!.url = (e.target as HTMLInputElement).value;
+    await saveConfig({ rss: cfg.rss });
+  });
+  (document.getElementById('gs-rss-en') as HTMLInputElement).addEventListener('change', async (e) => {
+    cfg.rss!.enabled = (e.target as HTMLInputElement).checked;
+    await saveConfig({ rss: cfg.rss });
+  });
 }
 
 function renderTypeLegend() {
@@ -298,51 +402,3 @@ function renderWidgetsPanel() {
   });
 }
 
-function renderDisplaySettings() {
-  const cfg = getConfig();
-  const el = document.getElementById('display-settings')!;
-  el.innerHTML = `
-  <section class="panel">
-    <h3>Display</h3>
-    <div class="form-row">
-      <label>Font size
-        <select id="font-scale">
-          <option value="1">Normal</option>
-          <option value="1.2">Large</option>
-          <option value="1.4">Extra Large</option>
-        </select>
-      </label>
-    </div>
-    <div class="form-row">
-      <label>Theme
-        <select id="theme-select">
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-        </select>
-      </label>
-    </div>
-    <div class="form-row">
-      <label><input type="checkbox" id="high-contrast"> High contrast</label>
-    </div>
-  </section>`;
-  (document.getElementById('font-scale') as HTMLSelectElement).value = (cfg.fontScale || 1).toString();
-  document.getElementById('font-scale')!.addEventListener('change', async (e) => {
-    const scale = parseFloat((e.target as HTMLSelectElement).value);
-    await saveConfig({ fontScale: scale });
-    applyThemeAndScale({ ...cfg, fontScale: scale });
-  });
-
-  (document.getElementById('theme-select') as HTMLSelectElement).value = cfg.theme || 'dark';
-  document.getElementById('theme-select')!.addEventListener('change', async (e) => {
-    const theme = (e.target as HTMLSelectElement).value as 'light' | 'dark';
-    await saveConfig({ theme });
-    applyThemeAndScale({ ...cfg, theme });
-  });
-
-  (document.getElementById('high-contrast') as HTMLInputElement).checked = !!cfg.highContrast;
-  document.getElementById('high-contrast')!.addEventListener('change', async (e) => {
-    const hc = (e.target as HTMLInputElement).checked;
-    await saveConfig({ highContrast: hc });
-    applyThemeAndScale({ ...cfg, highContrast: hc });
-  });
-}

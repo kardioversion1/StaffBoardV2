@@ -34,7 +34,7 @@ export async function renderMain(
     if (!active) active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones || []);
 
     root.innerHTML = `
-    <div class="layout">
+    <div class="layout" data-testid="main-board">
       <div class="col col-left">
         <section class="panel">
           <h3>Leadership</h3>
@@ -100,6 +100,12 @@ export async function renderMain(
     renderOffgoing(active, queueSave);
     renderClock();
     await renderWidgets(document.getElementById('widgets-body')!);
+
+    document.addEventListener('config-changed', () => {
+      const c = getConfig();
+      renderLeadership(active);
+      renderZones(active, c, staff, queueSave);
+    });
   } catch (err) {
     console.error(err);
     root.innerHTML = `
@@ -116,10 +122,15 @@ export async function renderMain(
 }
 
 function renderLeadership(active: any) {
-  (document.getElementById('slot-charge') as HTMLElement).textContent =
-    labelFromId(active.charge?.nurseId);
-  (document.getElementById('slot-triage') as HTMLElement).textContent =
-    labelFromId(active.triage?.nurseId);
+  const cfg = getConfig();
+  const chargeEl = document.getElementById('slot-charge') as HTMLElement;
+  const triageEl = document.getElementById('slot-triage') as HTMLElement;
+  chargeEl.textContent = labelFromId(active.charge?.nurseId);
+  triageEl.textContent = labelFromId(active.triage?.nurseId);
+  chargeEl.style.display =
+    active.charge?.nurseId || cfg.showPinned?.charge ? '' : 'none';
+  triageEl.style.display =
+    active.triage?.nurseId || cfg.showPinned?.triage ? '' : 'none';
   const adminEl = document.getElementById('slot-admin') as HTMLElement;
   if (active.admin?.nurseId) {
     adminEl.style.display = '';
@@ -135,22 +146,30 @@ function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
   cont.innerHTML = '';
   for (const z of cfg.zones || []) {
     const div = document.createElement('div');
+    div.className = 'zone-card';
+    div.dataset.testid = 'zone-card';
+    const color = cfg.zoneColors?.[z];
+    if (color) div.style.background = color;
     const h = document.createElement('h4');
     h.textContent = z;
     div.appendChild(h);
     const list = document.createElement('div');
 
     (active.zones[z] || []).forEach((s: Slot, idx: number) => {
-      const item = document.createElement('div');
       const st = staff.find((n) => n.id === s.nurseId);
+      if (!st) {
+        console.warn('Unknown staffId', s.nurseId);
+        return;
+      }
+      const item = document.createElement('div');
       const tileWrapper = document.createElement('div');
 
       // Ensure nurseTile gets a consistent role/type shape
       tileWrapper.innerHTML = nurseTile(s, {
-        id: st?.id || s.nurseId,
-        name: st?.name,
-        role: st?.role || 'nurse',
-        type: st?.type || 'other',
+        id: st.id,
+        name: st.name,
+        role: st.role || 'nurse',
+        type: st.type || 'other',
       } as Staff);
 
       item.appendChild(tileWrapper.firstElementChild!);

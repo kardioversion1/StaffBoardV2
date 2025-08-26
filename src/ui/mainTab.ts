@@ -12,9 +12,7 @@ function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: string
     charge: undefined,
     triage: undefined,
     admin: undefined,
-    zones: Object.fromEntries(
-      [...zones, 'Bullpen'].map((z) => [z, [] as any[]])
-    ),
+    zones: Object.fromEntries([...zones, 'Bullpen'].map((z) => [z, [] as any[]])),
     incoming: [],
     offgoing: [],
     comments: '',
@@ -28,8 +26,10 @@ export async function renderMain(
   try {
     const cfg = getConfig();
     if (!cfg.zones.includes('Bullpen')) cfg.zones.push('Bullpen');
+
     const staff: Staff[] = await loadStaff();
     setNurseCache(staff);
+
     let active: any = await DB.get(KS.ACTIVE(ctx.dateISO, ctx.shift));
     if (!active) active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones || []);
 
@@ -139,16 +139,21 @@ function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
     h.textContent = z;
     div.appendChild(h);
     const list = document.createElement('div');
+
     (active.zones[z] || []).forEach((s: Slot, idx: number) => {
       const item = document.createElement('div');
       const st = staff.find((n) => n.id === s.nurseId);
       const tileWrapper = document.createElement('div');
+
+      // Ensure nurseTile gets a consistent role/type shape
       tileWrapper.innerHTML = nurseTile(s, {
         id: st?.id || s.nurseId,
         name: st?.name,
         type: st?.type || 'other',
       } as Staff);
+
       item.appendChild(tileWrapper.firstElementChild!);
+
       const btn = document.createElement('button');
       btn.textContent = 'Manage';
       btn.className = 'btn';
@@ -168,6 +173,7 @@ function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
       item.appendChild(btn);
       list.appendChild(item);
     });
+
     div.appendChild(list);
     cont.appendChild(div);
   }
@@ -197,6 +203,7 @@ function renderIncoming(active: any, save: () => void) {
     });
     cont.appendChild(div);
   });
+
   const btn = document.getElementById('add-incoming') as HTMLButtonElement;
   btn.disabled = STATE.locked;
   btn.onclick = () => {
@@ -240,6 +247,10 @@ function manageSlot(
   cfg: any
 ): void {
   if (!st) return;
+
+  // Normalize role for selection (some data may use "nurse" instead of "rn")
+  const currentRole = (st.role === 'nurse' ? 'rn' : st.role) as Staff['role'];
+
   const overlay = document.createElement('div');
   overlay.className = 'manage-overlay';
   overlay.innerHTML = `<div class="manage-dialog">
@@ -247,13 +258,13 @@ function manageSlot(
     <label>Name <input id="mg-name" value="${st.name || ''}"></label>
     <label>RF <input id="mg-rf" type="number" value="${st.rf ?? ''}"></label>
     <label>Role <select id="mg-role">
-      <option value="rn"${st.role === 'rn' ? ' selected' : ''}>RN</option>
-      <option value="tech"${st.role === 'tech' ? ' selected' : ''}>Tech</option>
-      <option value="sitter"${st.role === 'sitter' ? ' selected' : ''}>Sitter</option>
-      <option value="ancillary"${st.role === 'ancillary' ? ' selected' : ''}>Ancillary</option>
-      <option value="admin"${st.role === 'admin' ? ' selected' : ''}>Admin</option>
+      <option value="rn"${currentRole === 'rn' ? ' selected' : ''}>RN</option>
+      <option value="tech"${currentRole === 'tech' ? ' selected' : ''}>Tech</option>
+      <option value="sitter"${currentRole === 'sitter' ? ' selected' : ''}>Sitter</option>
+      <option value="ancillary"${currentRole === 'ancillary' ? ' selected' : ''}>Ancillary</option>
+      <option value="admin"${currentRole === 'admin' ? ' selected' : ''}>Admin</option>
     </select></label>
-    <div id="mg-type-wrap" style="display:${st.role === 'rn' ? '' : 'none'}">
+    <div id="mg-type-wrap" style="display:${currentRole === 'rn' ? '' : 'none'}">
       <label>Type <select id="mg-type">
         <option value="home"${st.type === 'home' ? ' selected' : ''}>home</option>
         <option value="travel"${st.type === 'travel' ? ' selected' : ''}>travel</option>
@@ -267,14 +278,10 @@ function manageSlot(
       typeof slot.student === 'string' ? slot.student : ''
     }"></label>
     <label>Comment <input id="mg-comment" value="${slot.comment || ''}"></label>
-    <label><input type="checkbox" id="mg-break" ${
-      slot.break?.active ? 'checked' : ''
-    } /> On break</label>
+    <label><input type="checkbox" id="mg-break" ${slot.break?.active ? 'checked' : ''}/> On break</label>
     <label><input type="checkbox" id="mg-bad" ${slot.bad ? 'checked' : ''}/> Bad</label>
-    <label>End time <input id="mg-end" type="time" value="${
-      slot.endTimeOverrideHHMM || ''
-    }"></label>
-    <label>Zone <select id="mg-zone">${cfg.zones
+    <label>End time <input id="mg-end" type="time" value="${slot.endTimeOverrideHHMM || ''}"></label>
+    <label>Zone <select id="mg-zone">${(cfg.zones || [])
       .map((z: string) => `<option value="${z}"${z === zone ? ' selected' : ''}>${z}</option>`)
       .join('')}</select></label>
     <div class="dialog-actions">
@@ -293,28 +300,41 @@ function manageSlot(
   overlay.querySelector('#mg-cancel')!.addEventListener('click', () => overlay.remove());
   overlay.querySelector('#mg-save')!.addEventListener('click', () => {
     st.name = (overlay.querySelector('#mg-name') as HTMLInputElement).value.trim() || undefined;
+
     const rfVal = (overlay.querySelector('#mg-rf') as HTMLInputElement).value.trim();
     st.rf = rfVal ? Number(rfVal) : undefined;
-    st.role = roleSel.value as Staff['role'];
+
+    // Save role (normalize "nurse" -> "rn")
+    const selectedRole = roleSel.value as Staff['role'];
+    st.role = (selectedRole === 'nurse' ? 'rn' : selectedRole) as Staff['role'];
+
     if (st.role === 'rn') {
       const tval = (overlay.querySelector('#mg-type') as HTMLSelectElement).value;
       const canon = canonNurseType(tval) || st.type;
       st.type = canon as any;
     }
+
     const studVal = (overlay.querySelector('#mg-student') as HTMLInputElement).value.trim();
     slot.student = studVal ? studVal : undefined;
+
     const commentVal = (overlay.querySelector('#mg-comment') as HTMLInputElement).value.trim();
     slot.comment = commentVal ? commentVal : undefined;
+
     const breakChecked = (overlay.querySelector('#mg-break') as HTMLInputElement).checked;
     if (breakChecked && !slot.break?.active) startBreak(slot, {});
     if (!breakChecked && slot.break?.active) endBreak(slot);
+
     slot.bad = (overlay.querySelector('#mg-bad') as HTMLInputElement).checked;
+
     const endVal = (overlay.querySelector('#mg-end') as HTMLInputElement).value;
     slot.endTimeOverrideHHMM = endVal ? endVal : undefined;
+
     const zoneSel = overlay.querySelector('#mg-zone') as HTMLSelectElement;
     if (zoneSel.value !== zone) {
       moveSlot(board, { zone, index }, { zone: zoneSel.value });
     }
+
+    // best-effort save; not awaiting to keep UI snappy
     saveStaff(staffList);
     save();
     overlay.remove();

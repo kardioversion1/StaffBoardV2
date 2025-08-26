@@ -33,15 +33,20 @@
   --z-toast: 1100;
   --z-drag: 1200;
 
-  --zone-fg: #0a0a0a;
+  --zone-fg: #f2f5fb;
   --card-border: rgba(0,0,0,.08);
   --shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
   --ring: rgba(0,120,212,.45);
 
-  --zone-bg-1:#f2f7ff; --zone-bg-2:#f6fff2; --zone-bg-3:#fff7f2;
-  --zone-bg-4:#f7f2ff; --zone-bg-5:#f2fffb; --zone-bg-6:#fff2f7; --zone-bg-7:#f9f9f9;
-  --nurse-bg-1:#e7f0ff; --nurse-bg-2:#ecffe7; --nurse-bg-3:#ffece7;
-  --nurse-bg-4:#ece7ff; --nurse-bg-5:#e7fff8; --nurse-bg-6:#ffe7f0; --nurse-bg-7:#ededed;
+  /* dark palette */
+  --zone-bg-1:#3b82f6; --zone-bg-2:#2563eb; --zone-bg-3:#1d4ed8;
+  --zone-bg-4:#ef4444; --zone-bg-5:#b91c1c;
+  --zone-bg-6:#10b981; --zone-bg-7:#047857; --zone-bg-8:#8b5cf6;
+
+  /* nurse tones harmonized with zone colors */
+  --nurse-bg-1:#60a5fa; --nurse-bg-2:#3b82f6; --nurse-bg-3:#2563eb;
+  --nurse-bg-4:#f87171; --nurse-bg-5:#ef4444;
+  --nurse-bg-6:#34d399; --nurse-bg-7:#10b981; --nurse-bg-8:#a78bfa;
 }
 
 :root[data-theme='light']{
@@ -55,6 +60,17 @@
   --text-muted:#54627A;
   --elev-1: 0 2px 8px rgba(0,0,0,.08);
   --elev-2: 0 6px 20px rgba(0,0,0,.12);
+
+  --zone-fg: #0a0a0a;
+  /* light palette */
+  --zone-bg-1:#dbeafe; --zone-bg-2:#bfdbfe; --zone-bg-3:#93c5fd;
+  --zone-bg-4:#fee2e2; --zone-bg-5:#fecaca;
+  --zone-bg-6:#d1fae5; --zone-bg-7:#a7f3d0; --zone-bg-8:#ede9fe;
+
+  /* nurse tones for light theme */
+  --nurse-bg-1:#bfdbfe; --nurse-bg-2:#93c5fd; --nurse-bg-3:#60a5fa;
+  --nurse-bg-4:#fecaca; --nurse-bg-5:#fca5a5;
+  --nurse-bg-6:#a7f3d0; --nurse-bg-7:#6ee7b7; --nurse-bg-8:#ddd6fe;
 }
 
 :root[data-contrast='high']{

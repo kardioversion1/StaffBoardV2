@@ -181,7 +181,12 @@ function renderGeneralSettings() {
   const cfg = getConfig();
   const ui = getUIConfig();
   const el = document.getElementById('general-settings')!;
-  const palette = ['#FDE2E4','#E2F0CB','#CDE7FB','#FFF1A8','#EAD7FF','#FAD4C0','#E0E0E0'];
+  const palette = [
+    '#3b82f6', '#2563eb', '#1d4ed8', // blues
+    '#ef4444', '#b91c1c',             // reds
+    '#10b981', '#047857',             // greens
+    '#8b5cf6',                        // purple
+  ];
   const zoneOptions = (z: string) =>
     `<select data-zone="${z}" class="zone-sel">` +
     '<option value="">Default</option>' +

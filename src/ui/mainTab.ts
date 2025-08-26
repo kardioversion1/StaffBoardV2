@@ -6,6 +6,17 @@ import './mainBoard/boardLayout.css';
 import { startBreak, endBreak, moveSlot, type Slot } from '@/slots';
 import { canonNurseType } from '@/domain/lexicon';
 
+const PALETTE: [string, string][] = [
+  ['#3b82f6', '#60a5fa'],
+  ['#2563eb', '#3b82f6'],
+  ['#1d4ed8', '#2563eb'],
+  ['#ef4444', '#f87171'],
+  ['#b91c1c', '#ef4444'],
+  ['#10b981', '#34d399'],
+  ['#047857', '#10b981'],
+  ['#8b5cf6', '#a78bfa'],
+];
+
 function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: string[]) {
   return {
     dateISO,
@@ -151,9 +162,11 @@ function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
     const explicit = cfg.zoneColors?.[z];
     if (explicit) {
       section.style.background = explicit;
+      const match = PALETTE.find(([zone]) => zone.toLowerCase() === explicit.toLowerCase());
+      if (match) section.style.setProperty('--nurse-bg', match[1]);
     } else {
-      const zi = (i % 7) + 1;
-      const ni = ((i + 1) % 7) + 1;
+      const zi = (i % 8) + 1;
+      const ni = ((i + 1) % 8) + 1;
       section.style.setProperty('--zone-bg', `var(--zone-bg-${zi})`);
       section.style.setProperty('--nurse-bg', `var(--nurse-bg-${ni})`);
     }

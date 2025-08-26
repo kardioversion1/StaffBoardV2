@@ -10,7 +10,7 @@ import {
 import { fetchWeather, renderWidgets } from './widgets';
 
 function mapIcon(cond: string) {
-  const c = cond.toLowerCase();
+  const c = (cond || '').toLowerCase();
   if (c.includes('storm') || c.includes('thunder')) return 'storm';
   if (c.includes('snow')) return 'snow';
   if (c.includes('rain') || c.includes('drizzle')) return 'rain';
@@ -55,7 +55,7 @@ async function renderRosterSettings(): Promise<void> {
         <td><input data-id="${s.id}" data-field="name" value="${s.name || ''}"></td>
         <td><input data-id="${s.id}" data-field="rf" type="number" value="${s.rf ?? ''}"></td>
         <td><select data-id="${s.id}" data-field="role">
-          <option value="rn"${s.role === 'rn' ? ' selected' : ''}>RN</option>
+          <option value="rn"${(s.role === 'rn' || s.role === 'nurse') ? ' selected' : ''}>RN</option>
           <option value="tech"${s.role === 'tech' ? ' selected' : ''}>Tech</option>
           <option value="sitter"${s.role === 'sitter' ? ' selected' : ''}>Sitter</option>
           <option value="ancillary"${s.role === 'ancillary' ? ' selected' : ''}>Ancillary</option>
@@ -73,7 +73,7 @@ async function renderRosterSettings(): Promise<void> {
       `;
       const roleSel = tr.querySelector('select[data-field="role"]') as HTMLSelectElement;
       const typeSel = tr.querySelector('select[data-field="type"]') as HTMLSelectElement;
-      typeSel.disabled = roleSel.value !== 'rn';
+      typeSel.disabled = (roleSel.value !== 'rn');
       roleSel.addEventListener('change', () => {
         typeSel.disabled = roleSel.value !== 'rn';
       });
@@ -87,10 +87,15 @@ async function renderRosterSettings(): Promise<void> {
       if (!id || !field) return;
       const entry = staff.find((s) => s.id === id);
       if (!entry) return;
+
       if (field === 'rf') entry.rf = target.value ? Number(target.value) : undefined;
       else if (field === 'name') entry.name = target.value;
-      else if (field === 'role') entry.role = target.value as Staff['role'];
-      else if (field === 'type') entry.type = target.value as any;
+      else if (field === 'role') {
+        const v = (target as HTMLSelectElement).value as Staff['role'];
+        // normalize any legacy/externally-imported "nurse" to "rn"
+        entry.role = (v === 'nurse' ? 'rn' : v) as Staff['role'];
+      } else if (field === 'type') entry.type = target.value as any;
+
       await saveStaff(staff);
     });
 
@@ -124,13 +129,14 @@ async function renderRosterSettings(): Promise<void> {
       if (!file) return;
       const text = await file.text();
       try {
-        const arr = JSON.parse(text) as Staff[];
+        const arr = JSON.parse(text) as Partial<Staff>[];
         staff = arr.map((s) => ({
           id: s.id || crypto.randomUUID(),
           name: s.name || '',
           rf: s.rf,
-          role: s.role as Staff['role'],
-          type: s.type as any,
+          // accept either 'rn' or 'nurse' from imports
+          role: ((s.role === 'nurse' ? 'rn' : s.role) || 'rn') as Staff['role'],
+          type: (s.type as any) ?? 'other',
         }));
         await saveStaff(staff);
         renderTable();
@@ -208,7 +214,8 @@ function renderWidgetsPanel() {
 `;
 
   (document.getElementById('w-show') as HTMLInputElement).checked = w.show !== false;
-  (document.getElementById('w-mode') as HTMLSelectElement).value = w.weather.mode === 'openweather' ? 'OpenWeather' : 'Manual';
+  (document.getElementById('w-mode') as HTMLSelectElement).value =
+    w.weather.mode === 'openweather' ? 'OpenWeather' : 'Manual';
   (document.getElementById('w-units') as HTMLSelectElement).value = w.weather.units;
   (document.getElementById('w-city') as HTMLInputElement).value = w.weather.city || '';
   (document.getElementById('w-lat') as HTMLInputElement).value = w.weather.lat?.toString() || '';
@@ -217,8 +224,8 @@ function renderWidgetsPanel() {
   (document.getElementById('w-temp') as HTMLInputElement).value = w.weather.current?.temp?.toString() || '';
   (document.getElementById('w-cond') as HTMLInputElement).value = w.weather.current?.condition || '';
   (document.getElementById('w-loc') as HTMLInputElement).value = w.weather.current?.location || '';
-  (document.getElementById('h-int') as HTMLInputElement).value = w.headlines.internal;
-  (document.getElementById('h-ext') as HTMLInputElement).value = w.headlines.external;
+  (document.getElementById('h-int') as HTMLInputElement).value = w.headlines.internal || '';
+  (document.getElementById('h-ext') as HTMLInputElement).value = w.headlines.external || '';
 
   const manual = document.getElementById('w-manual')!;
   manual.style.display = w.weather.mode === 'manual' ? 'grid' : 'none';

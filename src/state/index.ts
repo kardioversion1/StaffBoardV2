@@ -3,6 +3,7 @@ import * as DB from '@/db';
 import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { ensureStaffId } from '@/utils/id';
+import { ensureRole } from '@/utils/role';
 import { normalizeZones, type ZoneDef } from '@/utils/zones';
 
 export type WidgetsConfig = {
@@ -69,8 +70,8 @@ export type Staff = {
   dtoEligible?: boolean;
 };
 
-import type { Slot } from "./slots";
-export type { Slot } from "./slots";
+import type { Slot } from '@/slots';
+export type { Slot } from '@/slots';
 
 export interface ActiveShift {
   dateISO: string;
@@ -256,11 +257,11 @@ export async function loadStaff(): Promise<Staff[]> {
   const list = (await DB.get<Staff[]>(KS.STAFF)) || [];
   let changed = false;
   const normalized = list.map((s) => {
+    ensureRole(s);
     const id = ensureStaffId(s.id);
-    const role = (s as any).role === 'tech' ? 'tech' : 'nurse';
     const type = (canonNurseType((s as any).type) || (s as any).type) as NurseType;
-    if (id !== s.id || role !== (s as any).role) changed = true;
-    return { ...s, id, role, type } as Staff;
+    if (id !== s.id) changed = true;
+    return { ...s, id, type } as Staff;
   });
   if (changed) await DB.set(KS.STAFF, normalized);
   return normalized;

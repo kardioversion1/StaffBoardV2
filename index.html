@@ -1,19 +1,19 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ED Staffing Board</title>
-  <link rel="icon" href="/favicon.svg" />
-  <style>
-    @media print {
-      body { background: white; color: black; }
-      header, nav, .no-print { display: none !important; }
-    }
-  </style>
-</head>
-<body>
-  <div id="app" class="wrap"></div>
-  <script type="module" src="/src/main.ts"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>StaffBoard V2</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="boot-status" style="font:14px system-ui;padding:8px;color:#444"></div>
+    <script>
+      window.addEventListener('error', (e) => {
+        const el = document.getElementById('boot-status');
+        if (el) el.textContent = 'App failed to load: ' + (e.message || 'Unknown error');
+      });
+    </script>
+    <script type="module" src="/src/main.ts" defer></script>
+  </body>
 </html>

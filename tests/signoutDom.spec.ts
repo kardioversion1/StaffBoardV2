@@ -18,7 +18,7 @@ vi.mock('@/main', () => ({ manualHandoff: () => {} }));
 import { saveUIConfig, applyUI } from '@/state/uiConfig';
 import { saveConfig, saveStaff, STATE, initState } from '@/state';
 import { renderHeader } from '@/ui/header';
-import { renderMain } from '@/ui/mainTab';
+import { renderBoard } from '@/ui/board';
 
 beforeEach(async () => {
   initState();
@@ -50,7 +50,7 @@ describe('layout and clock', () => {
     ).toContain('260');
     const root = document.createElement('div');
     document.body.appendChild(root);
-    await renderMain(root, { dateISO: STATE.dateISO, shift: STATE.shift });
+    await renderBoard(root, { dateISO: STATE.dateISO, shift: STATE.shift });
     expect(document.getElementById('clock')).toBeNull();
   });
 });

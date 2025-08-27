@@ -1,0 +1,20 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Diagnostics</title></head>
+<body style="font:16px system-ui;padding:24px">
+<h1>Diagnostics</h1>
+<pre id="out">Running…</pre>
+<script type="module">
+const out = document.getElementById('out');
+function log(o){ out.textContent += '\n' + (typeof o==='string'?o:JSON.stringify(o,null,2)); }
+log(`UserAgent: ${navigator.userAgent}`);
+log(`Time: ${new Date().toISOString()}`);
+try {
+  const r = await fetch('/index.html', {cache:'no-store'});
+  log(`GET /index.html → ${r.status}`);
+} catch (e) { log('Fetch error: ' + (e?.message||e)); }
+try {
+  const res = await fetch('/assets/does-not-exist.js', {cache:'no-store'});
+  log(`GET /assets/does-not-exist.js → ${res.status}`);
+} catch (e) { log('Fetch error: ' + (e?.message||e)); }
+</script>
+</body></html>

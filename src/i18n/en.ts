@@ -1,5 +1,5 @@
 export const en = {
-  nav: { draft: 'Draft', history: 'History' },
+  nav: { builder: 'Builder', history: 'History' },
   actions: {
     addNurse: 'Add nurse', editNurse: 'Edit nurse',
     createZone: 'Create zone', resetDefaults: 'Reset to ED defaults',
@@ -27,4 +27,16 @@ export const en = {
   },
 } as const;
 export type Messages = typeof en;
-export const t = <K extends string>(k: K): any => k.split('.').reduce((o,p)=>o?.[p], en);
+/** Retrieve a localized string by key path. */
+export function t(k: string): string {
+  const parts = k.split('.');
+  let result: unknown = en;
+  for (const p of parts) {
+    if (typeof result === 'object' && result && p in (result as Record<string, unknown>)) {
+      result = (result as Record<string, unknown>)[p];
+    } else {
+      return k;
+    }
+  }
+  return result as string;
+}

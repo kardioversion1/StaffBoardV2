@@ -7,6 +7,7 @@ import {
   type Board,
 } from "../src/slots";
 import { isEmployeeIdUnique } from "../src/utils/staff";
+import type { Staff } from '@/state';
 import { nurseTile as renderTile } from "@/ui/nurseTile";
 
 describe("ensureUniqueAssignment", () => {
@@ -44,9 +45,9 @@ describe("break toggles", () => {
 
 describe("employee ID uniqueness", () => {
   it("detects conflicts", () => {
-    const staff = [
-      { id: "1", name: "A", role: "nurse", type: "other" },
-      { id: "2", name: "B", role: "nurse", type: "other" },
+    const staff: Staff[] = [
+      { id: "1", name: "A", role: 'nurse', type: "other" },
+      { id: "2", name: "B", role: 'nurse', type: "other" },
     ];
     expect(isEmployeeIdUnique(staff, "3")).toBe(true);
     expect(isEmployeeIdUnique(staff, "2")).toBe(false);

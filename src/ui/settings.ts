@@ -22,7 +22,8 @@ function mapIcon(cond: string) {
 }
 
 /** Render the Settings tab including roster and display options. */
-export async function renderSettingsTab(root: HTMLElement): Promise<void> {
+/** Render the settings tab including roster and display options. */
+export async function renderSettings(root: HTMLElement): Promise<void> {
   mergeConfigDefaults();
   root.innerHTML = `
     <div class="settings-grid">
@@ -77,12 +78,13 @@ async function renderRosterPane() {
       t = setTimeout(() => renderList(search.value.toLowerCase()), 200);
     });
 
-    el.querySelectorAll('.roster-row').forEach((row) => {
-      row.addEventListener('click', () => {
-        selected = row.getAttribute('data-id');
-        renderList(search.value.toLowerCase());
-        renderEditor();
-      });
+    const list = document.getElementById('roster-list');
+    list?.addEventListener('click', (e) => {
+      const row = (e.target as HTMLElement).closest('.roster-row') as HTMLElement | null;
+      if (!row) return;
+      selected = row.getAttribute('data-id');
+      renderList(search.value.toLowerCase());
+      renderEditor();
     });
 
     (document.getElementById('staff-add') as HTMLButtonElement).onclick = async () => {

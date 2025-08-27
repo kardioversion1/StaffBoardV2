@@ -152,25 +152,6 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
         ev.dataTransfer?.setData('zone-index', String(i));
       });
       section.addEventListener('dragover', (e) => e.preventDefault());
-      section.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        const ev = e as DragEvent;
-        const fromIdxStr = ev.dataTransfer?.getData('zone-index');
-        if (fromIdxStr) {
-          const fromIdx = Number(fromIdxStr);
-          if (!isNaN(fromIdx) && fromIdx !== i) {
-            const [moved] = cfg.zones.splice(fromIdx, 1);
-            cfg.zones.splice(i, 0, moved);
-            board.zones = Object.fromEntries(
-              cfg.zones.map((zz) => [zz.name, board.zones[zz.name] || []])
-            );
-            await saveConfig({ zones: cfg.zones });
-            await save();
-            renderZones();
-            return;
-          }
-        }
-      });
 
       const title = document.createElement('h2');
       title.className = 'zone-card__title';
@@ -226,7 +207,8 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
         e.preventDefault();
         e.stopPropagation();
       });
-      body.addEventListener('drop', async (e: DragEvent) => {
+
+      const onDrop = async (e: DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         const zoneIdxStr = e.dataTransfer?.getData('zone-index');
@@ -262,7 +244,10 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
           await save();
           renderZones();
         }
-      });
+      };
+
+      section.addEventListener('drop', onDrop);
+      body.addEventListener('drop', onDrop);
 
       (board.zones[z.name] || []).forEach((slot, idx) => {
         const st = staff.find((n) => n.id === slot.nurseId);

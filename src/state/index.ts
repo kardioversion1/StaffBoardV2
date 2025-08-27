@@ -299,7 +299,8 @@ export async function loadStaff(): Promise<Staff[]> {
   const normalized = list.map((s) => {
     ensureRole(s);
     const id = ensureStaffId(s.id);
-    const type = (canonNurseType((s as any).type) || (s as any).type) as NurseType;
+    const rawType = (s as any).type;
+    const type = (canonNurseType(rawType) || rawType || 'home') as NurseType;
     if (id !== s.id) changed = true;
     return { ...s, id, type } as Staff;
   });

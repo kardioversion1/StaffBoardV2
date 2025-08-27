@@ -41,8 +41,9 @@ export type ShiftStatus = typeof CANON.shiftStatuses[number];
 
 function canonize<T extends Record<string, string[]>, K extends keyof T>(
   map: T,
-  value: string
+  value: string | undefined | null
 ): K | null {
+  if (typeof value !== 'string') return null;
   const needle = value.toLowerCase().trim();
   for (const [k, arr] of Object.entries(map)) {
     if (arr.includes(needle)) return k as K;
@@ -50,12 +51,17 @@ function canonize<T extends Record<string, string[]>, K extends keyof T>(
   return null;
 }
 
-export function canonNurseType(s: string): NurseType | null {
-  return canonize(SYNONYMS.nurseType, s) as NurseType | null;
+/** Normalize nurse type string to canonical form. */
+export function canonNurseType(s: string | undefined | null): NurseType | null {
+  return canonize(SYNONYMS.nurseType, s);
 }
-export function canonZoneType(s: string): ZoneType | null {
-  return canonize(SYNONYMS.zoneType, s) as ZoneType | null;
+
+/** Normalize zone type string to canonical form. */
+export function canonZoneType(s: string | undefined | null): ZoneType | null {
+  return canonize(SYNONYMS.zoneType, s);
 }
-export function canonShiftStatus(s: string): ShiftStatus | null {
-  return canonize(SYNONYMS.shiftStatus, s) as ShiftStatus | null;
+
+/** Normalize shift status string to canonical form. */
+export function canonShiftStatus(s: string | undefined | null): ShiftStatus | null {
+  return canonize(SYNONYMS.shiftStatus, s);
 }

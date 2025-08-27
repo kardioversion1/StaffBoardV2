@@ -11,8 +11,6 @@ function iconRain() { return svgIcon('<path d="M4 15a4 4 0 0 1 2-7 5 5 0 0 1 9 3
 function iconStorm() { return svgIcon('<path d="M13 11h3l-4 7v-4h-3l4-7z"/><path d="M4 15a4 4 0 0 1 2-7 5 5 0 0 1 9 3h1a3 3 0 0 1 0 6H6a4 4 0 0 1-2-2"/>'); }
 function iconSnow() { return svgIcon('<path d="M4 15a4 4 0 0 1 2-7 5 5 0 0 1 9 3h1a3 3 0 0 1 0 6H6a4 4 0 0 1-2-2"/><path d="M8 19v2M12 19v2M16 19v2"/><path d="M8 21h8"/>'); }
 function iconMist() { return svgIcon('<path d="M3 15h18M3 12h18M5 9h14"/>'); }
-function iconMegaphone() { return svgIcon('<path d="M3 11v2a1 1 0 0 0 1 1h3l4 4v-14l-4 4H4a1 1 0 0 0-1 1z"/>'); }
-function iconCone() { return svgIcon('<path d="M12 2 3 22h18L12 2z"/><path d="M9 16h6"/>'); }
 
 const ICONS: Record<string, () => string> = {
   sun: iconSun,
@@ -77,7 +75,7 @@ export async function fetchWeather(): Promise<void> {
   }
 }
 
-export async function renderWidgets(container: HTMLElement): Promise<void> {
+export async function renderWeather(container: HTMLElement): Promise<void> {
   const cfg = getConfig();
   mergeConfigDefaults();
   const wcfg = cfg.widgets;
@@ -114,14 +112,6 @@ export async function renderWidgets(container: HTMLElement): Promise<void> {
     weatherBody = `<div><span>${temp}° ${wcfg.weather.units} ${cur.condition} • ${cur.location || ''}</span>${upd}</div>`;
   }
   html += card('Weather', weatherBody, icon);
-
-  // Internal headline
-  const int = wcfg.headlines.internal || '';
-  html += card('Internal', `<div class="single-line" title="${int}">${int}</div>`, iconMegaphone());
-
-  // External headline
-  const ext = wcfg.headlines.external || '';
-  html += card('External', `<div class="single-line" title="${ext}">${ext}</div>`, iconCone());
 
   container.innerHTML = html;
 }

@@ -73,6 +73,15 @@ export type Staff = {
 import type { Slot } from '@/slots';
 export type { Slot } from '@/slots';
 
+export interface ZoneAssignment {
+  id: string;
+  role: 'nurse' | 'tech';
+  start?: string;
+  end?: string;
+}
+
+export const CURRENT_SCHEMA_VERSION = 2;
+
 export interface ActiveShift {
   dateISO: string;
   shift: Shift;
@@ -83,7 +92,12 @@ export interface ActiveShift {
   incoming: { nurseId: string; eta: string; arrived?: boolean }[];
   offgoing: { nurseId: string; ts: number }[];
   comments: string;
+  huddle: string;
+  handoff: string;
+  version: number;
 }
+
+export type ActiveBoard = ActiveShift;
 
 export type DraftShift = Omit<ActiveShift, 'comments'>;
 
@@ -241,6 +255,32 @@ export function mergeConfigDefaults(): Config {
 
   CONFIG_CACHE = cfg as Config;
   return CONFIG_CACHE;
+}
+
+export function migrateActiveBoard(raw: any): ActiveBoard {
+  const zones = raw?.zones && typeof raw.zones === 'object' ? raw.zones : {};
+  return {
+    dateISO: raw?.dateISO ?? toDateISO(new Date()),
+    shift: raw?.shift === 'night' ? 'night' : 'day',
+    charge: raw?.charge ?? undefined,
+    triage: raw?.triage ?? undefined,
+    admin: raw?.admin ?? undefined,
+    zones: Object.fromEntries(
+      Object.entries(zones).map(([k, v]) => [k, Array.isArray(v) ? v : []])
+    ),
+    incoming: Array.isArray(raw?.incoming)
+      ? raw.incoming.filter((i: any) => typeof i?.nurseId === 'string')
+      : [],
+    offgoing: Array.isArray(raw?.offgoing)
+      ? raw.offgoing.filter(
+          (o: any) => typeof o?.nurseId === 'string' && typeof o?.ts === 'number'
+        )
+      : [],
+    comments: typeof raw?.comments === 'string' ? raw.comments : '',
+    huddle: typeof raw?.huddle === 'string' ? raw.huddle : '',
+    handoff: typeof raw?.handoff === 'string' ? raw.handoff : '',
+    version: CURRENT_SCHEMA_VERSION,
+  };
 }
 
 export const KS = {

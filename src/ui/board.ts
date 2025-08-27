@@ -1,6 +1,17 @@
 // mainBoard.ts — merged & de-conflicted
 
-import { DB, KS, getConfig, STATE, loadStaff, saveStaff, Staff } from '@/state';
+import {
+  DB,
+  KS,
+  getConfig,
+  STATE,
+  loadStaff,
+  saveStaff,
+  Staff,
+  ActiveBoard,
+  CURRENT_SCHEMA_VERSION,
+  migrateActiveBoard,
+} from '@/state';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWidgets } from './widgets';
 import { nurseTile } from './nurseTile';
@@ -24,7 +35,11 @@ const PALETTE: [string, string][] = [
 
 // --- helpers ---------------------------------------------------------------
 
-function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: ZoneDef[]) {
+function buildEmptyActive(
+  dateISO: string,
+  shift: 'day' | 'night',
+  zones: ZoneDef[]
+): ActiveBoard {
   return {
     dateISO,
     shift,
@@ -32,11 +47,14 @@ function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: ZoneDe
     triage: undefined,
     admin: undefined,
     zones: Object.fromEntries(
-      [...zones.map((z) => z.name), 'Bullpen'].map((z) => [z, [] as any[]])
+      [...zones.map((z) => z.name), 'Bullpen'].map((z) => [z, [] as Slot[]])
     ),
     incoming: [],
     offgoing: [],
     comments: '',
+    huddle: '',
+    handoff: '',
+    version: CURRENT_SCHEMA_VERSION,
   };
 }
 
@@ -59,9 +77,13 @@ export async function renderBoard(
 
     // Load or initialize active shift tuple
     const saveKey = KS.ACTIVE(ctx.dateISO, ctx.shift);
-      let active: any = await DB.get(saveKey);
-      if (!active) active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones);
-      else normalizeActiveZones(active, cfg.zones);
+      let active = await DB.get<ActiveBoard>(saveKey);
+      if (!active) {
+        active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones);
+      } else {
+        active = migrateActiveBoard(active);
+      }
+      normalizeActiveZones(active, cfg.zones);
 
     // Layout
     root.innerHTML = `
@@ -149,7 +171,7 @@ export async function renderBoard(
 
 // --- leadership ------------------------------------------------------------
 
-function renderLeadership(active: any) {
+function renderLeadership(active: ActiveBoard) {
   const cfg = getConfig();
   const chargeEl = document.getElementById('slot-charge') as HTMLElement;
   const triageEl = document.getElementById('slot-triage') as HTMLElement;
@@ -174,7 +196,7 @@ function renderLeadership(active: any) {
 
 // --- zones & tiles ---------------------------------------------------------
 
-function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
+function renderZones(active: ActiveBoard, cfg: any, staff: Staff[], save: () => void) {
   const cont = document.getElementById('zones')!;
   cont.innerHTML = '';
   const zones: ZoneDef[] = cfg.zones || [];
@@ -255,7 +277,7 @@ function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
 
 // --- comments --------------------------------------------------------------
 
-function wireComments(active: any, save: () => void) {
+function wireComments(active: ActiveBoard, save: () => void) {
   const el = document.getElementById('comments') as HTMLTextAreaElement;
   if (!el) return;
 
@@ -274,7 +296,7 @@ function wireComments(active: any, save: () => void) {
 
 // --- incoming & offgoing ---------------------------------------------------
 
-function renderIncoming(active: any, save: () => void) {
+function renderIncoming(active: ActiveBoard, save: () => void) {
   const cont = document.getElementById('incoming')!;
   cont.innerHTML = '';
 
@@ -306,7 +328,7 @@ function renderIncoming(active: any, save: () => void) {
   }
 }
 
-function renderOffgoing(active: any, save: () => void) {
+function renderOffgoing(active: ActiveBoard, save: () => void) {
   const cont = document.getElementById('offgoing')!;
   const cutoff = Date.now() - 60 * 60 * 1000; // 60 min
   active.offgoing = (active.offgoing || []).filter((o: any) => o.ts > cutoff);

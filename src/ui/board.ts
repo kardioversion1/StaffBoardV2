@@ -21,18 +21,6 @@ import { startBreak, endBreak, moveSlot, type Slot } from '@/slots';
 import { canonNurseType } from '@/domain/lexicon';
 import { normalizeZones, normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 
-// Palette used to pair zone background with a readable nurse tile bg in dark mode
-const PALETTE: [string, string][] = [
-  ['#3b82f6', '#60a5fa'],
-  ['#2563eb', '#3b82f6'],
-  ['#1d4ed8', '#2563eb'],
-  ['#ef4444', '#f87171'],
-  ['#b91c1c', '#ef4444'],
-  ['#10b981', '#34d399'],
-  ['#047857', '#10b981'],
-  ['#8b5cf6', '#a78bfa'],
-];
-
 // --- helpers ---------------------------------------------------------------
 
 function buildEmptyActive(
@@ -207,19 +195,13 @@ function renderZones(active: ActiveBoard, cfg: any, staff: Staff[], save: () => 
     section.className = 'zone-card';
     section.setAttribute('data-testid', 'zone-card');
 
-    // Color: explicit or palette variables
+    // Highlight color: explicit or from palette
     const explicit = z.color || cfg.zoneColors?.[zName];
     if (explicit) {
-      section.style.background = explicit;
-      // If explicit color matches our palette's first color, use its paired nurse tile color
-      const match = PALETTE.find(([zone]) => zone.toLowerCase() === String(explicit).toLowerCase());
-      if (match) section.style.setProperty('--nurse-bg', match[1]);
+      section.style.setProperty('--zone-color', explicit);
     } else {
-      // Fall back to CSS var palette; using 8 to match PALETTE length
       const zi = (i % 8) + 1;
-      const ni = ((i + 1) % 8) + 1;
-      section.style.setProperty('--zone-bg', `var(--zone-bg-${zi})`);
-      section.style.setProperty('--nurse-bg', `var(--nurse-bg-${ni})`);
+      section.style.setProperty('--zone-color', `var(--zone-bg-${zi})`);
     }
 
     const title = document.createElement('h2');

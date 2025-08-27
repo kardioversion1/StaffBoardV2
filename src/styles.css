@@ -92,6 +92,7 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 
 /* choose the variable-based sidebar width */
 .layout{display:grid;grid-template-columns:1fr var(--right-sidebar-w);gap:var(--gap)}
+.builder-layout{grid-template-columns:minmax(200px,25%) 1fr}
 
 .panel{background:var(--panel);color:var(--text-high);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--elev-1)}
 .panel h3{color:var(--text-high);font-size:clamp(14px,.95vw,16px)}

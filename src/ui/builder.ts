@@ -35,7 +35,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
   }
 
   root.innerHTML = `
-    <div class="layout" data-testid="builder">
+    <div class="layout builder-layout" data-testid="builder">
       <div class="col col-left">
         <section class="panel">
           <h3>Roster</h3>

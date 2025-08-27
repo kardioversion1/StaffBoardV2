@@ -17,7 +17,7 @@ import { renderWidgets } from './widgets';
 import { nurseTile } from './nurseTile';
 import { debouncedSave } from '@/utils/debouncedSave';
 import './mainBoard/boardLayout.css';
-import { startBreak, endBreak, moveSlot, type Slot } from '@/slots';
+import { startBreak, endBreak, moveSlot, upsertSlot, type Slot } from '@/slots';
 import { canonNurseType } from '@/domain/lexicon';
 import { normalizeZones, normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 
@@ -252,6 +252,18 @@ function renderZones(active: ActiveBoard, cfg: any, staff: Staff[], save: () => 
       body.appendChild(row);
     });
 
+    const addRow = document.createElement('div');
+    const addBtn = document.createElement('button');
+    addBtn.textContent = '+ Add';
+    addBtn.className = 'btn';
+    addBtn.addEventListener('click', () =>
+      addSlotDialog(active, staff, save, z.name, () =>
+        renderZones(active, cfg, staff, save)
+      )
+    );
+    addRow.appendChild(addBtn);
+    body.appendChild(addRow);
+
     section.appendChild(body);
     cont.appendChild(section);
   });
@@ -451,6 +463,41 @@ function manageSlot(
     // Persist
     saveStaff(staffList); // best-effort staff write
     save();               // board tuple
+    overlay.remove();
+    rerender();
+  });
+}
+
+function addSlotDialog(
+  board: ActiveBoard,
+  staffList: Staff[],
+  save: () => void,
+  zone: string,
+  rerender: () => void
+): void {
+  const overlay = document.createElement('div');
+  overlay.className = 'manage-overlay';
+  overlay.innerHTML = `
+    <div class="manage-dialog">
+      <h3>Add to ${zone}</h3>
+      <select id="add-nurse">
+        ${staffList
+          .map((s) => `<option value="${s.id}">${s.name || s.id}</option>`)
+          .join('')}
+      </select>
+      <div class="dialog-actions">
+        <button id="add-confirm" class="btn">Add</button>
+        <button id="add-cancel" class="btn">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#add-cancel')!.addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#add-confirm')!.addEventListener('click', () => {
+    const sel = overlay.querySelector('#add-nurse') as HTMLSelectElement;
+    const id = sel.value;
+    upsertSlot(board, { zone }, { nurseId: id });
+    save();
     overlay.remove();
     rerender();
   });

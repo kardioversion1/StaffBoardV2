@@ -1,4 +1,5 @@
 import { getConfig, saveConfig, Staff } from '@/state';
+import { normalizeZones, type ZoneDef } from '@/utils/zones';
 import type { Board, Slot } from '@/slots';
 
 export type SeedStrategy = 'unassigned' | 'preassign';
@@ -17,8 +18,8 @@ export const DEFAULT_SEED_SETTINGS: SeedSettings = {
   assignChargeTriage: true,
 };
 
-export function buildEDDefaultZones(): string[] {
-  return [
+export function buildEDDefaultZones(): ZoneDef[] {
+  const list = [
     'Unassigned',
     ...Array.from({ length: 12 }, (_, i) => `A-${i + 1}`),
     ...Array.from({ length: 6 }, (_, i) => `HW-${i + 1}`),
@@ -27,18 +28,19 @@ export function buildEDDefaultZones(): string[] {
     'T2',
     '2',
   ];
+  return normalizeZones(list);
 }
 
 export async function seedZonesIfNeeded(): Promise<void> {
-  const cfg = getConfig();
-  if (!cfg.zones || cfg.zones.length === 0) {
-    const zones = buildEDDefaultZones();
-    await saveConfig({ zones });
-    return;
-  }
-  if (!cfg.zones.includes('Unassigned')) {
-    await saveConfig({ zones: ['Unassigned', ...cfg.zones] });
-  }
+    const cfg = getConfig();
+    if (!cfg.zones || cfg.zones.length === 0) {
+      const zones = buildEDDefaultZones();
+      await saveConfig({ zones });
+      return;
+    }
+    if (!cfg.zones.some((z) => z.name === 'Unassigned')) {
+      await saveConfig({ zones: [normalizeZones(['Unassigned'])[0], ...cfg.zones] });
+    }
 }
 
 export function getDefaultRosterForLabel(
@@ -55,12 +57,12 @@ export function buildSeedBoard(
   settings: SeedSettings = DEFAULT_SEED_SETTINGS
 ): Board {
   const cfg = getConfig();
-  const board: Board = {
-    charge: undefined,
-    triage: undefined,
-    admin: undefined,
-    zones: Object.fromEntries((cfg.zones || []).map((z) => [z, [] as Slot[]])),
-  };
+    const board: Board = {
+      charge: undefined,
+      triage: undefined,
+      admin: undefined,
+      zones: Object.fromEntries((cfg.zones || []).map((z) => [z.name, [] as Slot[]])),
+    };
 
   if (settings.assignChargeTriage) {
     const chargeCand = roster.find((n) => n.eligibleRoles?.includes('charge'));
@@ -78,11 +80,15 @@ export function buildSeedBoard(
   const unassigned = 'Unassigned';
   for (const n of roster) {
     if (board.charge?.nurseId === n.id || board.triage?.nurseId === n.id) continue;
-    if (settings.strategy === 'preassign' && n.defaultZone && cfg.zones.includes(n.defaultZone)) {
-      board.zones[n.defaultZone].push({ nurseId: n.id });
-    } else {
-      board.zones[unassigned].push({ nurseId: n.id });
-    }
+      if (
+        settings.strategy === 'preassign' &&
+        n.defaultZone &&
+        cfg.zones.some((z) => z.name === n.defaultZone)
+      ) {
+        board.zones[n.defaultZone].push({ nurseId: n.id });
+      } else {
+        board.zones[unassigned].push({ nurseId: n.id });
+      }
   }
 
   return board;

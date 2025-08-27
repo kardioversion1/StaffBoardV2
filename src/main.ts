@@ -7,6 +7,7 @@ import {
   loadConfig,
   applyThemeAndScale,
   getConfig,
+  zonesInvalid,
 } from '@/state';
 import { applyUI } from '@/state/uiConfig';
 import { seedDefaults } from '@/seedDefaults';
@@ -19,6 +20,7 @@ import { renderSettingsTab } from '@/ui/settingsTab';
 import { renderDraftTab } from '@/ui/draftTab';
 import { renderHistoryTab } from '@/ui/historyTab';
 import { outlineBlockers } from '@/utils/debug';
+import { showBanner } from '@/ui/banner';
 
 export async function renderAll() {
   applyThemeAndScale();
@@ -51,11 +53,14 @@ export async function manualHandoff() {
 }
 
 initState();
-loadConfig().then(async () => {
-  await seedDefaults();
-  applyThemeAndScale();
-  applyUI();
-  renderAll();
+  loadConfig().then(async () => {
+    await seedDefaults();
+    if (zonesInvalid()) {
+      showBanner('Zone data invalid, using defaults');
+    }
+    applyThemeAndScale();
+    applyUI();
+    renderAll();
 
   const clockTimer = setInterval(async () => {
     const hhmm = hhmmNowLocal();

@@ -3,6 +3,7 @@ import * as DB from '@/db';
 import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { ensureStaffId } from '@/utils/id';
+import { normalizeZones, type ZoneDef } from '@/utils/zones';
 
 export type WidgetsConfig = {
   show?: boolean;
@@ -30,7 +31,7 @@ export type WidgetsConfig = {
 export type Config = {
   dateISO: string;
   anchors: { day: string; night: string };
-  zones: string[];
+  zones: ZoneDef[];
   pin: string;
   relockMin: number;
   widgets: WidgetsConfig;
@@ -145,6 +146,11 @@ let CONFIG_CACHE: Config = {
   },
 };
 
+let ZONES_INVALID = false;
+export function zonesInvalid(): boolean {
+  return ZONES_INVALID;
+}
+
 export function getConfig(): Config {
   return CONFIG_CACHE;
 }
@@ -164,6 +170,9 @@ export async function loadConfig(): Promise<Config> {
 
 export async function saveConfig(partial: Partial<Config>): Promise<Config> {
   const updated: Config = { ...CONFIG_CACHE, ...partial } as Config;
+  if (partial.zones) {
+    updated.zones = normalizeZones(partial.zones as any);
+  }
   CONFIG_CACHE = updated;
   mergeConfigDefaults();
   await DB.set(KS.CONFIG, CONFIG_CACHE);
@@ -191,6 +200,15 @@ export function mergeConfigDefaults(): Config {
   }
 
   cfg.zoneColors = cfg.zoneColors || {};
+  ZONES_INVALID = false;
+  const normalized = normalizeZones(cfg.zones as any);
+  if (!Array.isArray(cfg.zones) || normalized.length !== cfg.zones.length) {
+    ZONES_INVALID = true;
+  }
+  for (const z of normalized) {
+    if (cfg.zoneColors && cfg.zoneColors[z.name]) z.color = cfg.zoneColors[z.name];
+  }
+  cfg.zones = normalized;
   cfg.shiftDurations = {
     day: cfg.shiftDurations?.day || 12,
     night: cfg.shiftDurations?.night || 12,

@@ -21,12 +21,15 @@ import {
 } from '@/seed';
 import { t } from '@/i18n/en';
 import { manualHandoff } from '@/main';
+import { normalizeZones, normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 
 /** Render the draft board allowing schedule edits before publishing. */
 export async function renderDraftTab(root: HTMLElement) {
   await seedZonesIfNeeded();
   const cfg = getConfig();
-  if (!cfg.zones.includes('Bullpen')) cfg.zones.push('Bullpen');
+  if (!cfg.zones.some((z: ZoneDef) => z.name === 'Bullpen')) {
+    cfg.zones.push(normalizeZones(['Bullpen'])[0]);
+  }
   let staff: Staff[] = await loadStaff();
   setNurseCache(staff);
   let board = await DB.get<DraftShift>(KS.DRAFT(STATE.dateISO, STATE.shift));
@@ -53,6 +56,7 @@ export async function renderDraftTab(root: HTMLElement) {
     board.shift ||= STATE.shift;
     board.admin ||= undefined;
   }
+  normalizeActiveZones(board, cfg.zones);
   let selected: string | undefined;
 
   root.innerHTML = `
@@ -317,7 +321,7 @@ export async function renderDraftTab(root: HTMLElement) {
       if (!name || board.zones[name]) return;
       board.zones[name] = [];
       const cfg = getConfig();
-      cfg.zones.push(name);
+      cfg.zones.push(normalizeZones([name])[0]);
       await saveConfig({ zones: cfg.zones });
       await saveBoard();
       renderBoard();
@@ -327,11 +331,11 @@ export async function renderDraftTab(root: HTMLElement) {
       const btn = (ev.target as HTMLElement).closest('.remove-zone') as HTMLElement | null;
       if (btn) {
         const z = btn.dataset.zone!;
-        if (CANONICAL_ZONES.includes(z)) return;
+        if (CANONICAL_ZONES.some((cz) => cz.name === z)) return;
         if (confirm(`Remove zone ${z}?`)) {
           delete board.zones[z];
           const cfg = getConfig();
-          cfg.zones = cfg.zones.filter((s) => s !== z);
+          cfg.zones = cfg.zones.filter((s) => s.name !== z);
           await saveConfig({ zones: cfg.zones });
           await saveBoard();
           renderBoard();

@@ -98,17 +98,20 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       section.addEventListener('drop', async (e) => {
         e.preventDefault();
         const ev = e as DragEvent;
-        const fromIdx = Number(ev.dataTransfer?.getData('zone-index'));
-        if (!isNaN(fromIdx) && fromIdx !== i) {
-          const [moved] = cfg.zones.splice(fromIdx, 1);
-          cfg.zones.splice(i, 0, moved);
-          board.zones = Object.fromEntries(
-            cfg.zones.map((zz) => [zz.name, board.zones[zz.name] || []])
-          );
-          await saveConfig({ zones: cfg.zones });
-          await save();
-          renderZones();
-          return;
+        const fromIdxStr = ev.dataTransfer?.getData('zone-index');
+        if (fromIdxStr) {
+          const fromIdx = Number(fromIdxStr);
+          if (!isNaN(fromIdx) && fromIdx !== i) {
+            const [moved] = cfg.zones.splice(fromIdx, 1);
+            cfg.zones.splice(i, 0, moved);
+            board.zones = Object.fromEntries(
+              cfg.zones.map((zz) => [zz.name, board.zones[zz.name] || []])
+            );
+            await saveConfig({ zones: cfg.zones });
+            await save();
+            renderZones();
+            return;
+          }
         }
       });
 
@@ -169,6 +172,22 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       body.addEventListener('drop', async (e: DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        const zoneIdxStr = e.dataTransfer?.getData('zone-index');
+        if (zoneIdxStr) {
+          const fromIdx = Number(zoneIdxStr);
+          if (!isNaN(fromIdx) && fromIdx !== i) {
+            const [moved] = cfg.zones.splice(fromIdx, 1);
+            cfg.zones.splice(i, 0, moved);
+            board.zones = Object.fromEntries(
+              cfg.zones.map((zz) => [zz.name, board.zones[zz.name] || []])
+            );
+            await saveConfig({ zones: cfg.zones });
+            await save();
+            renderZones();
+            return;
+          }
+        }
+
         const slotData = e.dataTransfer?.getData('slot');
         if (slotData) {
           const { zone: fromZone, index } = JSON.parse(slotData);

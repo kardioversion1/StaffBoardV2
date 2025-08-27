@@ -7,7 +7,7 @@ import {
   Staff,
 } from '@/state';
 import { createStaffId, ensureStaffId } from '@/utils/id';
-import { fetchWeather, renderWidgets } from './widgets';
+import { fetchWeather, renderWeather } from './widgets';
 import { getUIConfig, saveUIConfig, applyUI } from '@/state/uiConfig';
 import { renderHeader } from '@/ui/header';
 
@@ -396,12 +396,6 @@ function renderWidgetsPanel() {
       <button id="w-apply" class="btn">Apply Manual</button>
     </div>
 
-    <h4>Headlines</h4>
-    <div class="form-grid">
-      <label>Internal <input id="h-int"></label>
-      <label>External <input id="h-ext"></label>
-    </div>
-    <div class="btn-row"><button id="h-save" class="btn">Save Headlines</button></div>
   </section>
 `;
 
@@ -416,9 +410,6 @@ function renderWidgetsPanel() {
   (document.getElementById('w-temp') as HTMLInputElement).value = w.weather.current?.temp?.toString() || '';
   (document.getElementById('w-cond') as HTMLInputElement).value = w.weather.current?.condition || '';
   (document.getElementById('w-loc') as HTMLInputElement).value = w.weather.current?.location || '';
-  (document.getElementById('h-int') as HTMLInputElement).value = w.headlines.internal || '';
-  (document.getElementById('h-ext') as HTMLInputElement).value = w.headlines.external || '';
-
   const manual = document.getElementById('w-manual')!;
   manual.style.display = w.weather.mode === 'manual' ? 'grid' : 'none';
   document.getElementById('w-mode')!.addEventListener('change', (e) => {
@@ -454,14 +445,14 @@ function renderWidgetsPanel() {
     ) {
       await fetchWeather();
     }
-    const body = document.getElementById('widgets-body');
-    if (body) await renderWidgets(body);
+    const body = document.getElementById('weather-body');
+    if (body) await renderWeather(body);
   });
 
   document.getElementById('w-fetch')!.addEventListener('click', async () => {
     await fetchWeather();
-    const body = document.getElementById('widgets-body');
-    if (body) await renderWidgets(body);
+    const body = document.getElementById('weather-body');
+    if (body) await renderWeather(body);
     renderWidgetsPanel();
   });
 
@@ -479,18 +470,9 @@ function renderWidgetsPanel() {
       updatedISO: new Date().toISOString(),
     };
     await saveConfig({ widgets: w });
-    const body = document.getElementById('widgets-body');
-    if (body) await renderWidgets(body);
+    const body = document.getElementById('weather-body');
+    if (body) await renderWeather(body);
     renderWidgetsPanel();
-  });
-
-  document.getElementById('h-save')!.addEventListener('click', async () => {
-    const cfg = getConfig();
-    cfg.widgets.headlines.internal = (document.getElementById('h-int') as HTMLInputElement).value;
-    cfg.widgets.headlines.external = (document.getElementById('h-ext') as HTMLInputElement).value;
-    await saveConfig({ widgets: cfg.widgets });
-    const body = document.getElementById('widgets-body');
-    if (body) await renderWidgets(body);
   });
 }
 

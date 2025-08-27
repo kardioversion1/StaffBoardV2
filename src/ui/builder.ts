@@ -181,7 +181,8 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
         }
         const id = e.dataTransfer?.getData('text/plain');
         if (id) {
-          upsertSlot(board, { zone: z.name }, { nurseId: id });
+          const start = cfg.anchors[STATE.shift];
+          upsertSlot(board, { zone: z.name }, { nurseId: id, startHHMM: start });
           await save();
           renderZones();
         }
@@ -201,6 +202,15 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
         const tile = document.createElement('div');
         tile.innerHTML = nurseTile(slot, st);
         row.appendChild(tile.firstElementChild!);
+
+        const time = document.createElement('input');
+        time.type = 'time';
+        time.value = slot.startHHMM || cfg.anchors[STATE.shift];
+        time.addEventListener('change', async () => {
+          slot.startHHMM = time.value;
+          await save();
+        });
+        row.appendChild(time);
 
         const rm = document.createElement('button');
         rm.textContent = 'Remove';

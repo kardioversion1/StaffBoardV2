@@ -23,10 +23,6 @@ export type WidgetsConfig = {
       updatedISO?: string;
     };
   };
-  headlines: {
-    internal: string;
-    external: string;
-  };
 };
 
 export type Config = {
@@ -131,10 +127,6 @@ const WIDGETS_DEFAULTS: WidgetsConfig = {
     lat: DEFAULT_WEATHER_COORDS.lat,
     lon: DEFAULT_WEATHER_COORDS.lon,
   },
-  headlines: {
-    internal: 'Congrats to RN Katie for Daisy Award',
-    external: 'I-65 S Shutdown for repair',
-  },
 };
 
 let CONFIG_CACHE: Config = {
@@ -207,10 +199,6 @@ export function mergeConfigDefaults(): Config {
       current: cfg.widgets.weather.current
         ? { ...cfg.widgets.weather.current }
         : undefined,
-    };
-    cfg.widgets.headlines = {
-      ...WIDGETS_DEFAULTS.headlines,
-      ...cfg.widgets.headlines,
     };
   }
 

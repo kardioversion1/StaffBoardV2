@@ -13,13 +13,14 @@ import {
   migrateActiveBoard,
 } from '@/state';
 import { setNurseCache, labelFromId } from '@/utils/names';
-import { renderWidgets } from './widgets';
+import { renderWeather } from './widgets';
 import { nurseTile } from './nurseTile';
 import { debouncedSave } from '@/utils/debouncedSave';
 import './mainBoard/boardLayout.css';
 import { startBreak, endBreak, moveSlot, upsertSlot, type Slot } from '@/slots';
 import { canonNurseType } from '@/domain/lexicon';
 import { normalizeZones, normalizeActiveZones, type ZoneDef } from '@/utils/zones';
+import type { DraftShift } from '@/state';
 
 // --- helpers ---------------------------------------------------------------
 
@@ -98,15 +99,15 @@ export async function renderBoard(
         </div>
 
         <div class="col col-right">
-          <section class="panel">
-            <h3>Physicians (read-only)</h3>
-            <div id="phys"></div>
+          <section id="weather" class="panel">
+            <h3>Weather</h3>
+            <div id="weather-body"></div>
           </section>
 
           <section class="panel">
             <h3>Incoming (click to toggle arrived)</h3>
             <button id="add-incoming" class="btn">+ Add</button>
-            <div id="incoming"></div>
+            <div id="incoming" style="min-height:40px"></div>
           </section>
 
           <section class="panel">
@@ -114,9 +115,9 @@ export async function renderBoard(
             <div id="offgoing"></div>
           </section>
 
-          <section id="widgets" class="panel">
-            <h3>Ops Widgets</h3>
-            <div id="widgets-body"></div>
+          <section class="panel">
+            <h3>Physicians (read-only)</h3>
+            <div id="phys"></div>
           </section>
         </div>
       </div>
@@ -132,9 +133,9 @@ export async function renderBoard(
     renderLeadership(active);
     renderZones(active, cfg, staff, queueSave);
     wireComments(active, queueSave);
-    renderIncoming(active, queueSave);
+    await renderIncoming(active, queueSave);
     renderOffgoing(active, queueSave);
-    await renderWidgets(document.getElementById('widgets-body')!);
+    await renderWeather(document.getElementById('weather-body')!);
 
     // Re-render on config changes (e.g., zone list or colors)
     document.addEventListener('config-changed', () => {
@@ -290,22 +291,53 @@ function wireComments(active: ActiveBoard, save: () => void) {
 
 // --- incoming & offgoing ---------------------------------------------------
 
-function renderIncoming(active: ActiveBoard, save: () => void) {
+async function renderIncoming(active: ActiveBoard, save: () => void) {
   const cont = document.getElementById('incoming')!;
   cont.innerHTML = '';
 
-  active.incoming.forEach((inc: any) => {
-    const div = document.createElement('div');
-    const name = labelFromId(inc.nurseId);
-    div.textContent = `${name} ${inc.eta}${inc.arrived ? ' ✓' : ''}`;
-    div.addEventListener('click', () => {
-      if (STATE.locked) return;
-      inc.arrived = !inc.arrived;
-      save();
-      renderIncoming(active, save);
+  // auto-populate from draft schedule 40 min before start time
+  const draft = await DB.get<DraftShift>(KS.DRAFT(STATE.dateISO, STATE.shift));
+  const toMin = (hhmm: string) => {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
+  };
+  let changed = false;
+  if (draft) {
+    const slots: Slot[] = [];
+    if (draft.charge) slots.push(draft.charge);
+    if (draft.triage) slots.push(draft.triage);
+    if (draft.admin) slots.push(draft.admin);
+    for (const arr of Object.values(draft.zones)) slots.push(...arr);
+    const now = toMin(STATE.clockHHMM);
+    for (const s of slots) {
+      if (!s.startHHMM) continue;
+      const diff = toMin(s.startHHMM) - now;
+      if (diff <= 40 && diff >= 0) {
+        if (!active.incoming.some((i) => i.nurseId === s.nurseId)) {
+          active.incoming.push({ nurseId: s.nurseId, eta: s.startHHMM });
+          changed = true;
+        }
+      }
+    }
+  }
+  if (changed) save();
+
+  if (active.incoming.length === 0) {
+    cont.innerHTML = '<div class="incoming-placeholder"></div>';
+  } else {
+    active.incoming.forEach((inc: any) => {
+      const div = document.createElement('div');
+      const name = labelFromId(inc.nurseId);
+      div.textContent = `${name} ${inc.eta}${inc.arrived ? ' ✓' : ''}`;
+      div.addEventListener('click', () => {
+        if (STATE.locked) return;
+        inc.arrived = !inc.arrived;
+        save();
+        renderIncoming(active, save);
+      });
+      cont.appendChild(div);
     });
-    cont.appendChild(div);
-  });
+  }
 
   const btn = document.getElementById('add-incoming') as HTMLButtonElement;
   if (btn) {

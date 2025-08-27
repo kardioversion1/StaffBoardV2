@@ -1,6 +1,8 @@
 
 export type Slot = {
   nurseId: string;
+  /** Optional scheduled start time in HH:MM */
+  startHHMM?: string;
   student?: string | boolean;
   comment?: string;
   bad?: boolean;

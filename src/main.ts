@@ -33,7 +33,7 @@ export async function renderAll() {
       await renderBoard(root, { dateISO, shift });
       break;
     case 'Builder':
-      renderBuilder(root);
+      await renderBuilder(root);
       break;
     case 'History':
       renderHistoryTab(root);

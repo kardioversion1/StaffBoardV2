@@ -4,6 +4,7 @@ import { DB, KS, getConfig, STATE, loadStaff, saveStaff, Staff } from '@/state';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWidgets } from './widgets';
 import { nurseTile } from './nurseTile';
+import { debouncedSave } from '@/utils/debouncedSave';
 import './mainBoard/boardLayout.css';
 import { startBreak, endBreak, moveSlot, type Slot } from '@/slots';
 import { canonNurseType } from '@/domain/lexicon';
@@ -41,7 +42,8 @@ function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: ZoneDe
 
 // --- top-level render ------------------------------------------------------
 
-export async function renderMain(
+/** Render the main board view. */
+export async function renderBoard(
   root: HTMLElement,
   ctx: { dateISO: string; shift: 'day' | 'night' }
 ): Promise<void> {
@@ -140,7 +142,7 @@ export async function renderMain(
     `;
     document.getElementById('reset-tuple')?.addEventListener('click', async () => {
       await DB.del(KS.ACTIVE(ctx.dateISO, ctx.shift));
-      renderMain(root, ctx);
+      renderBoard(root, ctx);
     });
   }
 }
@@ -235,7 +237,7 @@ function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
           staff,
           save,
           () => renderZones(active, cfg, staff, save),
-          z,
+          z.name,
           idx,
           active,
           cfg
@@ -260,10 +262,14 @@ function wireComments(active: any, save: () => void) {
   el.value = active.comments || '';
   el.disabled = STATE.locked;
 
-  el.addEventListener('input', () => {
-    active.comments = el.value;
-    save();
-  });
+  el.addEventListener('input', () =>
+    debouncedSave(
+      () => {
+        active.comments = el.value;
+      },
+      () => save()
+    )
+  );
 }
 
 // --- incoming & offgoing ---------------------------------------------------

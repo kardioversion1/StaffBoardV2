@@ -1,0 +1,15 @@
+# Serve index by default
+DirectoryIndex index.html index.php
+
+# Correct MIME for JSON/JS/CSS
+AddType application/json .json
+AddType application/javascript .js
+AddType text/css .css
+
+# Single Page App rewrite (preserve real files/dirs)
+RewriteEngine On
+RewriteBase /
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+RewriteRule . /index.html [L]

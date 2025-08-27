@@ -15,9 +15,9 @@ import { fetchWeather, renderWidgets } from '@/ui/widgets';
 import { hhmmNowLocal, deriveShift } from '@/utils/time';
 import { renderHeader } from '@/ui/header';
 import { renderTabs, activeTab } from '@/ui/tabs';
-import { renderMain } from '@/ui/mainTab';
-import { renderSettingsTab } from '@/ui/settingsTab';
-import { renderDraftTab } from '@/ui/draftTab';
+import { renderBoard } from '@/ui/board';
+import { renderSettings } from '@/ui/settings';
+import { renderBuilder } from '@/ui/builder';
 import { renderHistoryTab } from '@/ui/historyTab';
 import { outlineBlockers } from '@/utils/debug';
 import { showBanner } from '@/ui/banner';
@@ -29,17 +29,17 @@ export async function renderAll() {
   const root = document.getElementById('panel')!;
   const { dateISO, shift } = STATE;
   switch (activeTab()) {
-    case 'Main':
-      await renderMain(root, { dateISO, shift });
+    case 'Board':
+      await renderBoard(root, { dateISO, shift });
       break;
-    case 'Draft':
-      renderDraftTab(root);
+    case 'Builder':
+      renderBuilder(root);
       break;
     case 'History':
       renderHistoryTab(root);
       break;
     case 'Settings':
-      await renderSettingsTab(root);
+      await renderSettings(root);
       break;
     // other tabs can be added here
   }

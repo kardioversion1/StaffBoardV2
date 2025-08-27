@@ -1,7 +1,8 @@
 import { renderAll } from '@/main';
 import { t } from '@/i18n/en';
+import { flags } from '@/flags';
 
-let active: string = 'Main';
+let active: string = 'Board';
 
 export function activeTab(): string {
   return active;
@@ -16,14 +17,14 @@ export function renderTabs(): void {
     app.appendChild(nav);
   }
   nav.innerHTML = `
-    <button data-tab="Main">Main</button>
-    <button data-tab="Draft">${t('nav.draft')}</button>
+    <button data-tab="Board">Board</button>
+    ${flags.enableShiftBuilderV2 ? `<button data-tab="Builder">${t('nav.builder')}</button>` : ''}
     <button data-tab="Settings">Settings</button>
     <button data-tab="History">${t('nav.history')}</button>
   `;
   nav.querySelectorAll('button').forEach((btn) => {
     btn.onclick = () => {
-      active = btn.getAttribute('data-tab') || 'Main';
+      active = btn.getAttribute('data-tab') || 'Board';
       renderAll();
     };
   });

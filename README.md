@@ -7,8 +7,15 @@ for the UI.
 ## Scripts
 
 - `npm run dev` – start the dev server
-- `npm run build` – build for production
-- `npm test` – run unit tests
+- `npm run build` – build for production (outputs to `dist/`)
+- `npm run preview` – preview the production build
+- `npm run precheck` – type check with `tsc --noEmit`
+
+## Utilities
+
+- Install dependencies: `npm ci`
+- Reset local data: visit `/reset.html`
+- Diagnostics: visit `/diag.html`
 
 ## Roster management
 

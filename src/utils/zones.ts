@@ -1,0 +1,51 @@
+export interface ZoneDef {
+  id: string;
+  name: string;
+  color?: string;
+}
+
+/**
+ * Normalize zones into a consistent array of { id, name, color }.
+ * Accepts either string[] or object[] from config.json.
+ */
+export function normalizeZones(input: any[]): ZoneDef[] {
+  if (!Array.isArray(input)) return [];
+
+  return input.map((z, i) => {
+    if (typeof z === 'string') {
+      return {
+        id: z.toLowerCase().replace(/\s+/g, '_'),
+        name: z,
+        color: '#ffffff'
+      };
+    } else if (typeof z === 'object' && z !== null) {
+      const name = z.name ?? String(z.id ?? `Zone ${i + 1}`);
+      return {
+        id: (z.id ?? name).toLowerCase().replace(/\s+/g, '_'),
+        name,
+        color: z.color ?? '#ffffff'
+      };
+    } else {
+      return {
+        id: `zone_${i}`,
+        name: `Zone ${i + 1}`,
+        color: '#ffffff'
+      };
+    }
+  });
+}
+
+/**
+ * Ensure active.zones keys align with normalized zone names.
+ * Mutates the active object in place.
+ */
+export function normalizeActiveZones(active: any, zones: ZoneDef[]): void {
+  if (!active || typeof active !== 'object') return;
+  if (!active.zones || typeof active.zones !== 'object') active.zones = {};
+  const normalized: Record<string, any[]> = {};
+  for (const z of zones) {
+    const arr = active.zones[z.name];
+    normalized[z.name] = Array.isArray(arr) ? arr : [];
+  }
+  active.zones = normalized;
+}

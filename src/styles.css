@@ -198,3 +198,4 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .manage-dialog{background:var(--panel);padding:16px;border-radius:8px;display:flex;flex-direction:column;gap:8px;min-width:260px}
 .manage-dialog label{display:flex;flex-direction:column;gap:4px}
 .manage-dialog .dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.banner{background:var(--danger);color:var(--text);padding:8px;text-align:center}

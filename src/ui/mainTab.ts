@@ -7,6 +7,7 @@ import { nurseTile } from './nurseTile';
 import './mainBoard/boardLayout.css';
 import { startBreak, endBreak, moveSlot, type Slot } from '@/slots';
 import { canonNurseType } from '@/domain/lexicon';
+import { normalizeZones, normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 
 // Palette used to pair zone background with a readable nurse tile bg in dark mode
 const PALETTE: [string, string][] = [
@@ -22,14 +23,16 @@ const PALETTE: [string, string][] = [
 
 // --- helpers ---------------------------------------------------------------
 
-function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: string[]) {
+function buildEmptyActive(dateISO: string, shift: 'day' | 'night', zones: ZoneDef[]) {
   return {
     dateISO,
     shift,
     charge: undefined,
     triage: undefined,
     admin: undefined,
-    zones: Object.fromEntries([...zones, 'Bullpen'].map((z) => [z, [] as any[]])),
+    zones: Object.fromEntries(
+      [...zones.map((z) => z.name), 'Bullpen'].map((z) => [z, [] as any[]])
+    ),
     incoming: [],
     offgoing: [],
     comments: '',
@@ -44,16 +47,19 @@ export async function renderMain(
 ): Promise<void> {
   try {
     const cfg = getConfig();
-    if (!cfg.zones) cfg.zones = [];
-    if (!cfg.zones.includes('Bullpen')) cfg.zones.push('Bullpen');
+      if (!cfg.zones) cfg.zones = [];
+      if (!cfg.zones.some((z: ZoneDef) => z.name === 'Bullpen')) {
+        cfg.zones.push(normalizeZones(['Bullpen'])[0]);
+      }
 
     const staff: Staff[] = await loadStaff();
     setNurseCache(staff);
 
     // Load or initialize active shift tuple
     const saveKey = KS.ACTIVE(ctx.dateISO, ctx.shift);
-    let active: any = await DB.get(saveKey);
-    if (!active) active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones);
+      let active: any = await DB.get(saveKey);
+      if (!active) active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones);
+      else normalizeActiveZones(active, cfg.zones);
 
     // Layout
     root.innerHTML = `
@@ -169,15 +175,16 @@ function renderLeadership(active: any) {
 function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
   const cont = document.getElementById('zones')!;
   cont.innerHTML = '';
-  const zones: string[] = cfg.zones || [];
+  const zones: ZoneDef[] = cfg.zones || [];
 
-  zones.forEach((z: string, i: number) => {
+  zones.forEach((z: ZoneDef, i: number) => {
+    const zName = z.name;
     const section = document.createElement('section');
     section.className = 'zone-card';
     section.setAttribute('data-testid', 'zone-card');
 
     // Color: explicit or palette variables
-    const explicit = cfg.zoneColors?.[z];
+    const explicit = z.color || cfg.zoneColors?.[zName];
     if (explicit) {
       section.style.background = explicit;
       // If explicit color matches our palette's first color, use its paired nurse tile color
@@ -193,13 +200,13 @@ function renderZones(active: any, cfg: any, staff: Staff[], save: () => void) {
 
     const title = document.createElement('h2');
     title.className = 'zone-card__title';
-    title.textContent = z;
+    title.textContent = zName;
     section.appendChild(title);
 
     const body = document.createElement('div');
     body.className = 'zone-card__body';
 
-    (active.zones[z] || []).forEach((s: Slot, idx: number) => {
+    (active.zones[zName] || []).forEach((s: Slot, idx: number) => {
       const st = staff.find((n) => n.id === s.nurseId);
       if (!st) {
         console.warn('Unknown staffId', s.nurseId);
@@ -352,7 +359,7 @@ function manageSlot(
       <label>End time <input id="mg-end" type="time" value="${slot.endTimeOverrideHHMM || ''}"></label>
       <label>Zone <select id="mg-zone">
         ${(cfg.zones || [])
-          .map((z: string) => `<option value="${z}"${z === zone ? ' selected' : ''}>${z}</option>`)
+          .map((z: ZoneDef) => `<option value="${z.name}"${z.name === zone ? ' selected' : ''}>${z.name}</option>`)
           .join('')}
       </select></label>
       <div class="dialog-actions">

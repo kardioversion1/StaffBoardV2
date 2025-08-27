@@ -187,15 +187,15 @@ function renderGeneralSettings() {
     '#10b981', '#047857',             // greens
     '#8b5cf6',                        // purple
   ];
-  const zoneOptions = (z: string) =>
+  const zoneOptions = (z: string, sel: string | undefined) =>
     `<select data-zone="${z}" class="zone-sel">` +
     '<option value="">Default</option>' +
     palette
-      .map((c) => `<option value="${c}"${cfg.zoneColors?.[z]===c?' selected':''} style="background:${c}">${c}</option>`)
+      .map((c) => `<option value="${c}"${sel===c?' selected':''} style="background:${c}">${c}</option>`)
       .join('') +
     '</select>';
   const zonesHTML = cfg.zones
-    .map((z) => `<div class="form-row"><label>${z} ${zoneOptions(z)}</label></div>`)
+    .map((z) => `<div class="form-row"><label>${z.name} ${zoneOptions(z.name, z.color)}</label></div>`)
     .join('');
   el.innerHTML = `
     <section class="panel">
@@ -229,8 +229,11 @@ function renderGeneralSettings() {
   el.querySelectorAll('.zone-sel').forEach((sel) => {
     sel.addEventListener('change', async () => {
       const zone = (sel as HTMLSelectElement).getAttribute('data-zone')!;
-      cfg.zoneColors![zone] = (sel as HTMLSelectElement).value;
-      await saveConfig({ zoneColors: cfg.zoneColors });
+      const val = (sel as HTMLSelectElement).value;
+      cfg.zoneColors![zone] = val;
+      const zObj = cfg.zones.find((z) => z.name === zone);
+      if (zObj) zObj.color = val;
+      await saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
       document.dispatchEvent(new Event('config-changed'));
     });
   });

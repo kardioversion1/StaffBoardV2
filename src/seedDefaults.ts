@@ -1,8 +1,9 @@
 import data from '../staff_and_zones.json';
 import { getConfig, saveConfig, loadStaff, saveStaff, Staff } from '@/state';
 import { ensureStaffId } from '@/utils/id';
+import type { ZoneDef } from '@/utils/zones';
 
-export const CANONICAL_ZONES = data.zones.map((z) => z.name);
+export const CANONICAL_ZONES: ZoneDef[] = data.zones as ZoneDef[];
 
 /** Seed default staff and zones if none exist. Idempotent. */
 export async function seedDefaults(): Promise<void> {
@@ -11,8 +12,8 @@ export async function seedDefaults(): Promise<void> {
     await saveConfig({ zones: [...CANONICAL_ZONES] });
   } else {
     const merged = [...cfg.zones];
-    for (const name of CANONICAL_ZONES) {
-      if (!merged.includes(name)) merged.push(name);
+    for (const z of CANONICAL_ZONES) {
+      if (!merged.some((m) => m.id === z.id || m.name === z.name)) merged.push(z);
     }
     await saveConfig({ zones: merged });
   }

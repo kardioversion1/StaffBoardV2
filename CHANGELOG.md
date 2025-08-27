@@ -1,5 +1,6 @@
 # Changelog
 
+- fix: normalize zone definitions and guard against invalid data
 - fix: prevent full app re-render on clock tick to stop input focus loss; throttle weather updates.
 - feat: seed defaults via `staff_and_zones.json` and `seedDefaults()`; enforce canonical zones.
 - feat: normalize staff roles to `nurse` or `tech` with prefixed IDs (`00-`), update UI and imports.

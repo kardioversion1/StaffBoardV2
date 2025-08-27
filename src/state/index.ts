@@ -5,6 +5,14 @@ import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { ensureStaffId } from '@/utils/id';
 import { ensureRole } from '@/utils/role';
 import { normalizeZones, type ZoneDef } from '@/utils/zones';
+import {
+  savePublishedShift,
+  indexStaffAssignments,
+  getHuddle,
+  type ShiftKind,
+  type PublishedShiftSnapshot,
+  type Assignment,
+} from '@/state/history';
 
 export type WidgetsConfig = {
   show?: boolean;
@@ -314,6 +322,52 @@ export async function applyDraftToActive(
   if (!draft) return;
   await DB.set(KS.ACTIVE(dateISO, shift), draft);
   await DB.del(KS.DRAFT(dateISO, shift));
+
+  // Build and persist a published snapshot for history.
+  const staff = await loadStaff();
+  const staffMap: Record<string, Staff> = Object.fromEntries(
+    staff.map((s) => [s.id, s])
+  );
+  const assignments: Assignment[] = [];
+  for (const [zone, slots] of Object.entries(draft.zones)) {
+    for (const slot of slots) {
+      const info = staffMap[slot.nurseId];
+      const now = new Date().toISOString();
+      assignments.push({
+        staffId: slot.nurseId,
+        displayName: info?.name || slot.nurseId,
+        role: info?.role || 'nurse',
+        zone,
+        startISO: now,
+        endISO: now,
+        dto: slot.dto
+          ? { effectiveISO: now, offgoingUntilISO: now }
+          : undefined,
+      });
+    }
+  }
+  const huddle = await getHuddle(dateISO, shift as ShiftKind);
+  const snapshot: PublishedShiftSnapshot = {
+    version: 1,
+    dateISO,
+    shift: shift as ShiftKind,
+    publishedAtISO: new Date().toISOString(),
+    publishedBy: 'unknown',
+    charge: draft.charge?.nurseId,
+    triage: draft.triage?.nurseId,
+    admin: draft.admin?.nurseId,
+    zoneAssignments: assignments,
+    incoming: draft.incoming.map((i) => i.nurseId),
+    offgoing: draft.offgoing.map((o) => o.nurseId),
+    comments: '',
+    huddle: huddle,
+    audit: {
+      createdAtISO: new Date().toISOString(),
+      createdBy: 'unknown',
+    },
+  };
+  await savePublishedShift(snapshot);
+  await indexStaffAssignments(snapshot);
 }
 
 export { DB };

@@ -1,0 +1,74 @@
+import { renderCalendarView } from './CalendarView';
+import { renderNurseHistory } from './NurseHistory';
+import { renderHuddleTable } from './HuddleTable';
+import './history.css';
+import type {
+  PublishedShiftSnapshot,
+  NurseShiftIndexEntry,
+} from '@/state/history';
+
+/** Render History tab with sub-views. */
+export function renderHistory(root: HTMLElement): void {
+  root.innerHTML = `
+    <div class="history-nav">
+      <button data-view="calendar">By Date</button>
+      <button data-view="nurse">By Nurse</button>
+      <button data-view="huddles">Huddles</button>
+    </div>
+    <div id="history-view"></div>
+  `;
+  const viewRoot = root.querySelector('#history-view') as HTMLElement;
+  function show(view: string) {
+    if (view === 'nurse') renderNurseHistory(viewRoot);
+    else if (view === 'huddles') renderHuddleTable(viewRoot);
+    else renderCalendarView(viewRoot);
+  }
+  root.querySelectorAll('.history-nav button').forEach((btn) => {
+    const el = btn as HTMLButtonElement;
+    el.addEventListener('click', () => show(el.dataset.view!));
+  });
+  show('calendar');
+}
+
+/** Export a single shift snapshot to CSV. */
+export function exportShiftCSV(snapshot: PublishedShiftSnapshot): string {
+  const header = 'date,shift,zone,staffId,displayName,role,startISO,endISO,dto';
+  const rows = snapshot.zoneAssignments
+    .map((a) =>
+      [
+        snapshot.dateISO,
+        snapshot.shift,
+        a.zone,
+        a.staffId,
+        a.displayName,
+        a.role,
+        a.startISO,
+        a.endISO,
+        a.dto ? '1' : '0',
+      ].join(',')
+    )
+    .join('\n');
+  return `${header}\n${rows}`;
+}
+
+/** Export nurse history entries to CSV. */
+export function exportNurseHistoryCSV(entries: NurseShiftIndexEntry[]): string {
+  const header = 'staffId,displayName,role,date,shift,zone,startISO,endISO,dto';
+  const rows = entries
+    .map((e) =>
+      [
+        e.staffId,
+        e.displayName,
+        e.role,
+        e.dateISO,
+        e.shift,
+        e.zone,
+        e.startISO,
+        e.endISO,
+        e.dto ? '1' : '0',
+      ].join(',')
+    )
+    .join('\n');
+  return `${header}\n${rows}`;
+}
+

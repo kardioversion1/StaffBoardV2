@@ -1,7 +1,7 @@
-export function renderHistoryTab(root: HTMLElement) {
-  root.innerHTML = `
-    <div class="history-page">
-      <p class="muted">No shift history yet.</p>
-    </div>
-  `;
+import { renderHistory } from '@/history';
+
+/** Legacy wrapper to render History tab. */
+export function renderHistoryTab(root: HTMLElement): void {
+  renderHistory(root);
 }
+

@@ -25,7 +25,7 @@ export const SYNONYMS = {
     hallway: ['hallway','hw'],
     waiting: ['waiting','wr','waiting room'],
     quick: ['quick','fast track','t1','t2','2'],
-    special: ['special','system','meta','offgoing','unassigned','admin'],
+    special: ['special','system','meta','offgoing','unassigned','admin','unit secretary','secretary'],
   },
   shiftStatus: {
     draft: ['draft','pending'],

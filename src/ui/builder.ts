@@ -10,8 +10,9 @@ import {
   applyDraftToActive,
   saveConfig,
 } from '@/state';
-import { upsertSlot, type Slot } from '@/slots';
+import { upsertSlot, removeSlot, type Slot } from '@/slots';
 import { nurseTile } from './nurseTile';
+import { setNurseCache, labelFromId } from '@/utils/names';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 import './mainBoard/boardLayout.css';
 
@@ -35,6 +36,7 @@ function buildEmptyDraft(dateISO: string, shift: 'day' | 'night', zones: ZoneDef
 export async function renderBuilder(root: HTMLElement): Promise<void> {
   const cfg = getConfig();
   const staff = await loadStaff();
+  setNurseCache(staff);
   const key = KS.DRAFT(STATE.dateISO, STATE.shift);
   const board: DraftShift =
     (await DB.get<DraftShift>(key)) ??
@@ -56,6 +58,14 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       </div>
       <div class="col col-right">
         <section class="panel">
+          <h3>Patient Care Team</h3>
+          <div class="slots lead">
+            <div id="builder-charge"></div>
+            <div id="builder-triage"></div>
+            <div id="builder-secretary"></div>
+          </div>
+        </section>
+        <section class="panel">
           <h3>Pending Zones</h3>
           <div id="builder-zones" class="zones-grid"></div>
         </section>
@@ -69,6 +79,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
 
   renderRoster();
   renderZones();
+  renderLeads();
 
   function adjustRosterHeight() {
     const cont = document.getElementById('builder-roster') as HTMLElement;
@@ -137,6 +148,75 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       }
     }
     return { shifts, dto };
+  }
+
+  function renderLeads() {
+    const chargeEl = document.getElementById('builder-charge') as HTMLElement;
+    const triageEl = document.getElementById('builder-triage') as HTMLElement;
+    const secEl = document.getElementById('builder-secretary') as HTMLElement;
+
+    chargeEl.textContent = labelFromId(board.charge?.nurseId);
+    triageEl.textContent = labelFromId(board.triage?.nurseId);
+    secEl.textContent = labelFromId(board.admin?.nurseId);
+
+    chargeEl.onclick = () =>
+      assignLeadDialog(board, staff, save, 'charge', renderLeads);
+    triageEl.onclick = () =>
+      assignLeadDialog(board, staff, save, 'triage', renderLeads);
+    secEl.onclick = () =>
+      assignLeadDialog(board, staff, save, 'admin', renderLeads);
+  }
+
+  function assignLeadDialog(
+    board: DraftShift,
+    staffList: Staff[],
+    save: () => void,
+    role: 'charge' | 'triage' | 'admin',
+    rerender: () => void
+  ): void {
+    const overlay = document.createElement('div');
+    overlay.className = 'manage-overlay';
+    const roleLabel =
+      role === 'charge' ? 'Charge Nurse' : role === 'triage' ? 'Triage Nurse' : 'Unit Secretary';
+    overlay.innerHTML = `
+      <div class="manage-dialog">
+        <h3>Assign ${roleLabel}</h3>
+        <select id="lead-select">
+          <option value="">Unassigned</option>
+          ${staffList
+            .map((s) => `<option value="${s.id}">${s.name || s.id}</option>`)
+            .join('')}
+        </select>
+        <div class="dialog-actions">
+          <button id="lead-save" class="btn">Save</button>
+          <button id="lead-cancel" class="btn">Cancel</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const sel = overlay.querySelector('#lead-select') as HTMLSelectElement;
+    const currentId =
+      role === 'charge'
+        ? board.charge?.nurseId
+        : role === 'triage'
+        ? board.triage?.nurseId
+        : board.admin?.nurseId;
+    if (currentId) sel.value = currentId;
+
+    overlay
+      .querySelector('#lead-cancel')!
+      .addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#lead-save')!.addEventListener('click', () => {
+      const id = sel.value;
+      if (id) {
+        upsertSlot(board, role, { nurseId: id });
+      } else {
+        removeSlot(board, role);
+      }
+      save();
+      overlay.remove();
+      rerender();
+    });
   }
 
   function renderZones() {

@@ -128,18 +128,19 @@ function wireNotes() {
 }
 
 function renderAttendance() {
-  const roles = ['Charge', 'Triage', 'Nurses', 'Techs'];
+  const roles = ['Charge Nurse', 'Triage Nurse', 'Nurses', 'Techs'];
   const cont = document.getElementById('huddle-attendance')!;
   cont.innerHTML = roles
     .map(
       (r) => `
-      <label><input type="checkbox" id="att-${r}"${
+      <label><input type="checkbox" id="att-${r.replace(/\s+/g, '')}"${
         data.attendance[r] ? ' checked' : ''
       }> ${r}</label>`
     )
     .join(' ');
   roles.forEach((r) => {
-    const cb = document.getElementById(`att-${r}`) as HTMLInputElement;
+    const id = `att-${r.replace(/\s+/g, '')}`;
+    const cb = document.getElementById(id) as HTMLInputElement;
     cb.addEventListener('change', async () => {
       data.attendance[r] = cb.checked;
       await save();

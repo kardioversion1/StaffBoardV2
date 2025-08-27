@@ -50,6 +50,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       <div class="col col-left">
         <section class="panel">
           <h3>Roster</h3>
+          <input id="builder-roster-search" class="input" placeholder="Search nurses">
           <div id="builder-roster"></div>
         </section>
       </div>
@@ -69,17 +70,73 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
   renderRoster();
   renderZones();
 
-  function renderRoster() {
+  function adjustRosterHeight() {
+    const cont = document.getElementById('builder-roster') as HTMLElement;
+    const top = cont.getBoundingClientRect().top;
+    cont.style.maxHeight = `${window.innerHeight - top}px`;
+    cont.style.overflow = 'hidden';
+  }
+
+  adjustRosterHeight();
+  window.addEventListener('resize', adjustRosterHeight);
+
+  const searchInput = document.getElementById('builder-roster-search') as HTMLInputElement;
+  searchInput.addEventListener('input', () => renderRoster(searchInput.value));
+
+  function renderRoster(query = '') {
     const cont = document.getElementById('builder-roster')!;
+    const q = query.toLowerCase();
     cont.innerHTML = staff
-      .map((s) => `<div class="nurse-card" draggable="true" data-id="${s.id}">${s.name || s.id}</div>`)
+      .filter((s) => !q || (s.name || s.id).toLowerCase().includes(q))
+      .map(
+        (s) =>
+          `<div class="nurse-card" draggable="true" data-id="${s.id}"><div class="nurse-name">${s.name || s.id}</div></div>`
+      )
       .join('');
-    cont.querySelectorAll('[draggable=true]').forEach((el) => {
+    cont.querySelectorAll('.nurse-card').forEach((el) => {
       el.addEventListener('dragstart', (e) => {
         const event = e as DragEvent;
         event.dataTransfer?.setData('text/plain', (el as HTMLElement).getAttribute('data-id')!);
       });
+      el.addEventListener('click', () => toggleDetails(el as HTMLElement));
     });
+  }
+
+  async function toggleDetails(card: HTMLElement) {
+    const existing = card.querySelector('.nurse-details');
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    const info = await nurseHistory(card.dataset.id!);
+    const detail = document.createElement('div');
+    detail.className = 'nurse-details';
+    detail.innerHTML = `
+      <div><strong>Past 5 shifts</strong></div>
+      <ul>${info.shifts.map((s) => `<li>${s}</li>`).join('') || '<li>None</li>'}</ul>
+      <div><strong>DTO</strong></div>
+      <ul>${info.dto.map((d) => `<li>${d}</li>`).join('') || '<li>None</li>'}</ul>
+    `;
+    card.appendChild(detail);
+  }
+
+  async function nurseHistory(id: string): Promise<{ shifts: string[]; dto: string[] }> {
+    const hist = (await DB.get<any[]>(KS.HISTORY)) || [];
+    const shifts: string[] = [];
+    const dto: string[] = [];
+    for (let i = hist.length - 1; i >= 0; i--) {
+      const entry = hist[i];
+      if (entry?.nurseId === id) {
+        dto.push(`${entry.dateISO} ${entry.shift}`);
+      } else if (entry?.zones) {
+        const zones: Slot[][] = Object.values(entry.zones);
+        if (zones.some((arr) => arr.some((s: Slot) => s.nurseId === id))) {
+          shifts.push(`${entry.dateISO} ${entry.shift}`);
+          if (shifts.length >= 5) break;
+        }
+      }
+    }
+    return { shifts, dto };
   }
 
   function renderZones() {

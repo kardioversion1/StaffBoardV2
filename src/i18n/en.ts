@@ -7,7 +7,7 @@ export const en = {
     endOverlapNow: 'End overlap now',
   },
   labels: {
-    charge: 'Charge', triage: 'Triage', adminOn: 'Admin on',
+    charge: 'Charge Nurse', triage: 'Triage Nurse', adminOn: 'Unit Secretary',
     unassigned: 'Unassigned', offgoing: 'Offgoing',
     roster: 'Roster', zones: 'Zones', flags: 'Duplication flags',
     dto: 'DTO', dtoLong: 'Discretionary Time Off',

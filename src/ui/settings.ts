@@ -214,8 +214,8 @@ function renderGeneralSettings() {
       <div class="form-row"><label>Day hours <input id="gs-day" type="number" value="${cfg.shiftDurations?.day}"></label></div>
       <div class="form-row"><label>Night hours <input id="gs-night" type="number" value="${cfg.shiftDurations?.night}"></label></div>
       <div class="form-row"><label>DTO minutes <input id="gs-dto" type="number" value="${cfg.dtoMinutes}"></label></div>
-      <div class="form-row"><label><input type="checkbox" id="gs-charge"${cfg.showPinned?.charge!==false?' checked':''}> Show Charge panel when empty</label></div>
-      <div class="form-row"><label><input type="checkbox" id="gs-triage"${cfg.showPinned?.triage!==false?' checked':''}> Show Triage panel when empty</label></div>
+      <div class="form-row"><label><input type="checkbox" id="gs-charge"${cfg.showPinned?.charge!==false?' checked':''}> Show Charge Nurse slot when empty</label></div>
+      <div class="form-row"><label><input type="checkbox" id="gs-triage"${cfg.showPinned?.triage!==false?' checked':''}> Show Triage Nurse slot when empty</label></div>
       <div class="form-row"><label><input type="checkbox" id="gs-privacy"${cfg.privacy!==false?' checked':''}> Privacy mode: First LastInitial</label></div>
       <div class="form-row"><label>RSS URL <input id="gs-rss" value="${cfg.rss?.url || ''}"></label></div>
       <div class="form-row"><label><input type="checkbox" id="gs-rss-en"${cfg.rss?.enabled?' checked':''}> Enable feed</label></div>

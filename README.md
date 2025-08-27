@@ -46,11 +46,11 @@ await importHistoryFromJSON(
 The example above seeds a past day shift where a "robot" nurse was assigned to
 zone Alpha.
 
-## Language & Terminology
+-## Language & Terminology
 
 - Nurse types: home, travel, flex, charge, triage, other
-- Special/pinned roles: Charge, Triage (always shown), Admin on (shown only if occupied)
-- Zone types: room, hallway (HW), waiting (WR), quick (T1/T2/2), special (Unassigned, Offgoing, Admin on)
+- Special/pinned roles: Charge Nurse, Triage Nurse (always shown), Unit Secretary (shown only if occupied)
+- Zone types: room, hallway (HW), waiting (WR), quick (T1/T2/2), special (Unassigned, Offgoing, Unit Secretary)
 - Shift statuses: draft → onbat → live → overlap → archived
 - DTO = Discretionary Time Off (displayed as “DTO” in UI)
 - Privacy: main board shows First LastInitial

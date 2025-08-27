@@ -17,7 +17,7 @@ import { renderWeather } from './widgets';
 import { nurseTile } from './nurseTile';
 import { debouncedSave } from '@/utils/debouncedSave';
 import './mainBoard/boardLayout.css';
-import { startBreak, endBreak, moveSlot, upsertSlot, type Slot } from '@/slots';
+import { startBreak, endBreak, moveSlot, upsertSlot, removeSlot, type Slot } from '@/slots';
 import { canonNurseType } from '@/domain/lexicon';
 import { normalizeZones, normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 import type { DraftShift } from '@/state';
@@ -79,11 +79,11 @@ export async function renderBoard(
       <div class="layout" data-testid="main-board">
         <div class="col col-left">
           <section class="panel">
-            <h3>Leadership</h3>
+            <h3>Patient Care Team</h3>
             <div class="slots lead">
               <div id="slot-charge"></div>
               <div id="slot-triage"></div>
-              <div id="slot-admin" style="display:none"></div>
+              <div id="slot-secretary"></div>
             </div>
           </section>
 
@@ -130,7 +130,7 @@ export async function renderBoard(
       saveTimer = setTimeout(() => DB.set(saveKey, active), 300);
     };
 
-    renderLeadership(active);
+    renderLeadership(active, staff, queueSave);
     renderZones(active, cfg, staff, queueSave);
     wireComments(active, queueSave);
     await renderIncoming(active, queueSave);
@@ -140,7 +140,7 @@ export async function renderBoard(
     // Re-render on config changes (e.g., zone list or colors)
     document.addEventListener('config-changed', () => {
       const c = getConfig();
-      renderLeadership(active);
+      renderLeadership(active, staff, queueSave);
       renderZones(active, c, staff, queueSave);
     });
   } catch (err) {
@@ -160,27 +160,90 @@ export async function renderBoard(
 
 // --- leadership ------------------------------------------------------------
 
-function renderLeadership(active: ActiveBoard) {
+function renderLeadership(
+  active: ActiveBoard,
+  staff: Staff[],
+  save: () => void
+) {
   const cfg = getConfig();
   const chargeEl = document.getElementById('slot-charge') as HTMLElement;
   const triageEl = document.getElementById('slot-triage') as HTMLElement;
+  const secEl = document.getElementById('slot-secretary') as HTMLElement;
 
   chargeEl.textContent = labelFromId(active.charge?.nurseId);
   triageEl.textContent = labelFromId(active.triage?.nurseId);
+  secEl.textContent = labelFromId(active.admin?.nurseId);
 
   chargeEl.style.display =
     active.charge?.nurseId || cfg.showPinned?.charge ? '' : 'none';
   triageEl.style.display =
     active.triage?.nurseId || cfg.showPinned?.triage ? '' : 'none';
+  secEl.style.display = active.admin?.nurseId ? '' : 'none';
 
-  const adminEl = document.getElementById('slot-admin') as HTMLElement;
-  if (active.admin?.nurseId) {
-    adminEl.style.display = '';
-    adminEl.textContent = labelFromId(active.admin.nurseId);
-  } else {
-    adminEl.style.display = 'none';
-    adminEl.textContent = '';
-  }
+  chargeEl.onclick = () =>
+    assignLeadDialog(active, staff, save, 'charge', () =>
+      renderLeadership(active, staff, save)
+    );
+  triageEl.onclick = () =>
+    assignLeadDialog(active, staff, save, 'triage', () =>
+      renderLeadership(active, staff, save)
+    );
+  secEl.onclick = () =>
+    assignLeadDialog(active, staff, save, 'admin', () =>
+      renderLeadership(active, staff, save)
+    );
+}
+
+function assignLeadDialog(
+  board: ActiveBoard,
+  staffList: Staff[],
+  save: () => void,
+  role: 'charge' | 'triage' | 'admin',
+  rerender: () => void
+): void {
+  const overlay = document.createElement('div');
+  overlay.className = 'manage-overlay';
+  const roleLabel =
+    role === 'charge' ? 'Charge Nurse' : role === 'triage' ? 'Triage Nurse' : 'Unit Secretary';
+  overlay.innerHTML = `
+    <div class="manage-dialog">
+      <h3>Assign ${roleLabel}</h3>
+      <select id="lead-select">
+        <option value="">Unassigned</option>
+        ${staffList
+          .map((s) => `<option value="${s.id}">${s.name || s.id}</option>`)
+          .join('')}
+      </select>
+      <div class="dialog-actions">
+        <button id="lead-save" class="btn">Save</button>
+        <button id="lead-cancel" class="btn">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const sel = overlay.querySelector('#lead-select') as HTMLSelectElement;
+  const currentId =
+    role === 'charge'
+      ? board.charge?.nurseId
+      : role === 'triage'
+      ? board.triage?.nurseId
+      : board.admin?.nurseId;
+  if (currentId) sel.value = currentId;
+
+  overlay.querySelector('#lead-cancel')!.addEventListener('click', () =>
+    overlay.remove()
+  );
+  overlay.querySelector('#lead-save')!.addEventListener('click', () => {
+    const id = sel.value;
+    if (id) {
+      upsertSlot(board, role, { nurseId: id });
+    } else {
+      removeSlot(board, role);
+    }
+    save();
+    overlay.remove();
+    rerender();
+  });
 }
 
 // --- zones & tiles ---------------------------------------------------------

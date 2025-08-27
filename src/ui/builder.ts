@@ -25,8 +25,9 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
   const cfg = getConfig();
   const staff = await loadStaff();
   const key = KS.DRAFT(STATE.dateISO, STATE.shift);
-  let board = await DB.get<DraftShift>(key);
-  if (!board) board = buildEmptyDraft(STATE.dateISO, STATE.shift, cfg.zones);
+  const board: DraftShift =
+    (await DB.get<DraftShift>(key)) ??
+    buildEmptyDraft(STATE.dateISO, STATE.shift, cfg.zones);
   normalizeActiveZones(board, cfg.zones);
 
   async function save() {
@@ -63,7 +64,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       .map((s) => `<div class="nurse-card" draggable="true" data-id="${s.id}">${s.name || s.id}</div>`)
       .join('');
     cont.querySelectorAll('[draggable=true]').forEach((el) => {
-      el.addEventListener('dragstart', (e) => {
+      el.addEventListener('dragstart', (e: DragEvent) => {
         e.dataTransfer?.setData('text/plain', (el as HTMLElement).getAttribute('data-id')!);
       });
     });
@@ -83,7 +84,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       const body = document.createElement('div');
       body.className = 'zone-card__body';
       body.addEventListener('dragover', (e) => e.preventDefault());
-      body.addEventListener('drop', async (e) => {
+      body.addEventListener('drop', async (e: DragEvent) => {
         e.preventDefault();
         const id = e.dataTransfer?.getData('text/plain');
         if (id) {

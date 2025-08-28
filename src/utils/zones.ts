@@ -2,6 +2,8 @@ export interface ZoneDef {
   id: string;
   name: string;
   color?: string;
+  /** Whether the zone is part of the patient care team area. */
+  pct?: boolean;
 }
 
 /**
@@ -16,20 +18,23 @@ export function normalizeZones(input: any[]): ZoneDef[] {
       return {
         id: z.toLowerCase().replace(/\s+/g, '_'),
         name: z,
-        color: '#ffffff'
+        color: '#ffffff',
+        pct: false,
       };
     } else if (typeof z === 'object' && z !== null) {
       const name = z.name ?? String(z.id ?? `Zone ${i + 1}`);
       return {
         id: (z.id ?? name).toLowerCase().replace(/\s+/g, '_'),
         name,
-        color: z.color ?? '#ffffff'
+        color: z.color ?? '#ffffff',
+        pct: !!(z as any).pct,
       };
     } else {
       return {
         id: `zone_${i}`,
         name: `Zone ${i + 1}`,
-        color: '#ffffff'
+        color: '#ffffff',
+        pct: false,
       };
     }
   });

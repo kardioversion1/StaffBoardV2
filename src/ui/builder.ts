@@ -64,6 +64,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
             <div id="builder-triage"></div>
             <div id="builder-secretary"></div>
           </div>
+          <div id="builder-pct-zones" class="zones-grid"></div>
         </section>
         <section class="panel">
           <h3>Pending Zones</h3>
@@ -220,7 +221,9 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
   }
 
   function renderZones() {
+    const pctCont = document.getElementById('builder-pct-zones')!;
     const cont = document.getElementById('builder-zones')!;
+    pctCont.innerHTML = '';
     cont.innerHTML = '';
     cfg.zones.forEach((z, i) => {
       const section = document.createElement('section');
@@ -366,8 +369,28 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       });
 
       section.appendChild(body);
-      cont.appendChild(section);
+      (z.pct ? pctCont : cont).appendChild(section);
     });
+
+    const enableDrop = (container: HTMLElement, pct: boolean) => {
+      container.addEventListener('dragover', (e) => e.preventDefault());
+      container.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const zoneIdxStr = e.dataTransfer?.getData('zone-index');
+        if (zoneIdxStr) {
+          const fromIdx = Number(zoneIdxStr);
+          if (!isNaN(fromIdx)) {
+            cfg.zones[fromIdx].pct = pct;
+            await saveConfig({ zones: cfg.zones });
+            renderZones();
+          }
+        }
+      });
+    };
+
+    enableDrop(pctCont, true);
+    enableDrop(cont, false);
   }
 
   document.getElementById('builder-save')!.addEventListener('click', save);

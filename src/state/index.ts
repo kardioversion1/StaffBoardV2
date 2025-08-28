@@ -346,6 +346,41 @@ export async function applyDraftToActive(
       });
     }
   }
+
+  const now = new Date().toISOString();
+  if (draft.charge?.nurseId) {
+    const info = staffMap[draft.charge.nurseId];
+    assignments.push({
+      staffId: draft.charge.nurseId,
+      displayName: info?.name || draft.charge.nurseId,
+      role: info?.role || 'nurse',
+      zone: 'Charge',
+      startISO: now,
+      endISO: now,
+    });
+  }
+  if (draft.triage?.nurseId) {
+    const info = staffMap[draft.triage.nurseId];
+    assignments.push({
+      staffId: draft.triage.nurseId,
+      displayName: info?.name || draft.triage.nurseId,
+      role: info?.role || 'nurse',
+      zone: 'Triage',
+      startISO: now,
+      endISO: now,
+    });
+  }
+  if (draft.admin?.nurseId) {
+    const info = staffMap[draft.admin.nurseId];
+    assignments.push({
+      staffId: draft.admin.nurseId,
+      displayName: info?.name || draft.admin.nurseId,
+      role: info?.role || 'nurse',
+      zone: 'Secretary',
+      startISO: now,
+      endISO: now,
+    });
+  }
   const huddle = await getHuddle(dateISO, shift as ShiftKind);
   const snapshot: PublishedShiftSnapshot = {
     version: 1,

@@ -64,11 +64,11 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
             <div id="builder-triage"></div>
             <div id="builder-secretary"></div>
           </div>
-          <div id="builder-pct-zones" class="zones-grid"></div>
+          <div id="builder-pct-zones" class="zones-grid" style="min-height:40px"></div>
         </section>
         <section class="panel">
           <h3>Pending Zones</h3>
-          <div id="builder-zones" class="zones-grid"></div>
+          <div id="builder-zones" class="zones-grid" style="min-height:40px"></div>
         </section>
         <div class="btn-row">
           <button id="builder-save" class="btn">Save</button>
@@ -225,6 +225,8 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
     const cont = document.getElementById('builder-zones')!;
     pctCont.innerHTML = '';
     cont.innerHTML = '';
+    pctCont.style.minHeight = '40px';
+    cont.style.minHeight = '40px';
     cfg.zones.forEach((z, i) => {
       const section = document.createElement('section');
       section.className = 'zone-card';

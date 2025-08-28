@@ -367,6 +367,10 @@ function wireComments(active: ActiveBoard, save: () => void) {
 
   el.value = active.comments || '';
   el.disabled = STATE.locked;
+  const commit = () => {
+    active.comments = el.value;
+    save();
+  };
 
   el.addEventListener('input', () =>
     debouncedSave(
@@ -376,6 +380,8 @@ function wireComments(active: ActiveBoard, save: () => void) {
       () => save()
     )
   );
+
+  el.addEventListener('blur', commit);
 }
 
 // --- incoming & offgoing ---------------------------------------------------
@@ -433,12 +439,30 @@ async function renderIncoming(active: ActiveBoard, save: () => void) {
     btn.disabled = STATE.locked;
     btn.onclick = () => {
       if (STATE.locked) return;
-      const nurse = prompt('Nurse ID?');
-      if (!nurse) return;
-      const eta = prompt('ETA?') || '';
-      active.incoming.push({ nurseId: nurse, eta });
-      save();
-      renderIncoming(active, save);
+      const overlay = document.createElement('div');
+      overlay.className = 'manage-overlay';
+      overlay.innerHTML = `
+        <div class="manage-dialog">
+          <h3>Add Incoming</h3>
+          <label>Nurse ID <input id="inc-id"></label>
+          <label>ETA <input id="inc-eta" placeholder="HH:MM"></label>
+          <div class="dialog-actions">
+            <button id="inc-save" class="btn">Save</button>
+            <button id="inc-cancel" class="btn">Cancel</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      const idEl = overlay.querySelector('#inc-id') as HTMLInputElement;
+      const etaEl = overlay.querySelector('#inc-eta') as HTMLInputElement;
+      overlay.querySelector('#inc-save')?.addEventListener('click', () => {
+        const nurse = idEl.value.trim();
+        if (!nurse) return;
+        active.incoming.push({ nurseId: nurse, eta: etaEl.value.trim() });
+        save();
+        renderIncoming(active, save);
+        overlay.remove();
+      });
+      overlay.querySelector('#inc-cancel')?.addEventListener('click', () => overlay.remove());
     };
   }
 }

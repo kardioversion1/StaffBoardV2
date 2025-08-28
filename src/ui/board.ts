@@ -88,7 +88,7 @@ export async function renderBoard(
           </section>
 
           <section class="panel">
-            <h3>Assignments (TV Landscape)</h3>
+            <h3>Assignments</h3>
             <div id="zones" class="zones-grid"></div>
           </section>
 

@@ -35,7 +35,9 @@ export function renderHeader() {
     </div>
   `;
   if (mode === 'shiftHuddle')
-    document.getElementById('huddle-btn')?.addEventListener('click', openHuddle);
+    document.getElementById('huddle-btn')?.addEventListener('click', () =>
+      openHuddle(STATE.dateISO, shift)
+    );
   else if (mode === 'legacySignout')
     document.getElementById('handoff')?.addEventListener('click', manualHandoff);
   document.getElementById('theme-toggle')!.addEventListener('click', async () => {

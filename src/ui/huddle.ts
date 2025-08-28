@@ -1,51 +1,35 @@
-import { DB } from '@/state';
+import { saveHuddle, getHuddle, type HuddleRecord } from '@/state/history';
+import { DEFAULT_HUDDLE_ITEMS } from '@/config/huddle';
 
-interface HuddleItem {
-  text: string;
-  done: boolean;
-}
-interface HuddleData {
-  checklist: HuddleItem[];
-  notes?: { text: string; ts: number };
-  attendance: Record<string, boolean>;
-}
-
-const DEFAULT_ITEMS = [
-  'Staffing',
-  'Surge plan',
-  'Code carts',
-  'Stroke/Cath readiness',
-  'Throughput goals',
-  'Safety alerts',
-];
-
-const KEY = 'HUDDLE';
-let data: HuddleData = {
-  checklist: DEFAULT_ITEMS.map((t) => ({ text: t, done: false })),
-  notes: { text: '', ts: 0 },
-  attendance: {},
-};
-
-async function load(): Promise<void> {
-  const existing = await DB.get<HuddleData>(KEY);
-  if (existing) {
-    data = {
-      checklist:
-        existing.checklist?.length
-          ? existing.checklist
-          : DEFAULT_ITEMS.map((t) => ({ text: t, done: false })),
-      notes: existing.notes || { text: '', ts: 0 },
-      attendance: existing.attendance || {},
-    };
-  }
-}
+let record: HuddleRecord;
 
 async function save() {
-  await DB.set(KEY, data);
+  record.recordedAtISO = new Date().toISOString();
+  await saveHuddle(record);
 }
 
-export async function openHuddle(): Promise<void> {
-  await load();
+export async function openHuddle(dateISO: string, shift: 'day' | 'night'): Promise<void> {
+  record =
+    (await getHuddle(dateISO, shift)) || {
+      dateISO,
+      shift,
+      recordedAtISO: new Date().toISOString(),
+      recordedBy: 'unknown',
+      checklist: DEFAULT_HUDDLE_ITEMS.map((i) => ({ ...i, state: 'ok' })),
+      notes: '',
+    };
+  renderOverlay();
+  renderChecklist();
+  wireNotes();
+  wireTimer();
+  document.getElementById('huddle-save')!.addEventListener('click', async () => {
+    await save();
+    close();
+  });
+  document.getElementById('huddle-close')!.addEventListener('click', close);
+}
+
+function renderOverlay() {
   let wrap = document.getElementById('huddle-overlay');
   if (!wrap) {
     wrap = document.createElement('div');
@@ -60,7 +44,6 @@ export async function openHuddle(): Promise<void> {
           <textarea id="huddle-notes" class="input"></textarea>
           <div id="huddle-note-ts" class="muted"></div>
         </div>
-        <div id="huddle-attendance"></div>
         <div class="form-row">
           <label for="huddle-timer-min">Standup Timer</label>
           <input id="huddle-timer-min" type="number" min="2" max="5" value="2" aria-label="Timer minutes">
@@ -75,39 +58,48 @@ export async function openHuddle(): Promise<void> {
     </div>`;
     document.body.appendChild(wrap);
   }
-  renderChecklist();
-  wireNotes();
-  renderAttendance();
-  wireTimer();
-  document.getElementById('huddle-save')!.addEventListener('click', async () => {
-    await save();
-    close();
-  });
-  document.getElementById('huddle-close')!.addEventListener('click', close);
 }
 
 function renderChecklist() {
   const cont = document.getElementById('huddle-checklist')!;
-  cont.innerHTML = data.checklist
+  const groups: Record<string, typeof record.checklist> = {};
+  record.checklist.forEach((i) => {
+    (groups[i.section] = groups[i.section] || []).push(i);
+  });
+  cont.innerHTML = Object.entries(groups)
     .map(
-      (item, i) => `
-      <div class="form-row">
-        <label for="hc-${i}">
-          <input type="checkbox" id="hc-${i}"${item.done ? ' checked' : ''}>
-          <input id="ht-${i}" class="input" value="${item.text}">
-        </label>
+      ([section, items]) => `
+      <div class="huddle-section">
+        <h4>${section}</h4>
+        ${items
+          .map(
+            (item) => `
+        <div class="form-row huddle-item" data-id="${item.id}">
+          <label>${item.label}</label>
+          <select id="hs-${item.id}">
+            <option value="ok"${item.state === 'ok' ? ' selected' : ''}>OK</option>
+            <option value="issue"${item.state === 'issue' ? ' selected' : ''}>Issue</option>
+            <option value="na"${item.state === 'na' ? ' selected' : ''}>N/A</option>
+          </select>
+          <input id="hn-${item.id}" class="input" placeholder="note" value="${item.note || ''}" style="display:${
+              item.state === 'issue' ? '' : 'none'
+            };max-width:120px;">
+        </div>`
+          )
+          .join('')}
       </div>`
     )
     .join('');
-  data.checklist.forEach((_, i) => {
-    const chk = document.getElementById(`hc-${i}`) as HTMLInputElement;
-    const txt = document.getElementById(`ht-${i}`) as HTMLInputElement;
-    chk.addEventListener('change', async () => {
-      data.checklist[i].done = chk.checked;
+  record.checklist.forEach((item) => {
+    const sel = document.getElementById(`hs-${item.id}`) as HTMLSelectElement;
+    const note = document.getElementById(`hn-${item.id}`) as HTMLInputElement;
+    sel.addEventListener('change', async () => {
+      item.state = sel.value as any;
+      note.style.display = item.state === 'issue' ? '' : 'none';
       await save();
     });
-    txt.addEventListener('blur', async () => {
-      data.checklist[i].text = txt.value;
+    note.addEventListener('blur', async () => {
+      item.note = note.value;
       await save();
     });
   });
@@ -116,35 +108,14 @@ function renderChecklist() {
 function wireNotes() {
   const ta = document.getElementById('huddle-notes') as HTMLTextAreaElement;
   const tsEl = document.getElementById('huddle-note-ts')!;
-  ta.value = data.notes?.text || '';
-  tsEl.textContent = data.notes?.ts
-    ? `Last edit: ${new Date(data.notes.ts).toLocaleString()}`
+  ta.value = record.notes || '';
+  tsEl.textContent = record.recordedAtISO
+    ? `Last edit: ${new Date(record.recordedAtISO).toLocaleString()}`
     : '';
   ta.addEventListener('blur', async () => {
-    data.notes = { text: ta.value, ts: Date.now() };
-    tsEl.textContent = `Last edit: ${new Date(data.notes.ts).toLocaleString()}`;
+    record.notes = ta.value;
     await save();
-  });
-}
-
-function renderAttendance() {
-  const roles = ['Charge Nurse', 'Triage Nurse', 'Nurses', 'Techs'];
-  const cont = document.getElementById('huddle-attendance')!;
-  cont.innerHTML = roles
-    .map(
-      (r) => `
-      <label><input type="checkbox" id="att-${r.replace(/\s+/g, '')}"${
-        data.attendance[r] ? ' checked' : ''
-      }> ${r}</label>`
-    )
-    .join(' ');
-  roles.forEach((r) => {
-    const id = `att-${r.replace(/\s+/g, '')}`;
-    const cb = document.getElementById(id) as HTMLInputElement;
-    cb.addEventListener('change', async () => {
-      data.attendance[r] = cb.checked;
-      await save();
-    });
+    tsEl.textContent = `Last edit: ${new Date(record.recordedAtISO).toLocaleString()}`;
   });
 }
 

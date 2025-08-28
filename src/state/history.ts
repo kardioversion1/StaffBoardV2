@@ -50,7 +50,10 @@ export interface Assignment {
 export interface HuddleChecklistItem {
   id: string;
   label: string;
-  checked: boolean;
+  section: string;
+  required?: boolean;
+  state: 'ok' | 'issue' | 'na';
+  note?: string;
 }
 
 export interface HuddleRecord {

@@ -4,6 +4,7 @@ import {
   DB,
   KS,
   getConfig,
+  saveConfig,
   STATE,
   loadStaff,
   saveStaff,
@@ -85,6 +86,7 @@ export async function renderBoard(
               <div id="slot-triage"></div>
               <div id="slot-secretary"></div>
             </div>
+            <div id="pct-zones" class="zones-grid"></div>
           </section>
 
           <section class="panel">
@@ -249,7 +251,9 @@ function assignLeadDialog(
 // --- zones & tiles ---------------------------------------------------------
 
 function renderZones(active: ActiveBoard, cfg: any, staff: Staff[], save: () => void) {
+  const pctCont = document.getElementById('pct-zones')!;
   const cont = document.getElementById('zones')!;
+  pctCont.innerHTML = '';
   cont.innerHTML = '';
   const zones: ZoneDef[] = cfg.zones || [];
 
@@ -258,6 +262,11 @@ function renderZones(active: ActiveBoard, cfg: any, staff: Staff[], save: () => 
     const section = document.createElement('section');
     section.className = 'zone-card';
     section.setAttribute('data-testid', 'zone-card');
+    section.draggable = true;
+    section.addEventListener('dragstart', (e) => {
+      const ev = e as DragEvent;
+      ev.dataTransfer?.setData('zone-index', String(i));
+    });
 
     // Highlight color: explicit or from palette
     const explicit = z.color || cfg.zoneColors?.[zName];
@@ -329,8 +338,25 @@ function renderZones(active: ActiveBoard, cfg: any, staff: Staff[], save: () => 
     body.appendChild(addRow);
 
     section.appendChild(body);
-    cont.appendChild(section);
+    (z.pct ? pctCont : cont).appendChild(section);
   });
+
+  const enableDrop = (container: HTMLElement, pct: boolean) => {
+    container.addEventListener('dragover', (e) => e.preventDefault());
+    container.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      const zoneIdxStr = e.dataTransfer?.getData('zone-index');
+      if (!zoneIdxStr) return;
+      const idx = Number(zoneIdxStr);
+      if (isNaN(idx)) return;
+      cfg.zones[idx].pct = pct;
+      await saveConfig({ zones: cfg.zones });
+      renderZones(active, cfg, staff, save);
+    });
+  };
+
+  enableDrop(pctCont, true);
+  enableDrop(cont, false);
 }
 
 // --- comments --------------------------------------------------------------

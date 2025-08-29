@@ -1,5 +1,5 @@
 import { STATE, getConfig, DB, KS, getActiveBoardCache } from '@/state';
-import type { ActiveBoard } from '@/state';
+import type { ActiveBoard, Staff } from '@/state';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
 import { manualHandoff, renderAll } from '@/main';
@@ -64,8 +64,10 @@ export function renderHeader() {
 
       tasks.push(Server.save('config', getConfig()));
 
-      const roster = await DB.get(KS.STAFF);
-      if (roster) tasks.push(Server.save('roster', roster));
+      const roster = await DB.get<Staff[]>(KS.STAFF);
+      if (Array.isArray(roster) && roster.length) {
+        tasks.push(Server.save('roster', roster));
+      }
 
       await Promise.all(tasks);
       showBanner('Published');

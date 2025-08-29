@@ -104,13 +104,13 @@ export async function renderBoard(
             <div id="weather-body"></div>
           </section>
 
-          <section class="panel">
+          <section id="incoming-panel" class="panel">
             <h3>Incoming (click to toggle arrived)</h3>
             <button id="add-incoming" class="btn">+ Add</button>
             <div id="incoming" style="min-height:40px"></div>
           </section>
 
-          <section class="panel">
+          <section id="offgoing-panel" class="panel">
             <h3>Offgoing (kept 40 min)</h3>
             <div id="offgoing"></div>
           </section>

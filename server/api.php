@@ -79,6 +79,8 @@ function activePath(string $dataDir, ?string $date, ?string $shift): string {
   return ($dateOk && $shiftOk) ? "$dataDir/active-$date-$shift.json" : "$dataDir/active.json";
 }
 
+require_once __DIR__ . '/validators.php';
+
 $API_KEY = getenv('HEYBRE_API_KEY') ?: '';
 $REQ_KEY = $_SERVER['HTTP_X_API_KEY'] ?? '';
 if ($API_KEY === '' || $REQ_KEY !== $API_KEY) {
@@ -123,8 +125,7 @@ try {
       $key = normalizeKey($key);
 
       $raw  = file_get_contents('php://input') ?: '';
-      $data = $raw === '' ? new stdClass() : json_decode($raw, true);
-      if ($raw !== '' && json_last_error() !== JSON_ERROR_NONE) bad('invalid JSON');
+      $data = validateSavePayload($raw);
 
       if ($key === 'roster' && is_array($data)) {
         foreach ($data as &$s) if (!isset($s['active'])) $s['active'] = true;
@@ -153,20 +154,18 @@ try {
     }
 
     case 'history': {
-      $mode = $_GET['mode'] ?? '';
+      $params = validateHistoryQuery($_GET);
       $hist = safeReadJson($historyPath, []);
       if (!is_array($hist)) $hist = [];
 
-      if ($mode === 'list') {
-        $date = $_GET['date'] ?? '';
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) bad('invalid date');
+      if ($params['mode'] === 'list') {
+        $date = $params['date'];
         $out = array_values(array_filter($hist, fn($h) => ($h['dateISO'] ?? '') === $date));
         ok($out);
       }
 
-      if ($mode === 'byNurse') {
-        $id = $_GET['nurseId'] ?? '';
-        if ($id === '') bad('missing nurseId');
+      if ($params['mode'] === 'byNurse') {
+        $id = $params['nurseId'];
         $out = [];
         foreach ($hist as $entry) {
           foreach (($entry['assignments'] ?? []) as $a) {

@@ -16,6 +16,7 @@ import { manualHandoff, renderAll } from '@/main';
 import { openHuddle } from '@/ui/huddle';
 import { showBanner } from '@/ui/banner';
 
+/** Render the application header. */
 export function renderHeader() {
   const app = document.getElementById('app')!;
   let header = document.getElementById('header');
@@ -124,5 +125,3 @@ export function renderHeader() {
     location.reload();
   });
 }
-
-

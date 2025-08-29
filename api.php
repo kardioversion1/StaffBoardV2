@@ -83,6 +83,8 @@ function p(string $name, $default = null) {
   return $_GET[$name] ?? $_POST[$name] ?? $default;
 }
 
+function now_iso() { return gmdate('Y-m-d\TH:i:s\Z'); }
+
 function read_json(string $path) {
   if (!file_exists($path)) return null;
   $raw = file_get_contents($path);
@@ -142,6 +144,36 @@ try {
     'staff'   => $DATA_DIR . '/staff.json',
     'config'  => $DATA_DIR . '/config.json',
   ];
+
+  if ($res === 'staff' && $method === 'DELETE') {
+    require_api_key($provided_key, $API_KEY);
+    parse_str($_SERVER['QUERY_STRING'] ?? '', $qs);
+    $id = $qs['id'] ?? '';
+    if (!$id) fail('Missing id');
+
+    $staff = read_json($paths['staff']) ?? ['nurses'=>[], 'techs'=>[]];
+    $removedListPath = $DATA_DIR . '/staff-removed.json';
+    $removedList = read_json($removedListPath) ?? [];
+
+    $found = null;
+    foreach (['nurses','techs'] as $k) {
+      $before = count($staff[$k] ?? []);
+      $staff[$k] = array_values(array_filter($staff[$k] ?? [], function ($row) use ($id, &$found) {
+        if (isset($row['id']) && $row['id'] === $id) { $found = $row; return false; }
+        return true;
+      }));
+      if ($found) break;
+    }
+
+    if (!$found) fail('Not found', 404);
+
+    $found['_removed'] = ['at'=> now_iso()];
+    $removedList[] = $found;
+
+    write_json_atomic($paths['staff'], $staff);
+    write_json_atomic($removedListPath, $removedList);
+    ok(['deleted'=>true, 'id'=>$id]);
+  }
 
   if ($res === 'staff') {
     if ($method === 'GET') {
@@ -207,6 +239,91 @@ try {
     } else {
       fail('Method not allowed', 405);
     }
+  }
+
+  if ($res === 'history_list' && $method === 'GET') {
+    $files = glob($DATA_DIR . '/history-*.json') ?: [];
+    $dates = [];
+    foreach ($files as $f) {
+      if (preg_match('~/history-(\d{4}-\d{2}-\d{2})\.json$~', $f, $m)) $dates[] = $m[1];
+    }
+    sort($dates);
+    ok(['dates' => $dates]);
+  }
+
+  if ($res === 'history_export' && $method === 'GET') {
+    $date  = p('date', '');
+    $start = p('start', '');
+    $end   = p('end', '');
+
+    $toRows = function ($snapshot, $dateISO, $shift) {
+      $rows = [];
+      $zones = $snapshot['zones'] ?? [];
+      foreach ($zones as $zone => $arr) {
+        foreach ($arr as $slot) {
+          $name = $slot['name'] ?? $slot['label'] ?? '';
+          $id   = $slot['id'] ?? '';
+          $type = $slot['type'] ?? '';
+          $rows[] = [
+            'date'   => $dateISO,
+            'shift'  => $shift,
+            'zone'   => $zone,
+            'id'     => $id,
+            'name'   => $name,
+            'type'   => $type,
+          ];
+        }
+      }
+      return $rows;
+    };
+
+    $emitCsv = function ($rows, $filename) {
+      header('Content-Type: text/csv; charset=utf-8');
+      header('Content-Disposition: attachment; filename="'.$filename.'"');
+      $out = fopen('php://output', 'w');
+      fputcsv($out, ['date','shift','zone','id','name','type']);
+      foreach ($rows as $r) fputcsv($out, [$r['date'],$r['shift'],$r['zone'],$r['id'],$r['name'],$r['type']]);
+      fclose($out);
+      exit;
+    };
+
+    if ($date) {
+      $day  = read_json($DATA_DIR . "/history-{$date}.json");
+      $rows = [];
+      if ($day && isset($day['entries']) && is_array($day['entries'])) {
+        foreach ($day['entries'] as $snap) {
+          $rows = array_merge($rows, $toRows($snap, $date, $snap['shift'] ?? ''));
+        }
+      } else {
+        foreach (['day','night'] as $sh) {
+          $active = read_json($DATA_DIR . "/active-{$date}-{$sh}.json");
+          if ($active) $rows = array_merge($rows, $toRows($active, $date, $sh));
+        }
+      }
+      $emitCsv($rows, "history-{$date}.csv");
+    }
+
+    if ($start && $end) {
+      $period = new DatePeriod(new DateTime($start), new DateInterval('P1D'), (new DateTime($end))->modify('+1 day'));
+      $rows = [];
+      foreach ($period as $dt) {
+        $d = $dt->format('Y-m-d');
+        $day = read_json($DATA_DIR . "/history-{$d}.json");
+        if ($day && isset($day['entries'])) {
+          foreach ($day['entries'] as $snap) {
+            $rows = array_merge($rows, $toRows($snap, $d, $snap['shift'] ?? ''));
+          }
+        } else {
+          foreach (['day','night'] as $sh) {
+            $active = read_json($DATA_DIR . "/active-{$d}-{$sh}.json");
+            if ($active) $rows = array_merge($rows, $toRows($active, $d, $sh));
+          }
+        }
+      }
+      $emitCsv($rows, "history-{$start}_to_{$end}.csv");
+    }
+
+    fail('Provide date=YYYY-MM-DD or start=YYYY-MM-DD&end=YYYY-MM-DD', 400);
   }
 
   if ($res === 'huddles') {

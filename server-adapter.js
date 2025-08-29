@@ -24,6 +24,7 @@
   const STAFF_API = {
     getStaff: () => api('staff'),
     saveStaff: (staffObj) => api('staff', {}, 'POST', staffObj),
+    deleteStaffById: (id) => api('staff', { id }, 'DELETE', null),
 
     getActive: (dateISO, shift) => api('active', { date: dateISO, shift }),
     saveActive: (stateObj) => api('active', {}, 'POST', stateObj),
@@ -33,6 +34,11 @@
 
     getHistory: (dateISO) => api('history', { date: dateISO }),
     saveHistory: (snapshot) => api('history', {}, 'POST', snapshot),
+    listHistoryDates: () => api('history_list'),
+    historyExportUrlForDate: (date) =>
+      `${window.location.origin}/api.php?res=history_export&date=${encodeURIComponent(date)}`,
+    historyExportUrlForRange: (start, end) =>
+      `${window.location.origin}/api.php?res=history_export&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
 
     getHuddles: (dateISO) => api('huddles', { date: dateISO }),
     saveHuddles: (h) => api('huddles', {}, 'POST', h),

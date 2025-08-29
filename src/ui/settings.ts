@@ -10,6 +10,7 @@ import { createStaffId, ensureStaffId } from '@/utils/id';
 import { fetchWeather, renderWeather } from './widgets';
 import { getUIConfig, saveUIConfig, applyUI } from '@/state/uiConfig';
 import { renderHeader } from '@/ui/header';
+import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 
 function mapIcon(cond: string) {
   const c = (cond || '').toLowerCase();
@@ -31,6 +32,7 @@ export async function renderSettings(root: HTMLElement): Promise<void> {
       <div class="settings-pane">
         <div id="nurse-editor" data-testid="nurse-editor"></div>
         <div id="general-settings" data-testid="general-settings"></div>
+        <div id="display-settings" data-testid="display-settings"></div>
       </div>
     </div>
     <div id="settings-widgets"></div>
@@ -38,6 +40,7 @@ export async function renderSettings(root: HTMLElement): Promise<void> {
   `;
   await renderRosterPane();
   renderGeneralSettings();
+  renderDisplaySettings();
   renderWidgetsPanel();
   renderTypeLegend();
 }
@@ -56,6 +59,7 @@ async function renderRosterPane() {
           <span>${s.name || ''}</span>
           <span class="muted">${s.role}</span>
           <span class="muted">${s.type}</span>
+          <button class="roster-del" data-id="${s.id}">🗑</button>
         </div>`
       )
       .join('');
@@ -79,8 +83,19 @@ async function renderRosterPane() {
     });
 
     const list = document.getElementById('roster-list');
-    list?.addEventListener('click', (e) => {
-      const row = (e.target as HTMLElement).closest('.roster-row') as HTMLElement | null;
+    list?.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('roster-del')) {
+        const id = target.getAttribute('data-id')!;
+        if (confirm('Remove from roster?')) {
+          await window.STAFF_API.deleteStaffById(id);
+          staff = staff.filter((s) => s.id !== id);
+          alert('Removed from roster. Past history is preserved.');
+          renderList(search.value.toLowerCase());
+        }
+        return;
+      }
+      const row = target.closest('.roster-row') as HTMLElement | null;
       if (!row) return;
       selected = row.getAttribute('data-id');
       renderList(search.value.toLowerCase());
@@ -338,6 +353,59 @@ function renderGeneralSettings() {
   num.addEventListener('change', async () => {
     ui.rightSidebarWidthPx = parseInt(num.value);
     await saveUIConfig({ rightSidebarWidthPx: ui.rightSidebarWidthPx });
+  });
+}
+
+function renderDisplaySettings() {
+  const cfg = getThemeConfig();
+  const el = document.getElementById('display-settings')!;
+  el.innerHTML = `
+    <section class="panel">
+      <h3>Display</h3>
+      <div class="form-row">
+        <label>Text size <input id="ds-scale" type="range" min="0.85" max="1.25" step="0.05" value="${cfg.scale}"></label>
+      </div>
+      <div class="form-row">
+        <label>Theme</label>
+        <div>
+          <label><input type="radio" name="ds-mode" value="system"${cfg.mode==='system'?' checked':''}> System</label>
+          <label><input type="radio" name="ds-mode" value="light"${cfg.mode==='light'?' checked':''}> Light</label>
+          <label><input type="radio" name="ds-mode" value="dark"${cfg.mode==='dark'?' checked':''}> Dark</label>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Light preset
+          <select id="ds-light">
+            <option value="paper"${cfg.lightPreset==='paper'?' selected':''}>Paper</option>
+            <option value="fog"${cfg.lightPreset==='fog'?' selected':''}>Fog</option>
+            <option value="pearl"${cfg.lightPreset==='pearl'?' selected':''}>Pearl</option>
+          </select>
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Dark preset
+          <select id="ds-dark">
+            <option value="ink"${cfg.darkPreset==='ink'?' selected':''}>Ink</option>
+            <option value="midnight"${cfg.darkPreset==='midnight'?' selected':''}>Midnight</option>
+            <option value="plum"${cfg.darkPreset==='plum'?' selected':''}>Plum</option>
+          </select>
+        </label>
+      </div>
+      <div class="form-row"><label><input type="checkbox" id="ds-contrast"${cfg.highContrast?' checked':''}> High contrast</label></div>
+      <div class="form-row"><label><input type="checkbox" id="ds-compact"${cfg.compact?' checked':''}> Compact mode</label></div>
+      <div class="form-row"><button id="ds-save" class="btn">Save Display</button></div>
+    </section>
+  `;
+  document.getElementById('ds-save')!.addEventListener('click', async () => {
+    const scale = parseFloat((document.getElementById('ds-scale') as HTMLInputElement).value);
+    const mode = (document.querySelector('input[name="ds-mode"]:checked') as HTMLInputElement).value as any;
+    const lightPreset = (document.getElementById('ds-light') as HTMLSelectElement).value as any;
+    const darkPreset = (document.getElementById('ds-dark') as HTMLSelectElement).value as any;
+    const highContrast = (document.getElementById('ds-contrast') as HTMLInputElement).checked;
+    const compact = (document.getElementById('ds-compact') as HTMLInputElement).checked;
+    await saveThemeConfig({ scale, mode, lightPreset, darkPreset, highContrast, compact });
+    applyTheme();
+    alert('Display settings saved.');
   });
 }
 

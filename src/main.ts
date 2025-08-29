@@ -5,10 +5,10 @@ import {
   initState,
   applyDraftToActive,
   loadConfig,
-  applyThemeAndScale,
   getConfig,
   zonesInvalid,
 } from '@/state';
+import { applyTheme } from '@/state/theme';
 import { applyUI } from '@/state/uiConfig';
 import { seedDefaults } from '@/seedDefaults';
 import { fetchWeather, renderWeather } from '@/ui/widgets';
@@ -23,7 +23,7 @@ import { outlineBlockers } from '@/utils/debug';
 import { showBanner } from '@/ui/banner';
 
 export async function renderAll() {
-  applyThemeAndScale();
+  applyTheme();
   await renderHeader();
   await renderTabs();
   const root = document.getElementById('panel')!;
@@ -58,7 +58,7 @@ initState();
     if (zonesInvalid()) {
       showBanner('Zone data invalid, using defaults');
     }
-    applyThemeAndScale();
+    applyTheme();
     applyUI();
     renderAll();
 

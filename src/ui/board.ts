@@ -8,11 +8,12 @@ import {
   STATE,
   loadStaff,
   saveStaff,
-  Staff,
-  ActiveBoard,
   CURRENT_SCHEMA_VERSION,
   migrateActiveBoard,
   setActiveBoardCache,
+  type Staff,
+  type ActiveBoard,
+  type Config,
 } from '@/state';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWeather } from './widgets';
@@ -21,7 +22,7 @@ import { nurseTile } from './nurseTile';
 import { createDebouncer } from '@/utils/debouncedSave';
 import './mainBoard/boardLayout.css';
 import { startBreak, endBreak, moveSlot, upsertSlot, removeSlot, type Slot } from '@/slots';
-import { canonNurseType } from '@/domain/lexicon';
+import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 import type { DraftShift } from '@/state';
 
@@ -124,7 +125,7 @@ export async function renderBoard(
     `;
 
     // Debounced save
-    let saveTimer: any;
+    let saveTimer: ReturnType<typeof setTimeout>;
     const queueSave = () => {
       clearTimeout(saveTimer);
       saveTimer = setTimeout(() => {
@@ -259,7 +260,12 @@ function assignLeadDialog(
 
 // --- zones & tiles ---------------------------------------------------------
 
-function renderZones(active: ActiveBoard, cfg: any, staff: Staff[], save: () => void) {
+function renderZones(
+  active: ActiveBoard,
+  cfg: Config,
+  staff: Staff[],
+  save: () => void
+) {
   const pctCont = document.getElementById('pct-zones')!;
   const cont = document.getElementById('zones')!;
   pctCont.innerHTML = '';
@@ -429,7 +435,7 @@ async function renderIncoming(active: ActiveBoard, save: () => void) {
   if (active.incoming.length === 0) {
     cont.innerHTML = '<div class="incoming-placeholder"></div>';
   } else {
-    active.incoming.forEach((inc: any) => {
+    active.incoming.forEach((inc) => {
       const div = document.createElement('div');
       const name = labelFromId(inc.nurseId);
       div.textContent = `${name} ${inc.eta}${inc.arrived ? ' ✓' : ''}`;
@@ -479,7 +485,7 @@ async function renderIncoming(active: ActiveBoard, save: () => void) {
 function renderOffgoing(active: ActiveBoard, save: () => void) {
   const cont = document.getElementById('offgoing')!;
   const cutoff = Date.now() - 60 * 60 * 1000; // 60 min
-  active.offgoing = (active.offgoing || []).filter((o: any) => o.ts > cutoff);
+  active.offgoing = (active.offgoing || []).filter((o) => o.ts > cutoff);
 
   cont.innerHTML = '';
   for (const o of active.offgoing) {
@@ -500,8 +506,8 @@ function manageSlot(
   rerender: () => void,
   zone: string,
   index: number,
-  board: any,
-  cfg: any
+  board: ActiveBoard,
+  cfg: Config
 ): void {
   if (!st) return;
 
@@ -561,7 +567,13 @@ function manageSlot(
     board.offgoing.push({ nurseId: st.id, ts: Date.now() });
 
     // Append to history
-    const hist = (await DB.get<any[]>(KS.HISTORY)) || [];
+    interface HistoryEntry {
+      nurseId: string;
+      dateISO: string;
+      shift: 'day' | 'night';
+      endedISO: string;
+    }
+    const hist = (await DB.get<HistoryEntry[]>(KS.HISTORY)) || [];
     hist.push({
       nurseId: st.id,
       dateISO: board.dateISO,
@@ -588,8 +600,8 @@ function manageSlot(
     // Only nurses have a nurse type
     if (st.role === 'nurse') {
       const tval = (overlay.querySelector('#mg-type') as HTMLSelectElement).value;
-      const canon = canonNurseType(tval) || st.type;
-      st.type = canon as any;
+      const canon = (canonNurseType(tval) || st.type) as NurseType;
+      st.type = canon;
     }
 
     // Slot-level fields

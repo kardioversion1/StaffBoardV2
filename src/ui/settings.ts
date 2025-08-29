@@ -12,6 +12,7 @@ import {
   type UIMode,
   type ThemePreset,
 } from '@/state/theme';
+import * as Server from '@/server';
 
 function mapIcon(cond: string) {
   const c = (cond || '').toLowerCase();

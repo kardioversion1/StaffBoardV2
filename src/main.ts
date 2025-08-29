@@ -24,6 +24,7 @@ import { renderBuilder } from '@/ui/builder';
 import { renderHistoryTab } from '@/ui/historyTab';
 import { outlineBlockers } from '@/utils/debug';
 import { showBanner } from '@/ui/banner';
+import * as Server from '@/server';
 
 export async function renderAll() {
   applyTheme();

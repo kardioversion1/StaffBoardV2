@@ -16,6 +16,7 @@ import {
 } from '@/state';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWeather } from './widgets';
+import { renderPhysicians } from './physicians';
 import { nurseTile } from './nurseTile';
 import { debouncedSave } from '@/utils/debouncedSave';
 import './mainBoard/boardLayout.css';
@@ -138,6 +139,10 @@ export async function renderBoard(
     await renderIncoming(active, queueSave);
     renderOffgoing(active, queueSave);
     await renderWeather(document.getElementById('weather-body')!);
+    await renderPhysicians(
+      document.getElementById('phys') as HTMLElement,
+      ctx.dateISO
+    );
 
     // Re-render on config changes (e.g., zone list or colors)
     document.addEventListener('config-changed', () => {

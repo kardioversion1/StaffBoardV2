@@ -107,7 +107,7 @@ export function renderHeader() {
         } catch {}
       }
 
-      const board = await Server.load<ActiveBoard>('active', { date: dateISO, shift });
+      const board = await Server.load('active', { date: dateISO, shift });
       if (board) await DB.set(KS.ACTIVE(dateISO, shift), board);
 
       await renderAll();

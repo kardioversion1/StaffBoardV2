@@ -1,19 +1,13 @@
 # cPanel-safe .htaccess for SPA routing
-# Disable directory listing.
-Options -Indexes
 
-# Avoid MultiViews only if available.
-<IfModule mod_negotiation.c>
-  Options -MultiViews
-</IfModule>
+# Disable directory listing and implicit content negotiation.
+Options -Indexes -MultiViews
 
 # Use index.html as the default document.
 DirectoryIndex index.html
 
 # Serve .json files with the proper MIME type.
-<IfModule mod_mime.c>
-  AddType application/json .json
-</IfModule>
+AddType application/json .json
 
 <IfModule mod_rewrite.c>
   # Enable rewrite engine and set base path.

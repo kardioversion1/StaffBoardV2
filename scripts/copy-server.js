@@ -2,7 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const files = ['api.php', 'reset.php', 'server-adapter.js', '.htaccess'];
+const files = ['api.php', 'reset.php', '.htaccess'];
 const dist = path.resolve('dist');
 
 if (!fs.existsSync(dist)) {

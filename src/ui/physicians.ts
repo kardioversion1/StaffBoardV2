@@ -1,5 +1,3 @@
-const CAL_URL = 'https://www.bytebloc.com/sk/?76b6a156';
-
 type Event = {
   date: string;
   summary: string;
@@ -47,7 +45,7 @@ function parseICS(text: string): Event[] {
 /** Fetch and render physicians for the given day. */
 export async function renderPhysicians(el: HTMLElement, dateISO: string): Promise<void> {
   try {
-    const res = await fetch(CAL_URL);
+    const res = await fetch('/api.php?action=physicians');
     if (!res.ok) throw new Error('failed');
     const ics = await res.text();
     const events = parseICS(ics);

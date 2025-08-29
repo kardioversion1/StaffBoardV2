@@ -233,6 +233,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       section.draggable = true;
       section.dataset.index = String(i);
       section.addEventListener('dragstart', (e) => {
+        if ((e.target as HTMLElement).closest('.nurse-row')) return;
         const ev = e as DragEvent;
         ev.dataTransfer?.setData('zone-index', String(i));
       });

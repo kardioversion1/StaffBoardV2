@@ -164,6 +164,7 @@ let CONFIG_CACHE: Config = {
   dtoMinutes: 60,
   showPinned: { charge: true, triage: true },
   rss: { url: '', enabled: false },
+  physicians: { calendarUrl: '' },
   privacy: true,
   ui: {
     signoutMode: 'shiftHuddle',
@@ -230,8 +231,8 @@ export function mergeConfigDefaults(): Config {
     cfg.widgets.show = cfg.widgets.show === false ? false : true;
     cfg.widgets.weather = {
       ...WIDGETS_DEFAULTS.weather,
-      ...cfg.widgets.weather,
-      current: cfg.widgets.weather.current
+      ...(cfg.widgets.weather || {}),
+      current: cfg.widgets.weather?.current
         ? { ...cfg.widgets.weather.current }
         : undefined,
     };

@@ -19,7 +19,7 @@ function openDB(): Promise<IDBDatabase> {
     req.onupgradeneeded = () => {
       const db = req.result;
       // Create the simple key-value store if it doesn't exist.
-      if (!db.objectStoreNames.contains(STORE)) {
+      if (!db.objectStoreNames?.contains?.(STORE)) {
         db.createObjectStore(STORE);
       }
     };

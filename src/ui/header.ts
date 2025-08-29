@@ -1,23 +1,13 @@
-Here’s the cleaned, unified `renderHeader` module with the consolidated `@/state` imports and the missing `Server` import wired up.
-
-```ts
-// header.ts — merged & de-conflicted
-
 import * as Server from '@/server';
-import {
-  STATE,
-  getConfig,
-  DB,
-  KS,
-  getActiveBoardCache,
-  type ActiveBoard,
-} from '@/state';
+import { STATE, DB, KS, getActiveBoardCache, type ActiveBoard } from '@/state';
+import { getConfig } from '@/state/config';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
 import { manualHandoff, renderAll } from '@/main';
 import { openHuddle } from '@/ui/huddle';
 import { showBanner } from '@/ui/banner';
 
+/** Render the application header. */
 export function renderHeader() {
   const app = document.getElementById('app')!;
   let header = document.getElementById('header');
@@ -124,5 +114,3 @@ export function renderHeader() {
     location.reload();
   });
 }
-```
-

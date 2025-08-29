@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "postbuild": "node scripts/copy-server.js",
     "preview": "vite preview --port 5173",
     "precheck": "tsc --noEmit",
     "test": "vitest run"

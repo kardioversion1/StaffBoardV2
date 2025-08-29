@@ -1,40 +1,15 @@
-# Serve index.html as default (fallback to SPA-style)
+# Serve index by default
 DirectoryIndex index.html index.php
 
-# Deny direct access to data directory if it sits inside webroot
+# Correct MIME for JSON/JS/CSS
+AddType application/json .json
+AddType application/javascript .js
+AddType text/css .css
+
+# Single Page App rewrite (preserve real files/dirs)
 RewriteEngine On
-RewriteRule ^data/ - [F,L]
-
-# Route pretty API path /api/* to api.php
-RewriteCond %{REQUEST_URI} ^/api($|/)
-RewriteRule ^api/?(.*)$ api.php [QSA,L]
-
-# JSON, CORS, and security headers
-<IfModule mod_headers.c>
-  Header always set X-Frame-Options "SAMEORIGIN"
-  Header always set X-Content-Type-Options "nosniff"
-  Header always set Referrer-Policy "no-referrer-when-downgrade"
-  Header always set Content-Security-Policy "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: http:; img-src * data: blob:; connect-src *"
-  Header always set Access-Control-Allow-Credentials "true"
-</IfModule>
-
-# Gzip/Brotli if available
-<IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
-</IfModule>
-
-# Cache static assets
-<IfModule mod_expires.c>
-  ExpiresActive On
-  ExpiresByType text/html "access plus 5m"
-  ExpiresByType text/css "access plus 7d"
-  ExpiresByType application/javascript "access plus 7d"
-  ExpiresByType image/svg+xml "access plus 30d"
-  ExpiresByType image/png "access plus 30d"
-  ExpiresByType image/jpeg "access plus 30d"
-  ExpiresByType application/json "access plus 0s"
-</IfModule>
-
-# Optional (set server-side secrets) – replace values or set in cPanel
-# SetEnv HEYBRE_API_KEY "REPLACE_WITH_RANDOM_LONG_STRING"
-# SetEnv HEYBRE_DATA_DIR "/home/<cpanel-user>/heybre-board-data"
+RewriteBase /
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+RewriteRule . /index.html [L]

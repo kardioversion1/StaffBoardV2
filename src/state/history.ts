@@ -183,6 +183,14 @@ export async function getHuddle(
   return kvGet<HuddleRecord>(HUDDLE_KEY(dateISO, shift));
 }
 
+/** Submit a huddle record and archive it to history. */
+export async function submitHuddle(record: HuddleRecord): Promise<void> {
+  await ensureVersion();
+  const base = HUDDLE_KEY(record.dateISO, record.shift);
+  await kvSet(`${base}:${record.recordedAtISO}`, record);
+  await kvDel(base);
+}
+
 /** Clone and replace an existing snapshot with audit trail update. */
 export async function adminOverrideShift(
   dateISO: string,
@@ -222,14 +230,14 @@ export async function listShiftDates(): Promise<string[]> {
 /** Retrieve all saved huddle records. */
 export async function listHuddles(): Promise<HuddleRecord[]> {
   await ensureVersion();
-  const keys = await DB.keys('history:huddle:');
+  const keys = (await DB.keys('history:huddle:')).filter(
+    (k) => k.split(':').length > 4
+  );
   const out: HuddleRecord[] = [];
   for (const k of keys) {
     const rec = await kvGet<HuddleRecord>(k);
     if (rec) out.push(rec);
   }
-  return out.sort((a, b) =>
-    `${a.dateISO}-${a.shift}`.localeCompare(`${b.dateISO}-${b.shift}`)
-  );
+  return out.sort((a, b) => a.recordedAtISO.localeCompare(b.recordedAtISO));
 }
 

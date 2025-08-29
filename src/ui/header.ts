@@ -64,8 +64,8 @@ export function renderHeader() {
 
       tasks.push(Server.save('config', getConfig()));
 
-      const roster = await DB.get(KS.STAFF);
-      if (roster) tasks.push(Server.save('roster', roster));
+      const roster = (await DB.get(KS.STAFF)) ?? [];
+      if (Array.isArray(roster)) tasks.push(Server.save('roster', roster));
 
       await Promise.all(tasks);
       showBanner('Published');

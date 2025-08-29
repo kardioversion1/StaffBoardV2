@@ -1,4 +1,6 @@
 /** Display a non-blocking banner message at top of the page. */
+let bannerTimer: number | undefined;
+
 export function showBanner(msg: string): void {
   let el = document.getElementById('app-banner');
   if (!el) {
@@ -8,4 +10,8 @@ export function showBanner(msg: string): void {
     document.body.prepend(el);
   }
   el.textContent = msg;
+  if (bannerTimer) clearTimeout(bannerTimer);
+  bannerTimer = window.setTimeout(() => {
+    el?.remove();
+  }, 10_000);
 }

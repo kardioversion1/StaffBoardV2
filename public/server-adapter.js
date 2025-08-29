@@ -56,6 +56,7 @@
     document.body.removeChild(a);
   }
 
-  window.Server = { load, save, softDeleteStaff, exportHistoryCSV };
+  var Server = { load, save, softDeleteStaff, exportHistoryCSV };
+  window.Server = Server;
 })();
 

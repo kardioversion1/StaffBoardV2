@@ -16,7 +16,7 @@ import {
 } from '@/state';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWeather } from './widgets';
-import { renderPhysicians } from './physicians';
+import { renderPhysicians, renderPhysicianPopup } from './physicians';
 import { nurseTile } from './nurseTile';
 import { debouncedSave } from '@/utils/debouncedSave';
 import './mainBoard/boardLayout.css';
@@ -118,6 +118,7 @@ export async function renderBoard(
           <section class="panel">
             <h3>Physicians (read-only)</h3>
             <div id="phys"></div>
+            <button id="phys-next7" class="btn">Next 7 days</button>
           </section>
         </div>
       </div>
@@ -143,6 +144,11 @@ export async function renderBoard(
       document.getElementById('phys') as HTMLElement,
       ctx.dateISO
     );
+
+    const btn = document.getElementById('phys-next7');
+    btn?.addEventListener('click', () => {
+      renderPhysicianPopup(ctx.dateISO, 7);
+    });
 
     // Removed testBoardFit call; allow natural scroll for overflow
 

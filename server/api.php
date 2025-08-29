@@ -17,13 +17,20 @@ declare(strict_types=1);
  */
 
 header('Content-Type: application/json; charset=utf-8');
-// Prevent stale caches on phones
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 
 $ROOT_DIR = __DIR__;
 $DATA_DIR = $ROOT_DIR . '/data';
-if (!is_dir($DATA_DIR)) { @mkdir($DATA_DIR, 0775, true); }
+if (!is_dir($DATA_DIR)) {
+  try {
+    if (!mkdir($DATA_DIR, 0775, true) && !is_dir($DATA_DIR)) {
+      throw new RuntimeException('data directory creation failed');
+    }
+  } catch (Throwable $e) {
+    error_log('data dir: ' . $e->getMessage());
+  }
+}
 
 require __DIR__ . '/db.php';
 require_once __DIR__ . '/validators.php';
@@ -65,6 +72,7 @@ function ensureRosterExists(string $rootDir): void {
 $API_KEY = getenv('HEYBRE_API_KEY') ?: '';
 $REQ_KEY = $_SERVER['HTTP_X_API_KEY'] ?? '';
 if ($API_KEY === '' || $REQ_KEY !== $API_KEY) {
+  error_log('unauthorized');
   bad('unauthorized', 401);
 }
 
@@ -125,9 +133,8 @@ try {
     }
 
     case 'history': {
-      // Unified DB-backed implementation
       $params = validateHistoryQuery($_GET); // expects mode + (date|nurseId)
-      $hist = historyAll(); // returns array of published shift snapshots
+      $hist = historyAll(); // array of published shift snapshots
 
       if ($params['mode'] === 'list') {
         $date = $params['date'];
@@ -198,30 +205,35 @@ try {
     }
 
     case 'physicians': {
-      // ICS proxy with short-lived cache
       header('Content-Type: text/calendar; charset=utf-8');
       $cachePath = $DATA_DIR . '/physicians.ics';
       $ttl = 300; // 5 minutes
-      $ics = null;
-      if (is_file($cachePath) && (time() - filemtime($cachePath) < $ttl)) {
-        $ics = @file_get_contents($cachePath);
-      }
-      if ($ics === null) {
-        $ics = @file_get_contents($physiciansUrl);
-        if ($ics === false) {
-          $ics = is_file($cachePath) ? @file_get_contents($cachePath) : null;
-        } else {
-          @file_put_contents($cachePath, $ics);
+      try {
+        $ics = null;
+        if (is_file($cachePath) && (time() - filemtime($cachePath) < $ttl)) {
+          $ics = file_get_contents($cachePath);
         }
+        if ($ics === null) {
+          $ics = file_get_contents($physiciansUrl);
+          if ($ics === false) {
+            $ics = is_file($cachePath) ? file_get_contents($cachePath) : null;
+          } else {
+            file_put_contents($cachePath, $ics);
+          }
+        }
+        if ($ics === null) bad('calendar fetch failed', 502);
+        echo $ics;
+        exit;
+      } catch (Throwable $e) {
+        error_log('physicians: ' . $e->getMessage());
+        bad('calendar fetch failed', 502);
       }
-      if ($ics === null) bad('calendar fetch failed', 502);
-      echo $ics;
-      exit;
     }
 
     default:
       bad('unknown action', 404);
   }
 } catch (Throwable $e) {
+  error_log('api: ' . $e->getMessage());
   bad('server error: ' . $e->getMessage(), 500);
 }

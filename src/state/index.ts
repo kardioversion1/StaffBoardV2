@@ -7,11 +7,9 @@
 import { Shift, hhmmNowLocal, toDateISO, deriveShift } from '@/utils/time';
 import * as DB from '@/db';
 import * as Server from '@/server';
-import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { ensureStaffId } from '@/utils/id';
 import { ensureRole } from '@/utils/role';
-import { normalizeZones, type ZoneDef } from '@/utils/zones';
 import {
   savePublishedShift,
   indexStaffAssignments,
@@ -20,49 +18,6 @@ import {
   type PublishedShiftSnapshot,
   type Assignment,
 } from '@/state/history';
-import type { UIThemeConfig } from '@/state/theme';
-
-export type WidgetsConfig = {
-  show?: boolean;
-  weather: {
-    mode: 'manual' | 'openweather';
-    units: 'F' | 'C';
-    city?: string;
-    lat?: number;
-    lon?: number;
-    apiKey?: string;
-    current?: {
-      temp: number;
-      condition: string;
-      icon?: 'sun' | 'cloud' | 'rain' | 'storm' | 'snow' | 'mist';
-      location?: string;
-      updatedISO?: string;
-    };
-  };
-};
-
-export type Config = {
-  dateISO: string;
-  anchors: { day: string; night: string };
-  zones: ZoneDef[];
-  pin: string;
-  relockMin: number;
-  widgets: WidgetsConfig;
-  zoneColors?: Record<string, string>;
-  shiftDurations?: { day: number; night: number };
-  dtoMinutes?: number;
-  showPinned?: { charge: boolean; triage: boolean };
-  rss?: { url: string; enabled: boolean };
-  physicians?: { calendarUrl: string };
-  privacy?: boolean;
-  ui?: {
-    signoutMode?: 'shiftHuddle' | 'disabled' | 'legacySignout';
-    rightSidebarWidthPx?: number;
-    rightSidebarMinPx?: number;
-    rightSidebarMaxPx?: number;
-  };
-  uiTheme?: UIThemeConfig;
-};
 
 export type Staff = {
   id: string;
@@ -83,6 +38,15 @@ export type Staff = {
 
 import type { Slot } from '@/slots';
 export type { Slot } from '@/slots';
+export {
+  getConfig,
+  loadConfig,
+  saveConfig,
+  mergeConfigDefaults,
+  zonesInvalid,
+  WIDGETS_DEFAULTS,
+} from './config';
+export type { Config, WidgetsConfig } from './config';
 
 export interface ZoneAssignment {
   id: string;
@@ -141,188 +105,6 @@ export function setActiveBoardCache(board: ActiveBoard): void {
 export function getActiveBoardCache(): ActiveBoard | undefined {
   return ACTIVE_BOARD_CACHE;
 }
-
-export const WIDGETS_DEFAULTS: WidgetsConfig = {
-  show: true,
-  weather: {
-    mode: 'manual',
-    units: 'F',
-    lat: DEFAULT_WEATHER_COORDS.lat,
-    lon: DEFAULT_WEATHER_COORDS.lon,
-  },
-};
-
-let CONFIG_CACHE: Config = {
-  dateISO: STATE.dateISO,
-  anchors: { day: '07:00', night: '19:00' },
-  zones: [],
-  pin: '4911',
-  relockMin: 0,
-  widgets: structuredClone(WIDGETS_DEFAULTS),
-  zoneColors: {},
-  shiftDurations: { day: 12, night: 12 },
-  dtoMinutes: 60,
-  showPinned: { charge: true, triage: true },
-  rss: { url: '', enabled: false },
-  physicians: { calendarUrl: '' },
-  privacy: true,
-  ui: {
-    signoutMode: 'shiftHuddle',
-    rightSidebarWidthPx: 300,
-    rightSidebarMinPx: 260,
-    rightSidebarMaxPx: 420,
-  },
-  uiTheme: {
-    mode: 'system',
-    scale: 1,
-    lightPreset: 'fog',
-    darkPreset: 'midnight',
-    highContrast: false,
-    compact: false,
-  },
-};
-
-let ZONES_INVALID = false;
-export function zonesInvalid(): boolean {
-  return ZONES_INVALID;
-}
-
-export function getConfig(): Config {
-  return CONFIG_CACHE;
-}
-
-export async function loadConfig(): Promise<Config> {
-  try {
-    const cfg = await Server.load('config');
-    CONFIG_CACHE = cfg;
-    await DB.set(KS.CONFIG, CONFIG_CACHE);
-  } catch {
-    const existing = await DB.get<Config>(KS.CONFIG);
-    if (existing) CONFIG_CACHE = existing as Config;
-  }
-  return mergeConfigDefaults();
-}
-
-export async function saveConfig(
-  partial: Partial<Omit<Config, 'zones'>> & {
-    zones?: Array<string | Partial<ZoneDef>>;
-  }
-): Promise<Config> {
-  const updated: Config = { ...CONFIG_CACHE, ...partial } as Config;
-  if (partial.zones) {
-    updated.zones = normalizeZones(partial.zones);
-  }
-  CONFIG_CACHE = updated;
-  mergeConfigDefaults();
-  try {
-    await Server.save('config', CONFIG_CACHE);
-  } catch {}
-  await DB.set(KS.CONFIG, CONFIG_CACHE);
-  return CONFIG_CACHE;
-}
-
-export function mergeConfigDefaults(): Config {
-  const cfg = { ...CONFIG_CACHE } as Config & { widgets?: WidgetsConfig | undefined };
-
-  // Widgets defaults
-  if (!cfg.widgets) {
-    cfg.widgets = structuredClone(WIDGETS_DEFAULTS);
-  } else {
-    cfg.widgets.show = cfg.widgets.show === false ? false : true;
-    cfg.widgets.weather = {
-      ...WIDGETS_DEFAULTS.weather,
-      ...(cfg.widgets.weather || {}),
-      current: cfg.widgets.weather?.current
-        ? { ...cfg.widgets.weather.current }
-        : undefined,
-    };
-  }
-
-  // Anchors: ensure HH:MM format with safe fallback
-  const safeTime = (s: unknown, fallback: string) =>
-    typeof s === 'string' && /^\d{2}:\d{2}$/.test(s) ? s : fallback;
-
-  cfg.anchors = {
-    day: safeTime(cfg.anchors?.day, '07:00'),
-    night: safeTime(cfg.anchors?.night, '19:00'),
-  };
-
-  // Zone colors map
-  cfg.zoneColors = cfg.zoneColors || {};
-
-  // Normalize zones & flag validity
-  try {
-    const normalized = normalizeZones(cfg.zones ?? []);
-    // Apply color overrides
-    for (const z of normalized) {
-      if (cfg.zoneColors && cfg.zoneColors[z.name]) z.color = cfg.zoneColors[z.name];
-    }
-    cfg.zones = normalized;
-    ZONES_INVALID = false;
-  } catch {
-    cfg.zones = [];
-    ZONES_INVALID = true;
-  }
-
-  // Shift durations
-  cfg.shiftDurations = {
-    day: typeof cfg.shiftDurations?.day === 'number' ? cfg.shiftDurations.day : 12,
-    night: typeof cfg.shiftDurations?.night === 'number' ? cfg.shiftDurations.night : 12,
-  };
-
-  // DTO minutes
-  cfg.dtoMinutes = typeof cfg.dtoMinutes === 'number' ? cfg.dtoMinutes : 60;
-
-  // Pinned roles visibility
-  cfg.showPinned = {
-    charge: cfg.showPinned?.charge !== false,
-    triage: cfg.showPinned?.triage !== false,
-  };
-
-  // RSS
-  cfg.rss = {
-    url: cfg.rss?.url || '',
-    enabled: cfg.rss?.enabled === true,
-  };
-
-  // Physicians calendar
-  cfg.physicians = {
-    calendarUrl: cfg.physicians?.calendarUrl || '',
-  };
-
-  // Privacy (default true)
-  cfg.privacy = cfg.privacy !== false;
-
-  // UI layout
-  cfg.ui = {
-    signoutMode: cfg.ui?.signoutMode || 'shiftHuddle',
-    rightSidebarWidthPx:
-      typeof cfg.ui?.rightSidebarWidthPx === 'number' ? cfg.ui.rightSidebarWidthPx : 300,
-    rightSidebarMinPx:
-      typeof cfg.ui?.rightSidebarMinPx === 'number' ? cfg.ui.rightSidebarMinPx : 260,
-    rightSidebarMaxPx:
-      typeof cfg.ui?.rightSidebarMaxPx === 'number' ? cfg.ui.rightSidebarMaxPx : 420,
-  };
-
-  // Theme defaults
-  cfg.uiTheme = {
-    mode: cfg.uiTheme?.mode || 'system',
-    scale: cfg.uiTheme?.scale ?? 1,
-    lightPreset: cfg.uiTheme?.lightPreset || 'fog',
-    darkPreset: cfg.uiTheme?.darkPreset || 'midnight',
-    highContrast: cfg.uiTheme?.highContrast === true,
-    compact: cfg.uiTheme?.compact === true,
-  };
-
-  // Misc
-  cfg.pin = cfg.pin || '4911';
-  cfg.relockMin = typeof cfg.relockMin === 'number' ? cfg.relockMin : 0;
-  cfg.dateISO = cfg.dateISO || STATE.dateISO;
-
-  CONFIG_CACHE = cfg as Config;
-  return CONFIG_CACHE;
-}
-
 export function migrateActiveBoard(raw: unknown): ActiveBoard {
   const r = raw as Partial<ActiveBoard> | undefined;
   const zones = r?.zones && typeof r.zones === 'object' ? r.zones : {};

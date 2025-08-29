@@ -33,7 +33,8 @@ function parseICS(text: string): Event[] {
     } else if (current) {
       const idx = line.indexOf(':');
       if (idx > -1) {
-        const key = line.slice(0, idx);
+        const keyRaw = line.slice(0, idx);
+        const key = keyRaw.split(';')[0];
         const value = line.slice(idx + 1);
         current[key] = value;
       }

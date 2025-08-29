@@ -4,15 +4,19 @@ import { getConfig } from '@/state/config';
 let NURSES: Staff[] = [];
 
 /**
- * Set the in-memory nurse cache.
+ * Store staff list for lookup helpers.
+ * @param list staff records to cache
+ * @returns nothing
  */
 export function setNurseCache(list: Staff[]): void {
   NURSES = Array.isArray(list) ? [...list] : [];
 }
 
 /**
- * Format a short name from a full name.
- * Returns "First L." given "First Last".
+ * Build a short name from a full name.
+ * @param full full name to format
+ * @param privacy hide last name when true
+ * @returns formatted name
  */
 export function formatName(full: string, privacy = true): string {
   const parts = (full || '').trim().split(/\s+/).filter(Boolean);
@@ -23,27 +27,37 @@ export function formatName(full: string, privacy = true): string {
 }
 
 /**
- * Convenience wrapper for privacy-on short names.
+ * Generate privacy-on short name.
+ * @param full full name to format
+ * @returns formatted name
  */
 export function formatShortName(full: string): string {
   return formatName(full, true);
 }
 
+/**
+ * Format name respecting configuration privacy.
+ * @param full full name to format
+ * @returns display name
+ */
 export function formatDisplayName(full: string): string {
   const cfg = getConfig();
   return formatName(full, cfg.privacy !== false);
 }
 
 /**
- * Retrieve a nurse by id from the cache.
+ * Look up nurse in cache by id.
+ * @param id nurse identifier
+ * @returns matching staff or undefined
  */
 export function getNurseById(id: string): Staff | undefined {
   return NURSES.find((n) => n.id === id);
 }
 
 /**
- * Get a display label for a nurse id.
- * Falls back to empty string if the nurse is not found.
+ * Resolve display label for nurse id.
+ * @param id nurse identifier
+ * @returns short label or empty string
  */
 export function labelFromId(id?: string): string {
   if (!id) return '';

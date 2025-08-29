@@ -4,7 +4,14 @@ import { createStaffId, ensureStaffId } from '@/utils/id';
 import { fetchWeather, renderWeather } from './widgets';
 import { getUIConfig, saveUIConfig, applyUI } from '@/state/uiConfig';
 import { renderHeader } from '@/ui/header';
-import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
+import {
+  getThemeConfig,
+  saveThemeConfig,
+  applyTheme,
+  THEME_PRESETS,
+  type UIMode,
+  type ThemePreset,
+} from '@/state/theme';
 
 function mapIcon(cond: string) {
   const c = (cond || '').toLowerCase();
@@ -192,12 +199,13 @@ function renderGeneralSettings() {
   const cfg = getConfig();
   const ui = getUIConfig();
   const el = document.getElementById('general-settings')!;
-  const palette = [
-    '#3b82f6', '#2563eb', '#1d4ed8', // blues
-    '#ef4444', '#b91c1c',             // reds
-    '#10b981', '#047857',             // greens
-    '#8b5cf6',                        // purple
+  const paletteVars = [
+    '--zone-bg-1', '--zone-bg-2', '--zone-bg-3',
+    '--zone-bg-4', '--zone-bg-5',
+    '--zone-bg-6', '--zone-bg-7', '--zone-bg-8',
   ];
+  const style = getComputedStyle(document.documentElement);
+  const palette = paletteVars.map((v) => style.getPropertyValue(v).trim());
   const zoneOptions = (z: string, sel: string | undefined) =>
     `<select data-zone="${z}" class="zone-sel">` +
     '<option value="">Default</option>' +
@@ -228,6 +236,7 @@ function renderGeneralSettings() {
       <div class="form-row"><label><input type="checkbox" id="gs-privacy"${cfg.privacy!==false?' checked':''}> Privacy mode: First LastInitial</label></div>
       <div class="form-row"><label>RSS URL <input id="gs-rss" value="${cfg.rss?.url || ''}"></label></div>
       <div class="form-row"><label><input type="checkbox" id="gs-rss-en"${cfg.rss?.enabled?' checked':''}> Enable feed</label></div>
+      <div class="form-row"><label>Physicians calendar URL <input id="gs-phys-url" value="${cfg.physicians?.calendarUrl || ''}"></label></div>
       <div class="form-row">
         <label>Signout Button Mode</label>
         <div>
@@ -284,7 +293,7 @@ function renderGeneralSettings() {
     });
   });
   (document.getElementById('zone-add') as HTMLButtonElement).addEventListener('click', async () => {
-    cfg.zones.push({ id: `zone_${Date.now()}`, name: `Zone ${cfg.zones.length + 1}`, color: '#ffffff' });
+    cfg.zones.push({ id: `zone_${Date.now()}`, name: `Zone ${cfg.zones.length + 1}`, color: 'var(--panel)' });
     await saveConfig({ zones: cfg.zones });
     document.dispatchEvent(new Event('config-changed'));
     renderGeneralSettings();
@@ -324,6 +333,10 @@ function renderGeneralSettings() {
     cfg.rss!.enabled = (e.target as HTMLInputElement).checked;
     await saveConfig({ rss: cfg.rss });
   });
+  (document.getElementById('gs-phys-url') as HTMLInputElement).addEventListener('input', async (e) => {
+    cfg.physicians!.calendarUrl = (e.target as HTMLInputElement).value;
+    await saveConfig({ physicians: cfg.physicians });
+  });
 
   el.querySelectorAll('input[name="signout-mode"]').forEach((r) => {
     r.addEventListener('change', async (e) => {
@@ -353,6 +366,22 @@ function renderGeneralSettings() {
 function renderDisplaySettings() {
   const cfg = getThemeConfig();
   const el = document.getElementById('display-settings')!;
+  const makeCard = (p: ThemePreset, name: string, sel: string) => `
+    <label class="preset-card">
+      <input type="radio" name="${name}" value="${p.id}"${sel===p.id?' checked':''}>
+      <div class="swatches">
+        <span class="swatch" style="background:${p.tokens.bg}"></span>
+        <span class="swatch" style="background:${p.tokens.panel}"></span>
+        <span class="swatch" style="background:${p.tokens.text}"></span>
+        <span class="swatch" style="background:${p.tokens.accent}"></span>
+      </div>
+      <div class="preset-meta">
+        <span>${p.label}</span>
+        ${p.note?`<span class="muted">${p.note}</span>`:''}
+      </div>
+    </label>`;
+  const lightCards = THEME_PRESETS.filter(p=>p.mode==='light').map(p=>makeCard(p,'ds-light',cfg.lightPreset)).join('');
+  const darkCards = THEME_PRESETS.filter(p=>p.mode==='dark').map(p=>makeCard(p,'ds-dark',cfg.darkPreset)).join('');
   el.innerHTML = `
     <section class="panel">
       <h3>Display</h3>
@@ -367,39 +396,67 @@ function renderDisplaySettings() {
           <label><input type="radio" name="ds-mode" value="dark"${cfg.mode==='dark'?' checked':''}> Dark</label>
         </div>
       </div>
-      <div class="form-row">
-        <label>Light preset
-          <select id="ds-light">
-            <option value="paper"${cfg.lightPreset==='paper'?' selected':''}>Paper</option>
-            <option value="fog"${cfg.lightPreset==='fog'?' selected':''}>Fog</option>
-            <option value="pearl"${cfg.lightPreset==='pearl'?' selected':''}>Pearl</option>
-          </select>
-        </label>
-      </div>
-      <div class="form-row">
-        <label>Dark preset
-          <select id="ds-dark">
-            <option value="ink"${cfg.darkPreset==='ink'?' selected':''}>Ink</option>
-            <option value="midnight"${cfg.darkPreset==='midnight'?' selected':''}>Midnight</option>
-            <option value="plum"${cfg.darkPreset==='plum'?' selected':''}>Plum</option>
-          </select>
-        </label>
-      </div>
+      <h4>Light presets</h4>
+      <div class="preset-grid">${lightCards}</div>
+      <div class="form-row"><span id="light-contrast" class="muted"></span></div>
+      <h4>Dark presets</h4>
+      <div class="preset-grid">${darkCards}</div>
+      <div class="form-row"><span id="dark-contrast" class="muted"></span></div>
       <div class="form-row"><label><input type="checkbox" id="ds-contrast"${cfg.highContrast?' checked':''}> High contrast</label></div>
       <div class="form-row"><label><input type="checkbox" id="ds-compact"${cfg.compact?' checked':''}> Compact mode</label></div>
-      <div class="form-row"><button id="ds-save" class="btn">Save Display</button></div>
+      <div class="btn-row"><button id="ds-reset" class="btn">Reset to defaults</button><button id="ds-save" class="btn">Save Display</button></div>
     </section>
   `;
+
+  const contrast = (fg: string, bg: string) => {
+    const hex = (h: string) => {
+      const c = h.replace('#', '');
+      const bigint = parseInt(c, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      const toLum = (v: number) => {
+        const s = v / 255;
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+      };
+      return 0.2126 * toLum(r) + 0.7152 * toLum(g) + 0.0722 * toLum(b);
+    };
+    const L1 = hex(fg);
+    const L2 = hex(bg);
+    return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+  };
+
+  const updateContrast = () => {
+    const lightId = (document.querySelector('input[name="ds-light"]:checked') as HTMLInputElement).value;
+    const darkId = (document.querySelector('input[name="ds-dark"]:checked') as HTMLInputElement).value;
+    const lp = THEME_PRESETS.find(p=>p.id===lightId)!;
+    const dp = THEME_PRESETS.find(p=>p.id===darkId)!;
+    const lr = contrast(lp.tokens.text, lp.tokens.bg);
+    const dr = contrast(dp.tokens.text, dp.tokens.bg);
+    (document.getElementById('light-contrast') as HTMLElement).textContent = `Contrast ${lr.toFixed(2)}:1 ${lr>=4.5?'AA pass':'fail'}`;
+    (document.getElementById('dark-contrast') as HTMLElement).textContent = `Contrast ${dr.toFixed(2)}:1 ${dr>=4.5?'AA pass':'fail'}`;
+    const saveBtn = document.getElementById('ds-save') as HTMLButtonElement;
+    saveBtn.disabled = lr < 4.5 || dr < 4.5;
+  };
+  el.querySelectorAll('input[name="ds-light"],input[name="ds-dark"]').forEach((i) => i.addEventListener('change', updateContrast));
+  updateContrast();
+
   document.getElementById('ds-save')!.addEventListener('click', async () => {
     const scale = parseFloat((document.getElementById('ds-scale') as HTMLInputElement).value);
-    const mode = (document.querySelector('input[name="ds-mode"]:checked') as HTMLInputElement).value as any;
-    const lightPreset = (document.getElementById('ds-light') as HTMLSelectElement).value as any;
-    const darkPreset = (document.getElementById('ds-dark') as HTMLSelectElement).value as any;
+    const mode = (document.querySelector('input[name="ds-mode"]:checked') as HTMLInputElement).value as UIMode;
+    const lightPreset = (document.querySelector('input[name="ds-light"]:checked') as HTMLInputElement).value;
+    const darkPreset = (document.querySelector('input[name="ds-dark"]:checked') as HTMLInputElement).value;
     const highContrast = (document.getElementById('ds-contrast') as HTMLInputElement).checked;
     const compact = (document.getElementById('ds-compact') as HTMLInputElement).checked;
     await saveThemeConfig({ scale, mode, lightPreset, darkPreset, highContrast, compact });
     applyTheme();
     alert('Display settings saved.');
+  });
+
+  document.getElementById('ds-reset')!.addEventListener('click', async () => {
+    await saveThemeConfig({ custom: undefined });
+    applyTheme();
+    alert('Theme reset to preset defaults.');
   });
 }
 

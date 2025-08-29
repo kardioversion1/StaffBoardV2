@@ -170,7 +170,7 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 
 @media print{
   #widgets,.widget{display:none!important}
-  .zone-card,.nurse-card{background:#fff!important;color:#000!important;box-shadow:none!important}
+.zone-card,.nurse-card{background:var(--panel)!important;color:var(--text-high)!important;box-shadow:none!important}
 }
 
 .overlay,.backdrop,.modal-backdrop{position:fixed;inset:0;z-index:var(--z-modal)}
@@ -214,3 +214,12 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .manage-dialog label{display:flex;flex-direction:column;gap:4px}
 .manage-dialog .dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
 .banner{background:var(--danger);color:var(--text);padding:8px;text-align:center}
+
+.phys-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:var(--z-modal)}
+.phys-modal{background:var(--panel);padding:16px;border-radius:8px;max-width:320px;max-height:80vh;overflow:auto}
+
+.preset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin:8px 0}
+.preset-card{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:8px;padding:6px;background:var(--control)}
+.swatches{display:flex;gap:4px}
+.swatch{flex:1;height:12px;border-radius:4px}
+.preset-meta{display:flex;flex-direction:column;font-size:.85em}

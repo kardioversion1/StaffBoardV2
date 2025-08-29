@@ -1,5 +1,17 @@
-import { STATE, DB, KS, getActiveBoardCache } from '@/state/board';
-import { getConfig } from '@/state/config';
+Here’s the cleaned, unified `renderHeader` module with the consolidated `@/state` imports and the missing `Server` import wired up.
+
+```ts
+// header.ts — merged & de-conflicted
+
+import * as Server from '@/server';
+import {
+  STATE,
+  getConfig,
+  DB,
+  KS,
+  getActiveBoardCache,
+  type ActiveBoard,
+} from '@/state';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
 import { manualHandoff, renderAll } from '@/main';
@@ -7,22 +19,25 @@ import { openHuddle } from '@/ui/huddle';
 import { showBanner } from '@/ui/banner';
 
 export function renderHeader() {
-  const app = document.getElementById("app")!;
-  let header = document.getElementById("header");
+  const app = document.getElementById('app')!;
+  let header = document.getElementById('header');
   if (!header) {
-    header = document.createElement("header");
-    header.id = "header";
+    header = document.createElement('header');
+    header.id = 'header';
     app.appendChild(header);
   }
+
   const shift = deriveShift(STATE.clockHHMM);
-  const shiftLabel = shift === "day" ? "Day (07–19)" : "Night (19–07)";
+  const shiftLabel = shift === 'day' ? 'Day (07–19)' : 'Night (19–07)';
   const mode = getConfig().ui?.signoutMode || 'shiftHuddle';
+
   const actionBtn =
     mode === 'shiftHuddle'
       ? '<button id="huddle-btn" class="btn">Shift Huddle</button>'
       : mode === 'legacySignout'
         ? '<button id="handoff" class="btn">Sign-out</button>'
         : '';
+
   header.innerHTML = `
     <div class="title-block">
       <div class="title">ED Staffing Board</div>
@@ -40,23 +55,29 @@ export function renderHeader() {
       <button id="reset-cache" class="btn">Reset</button>
     </div>
   `;
-  if (mode === 'shiftHuddle')
+
+  if (mode === 'shiftHuddle') {
     document.getElementById('huddle-btn')?.addEventListener('click', () =>
       openHuddle(STATE.dateISO, shift)
     );
-  else if (mode === 'legacySignout')
+  } else if (mode === 'legacySignout') {
     document.getElementById('handoff')?.addEventListener('click', manualHandoff);
+  }
+
   document.getElementById('theme-toggle')!.addEventListener('click', async () => {
     const t = getThemeConfig();
     const next = t.mode === 'dark' ? 'light' : 'dark';
     await saveThemeConfig({ mode: next });
     applyTheme();
   });
+
   document.getElementById('publish-btn')?.addEventListener('click', async () => {
     try {
       const tasks: Promise<any>[] = [];
 
-      const board = getActiveBoardCache() ?? (await DB.get(KS.ACTIVE(STATE.dateISO, shift)));
+      const board =
+        getActiveBoardCache() ??
+        (await DB.get<ActiveBoard>(KS.ACTIVE(STATE.dateISO, shift)));
       if (board) {
         await DB.set(KS.ACTIVE(STATE.dateISO, shift), board);
         tasks.push(Server.save('active', board));
@@ -64,8 +85,8 @@ export function renderHeader() {
 
       tasks.push(Server.save('config', getConfig()));
 
-      const roster = await DB.get(KS.STAFF);
-      if (roster) tasks.push(Server.save('roster', roster));
+      const roster = (await DB.get(KS.STAFF)) ?? [];
+      if (Array.isArray(roster)) tasks.push(Server.save('roster', roster));
 
       await Promise.all(tasks);
       showBanner('Published');
@@ -73,9 +94,11 @@ export function renderHeader() {
       showBanner('Publish failed');
     }
   });
+
   document.getElementById('refresh-btn')?.addEventListener('click', async () => {
     try {
       const { dateISO, shift } = STATE;
+
       const local = getActiveBoardCache();
       if (local) {
         await DB.set(KS.ACTIVE(dateISO, shift), local);
@@ -83,14 +106,17 @@ export function renderHeader() {
           await Server.save('active', local);
         } catch {}
       }
-      const board = await Server.load('active', { date: dateISO, shift });
+
+      const board = await Server.load<ActiveBoard>('active', { date: dateISO, shift });
       if (board) await DB.set(KS.ACTIVE(dateISO, shift), board);
+
       await renderAll();
       showBanner('Refreshed');
     } catch {
       showBanner('Refresh failed');
     }
   });
+
   document.getElementById('reset-cache')?.addEventListener('click', () => {
     ['config', 'roster', 'active'].forEach((k) =>
       localStorage.removeItem(`staffboard:${k}`)
@@ -98,3 +124,5 @@ export function renderHeader() {
     location.reload();
   });
 }
+```
+

@@ -1,25 +1,31 @@
 // mainBoard.ts — merged & de-conflicted
 
+import * as Server from '@/server';
 import {
   DB,
   KS,
   STATE,
-  ActiveBoard,
+  loadStaff,
+  saveStaff,
   CURRENT_SCHEMA_VERSION,
   migrateActiveBoard,
   setActiveBoardCache,
+  type Staff,
+  type ActiveBoard,
   type DraftShift,
-} from '@/state/board';
-import { getConfig, saveConfig } from '@/state/config';
-import { loadStaff, saveStaff, type Staff } from '@/state/staff';
+  getConfig,
+  saveConfig,
+  type Config,
+} from '@/state';
+
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWeather } from './widgets';
-import { renderPhysicians } from './physicians';
+import { renderPhysicians, renderPhysicianPopup } from './physicians';
 import { nurseTile } from './nurseTile';
-import { debouncedSave } from '@/utils/debouncedSave';
+import { createDebouncer } from '@/utils/debouncedSave';
 import './mainBoard/boardLayout.css';
 import { startBreak, endBreak, moveSlot, upsertSlot, removeSlot, type Slot } from '@/slots';
-import { canonNurseType } from '@/domain/lexicon';
+import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 
 // --- helpers ---------------------------------------------------------------
@@ -54,21 +60,21 @@ export async function renderBoard(
 ): Promise<void> {
   try {
     const cfg = getConfig();
-      if (!cfg.zones) cfg.zones = [];
+    if (!cfg.zones) cfg.zones = [];
 
     const staff: Staff[] = await loadStaff();
     setNurseCache(staff);
 
     // Load or initialize active shift tuple
     const saveKey = KS.ACTIVE(ctx.dateISO, ctx.shift);
-      let active = await DB.get<ActiveBoard>(saveKey);
-      if (!active) {
-        active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones);
-      } else {
-        active = migrateActiveBoard(active);
-      }
-      normalizeActiveZones(active, cfg.zones);
-      setActiveBoardCache(active);
+    let active = await DB.get<ActiveBoard>(saveKey);
+    if (!active) {
+      active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones);
+    } else {
+      active = migrateActiveBoard(active);
+    }
+    normalizeActiveZones(active, cfg.zones);
+    setActiveBoardCache(active);
 
     // Layout
     root.innerHTML = `
@@ -115,13 +121,14 @@ export async function renderBoard(
           <section class="panel">
             <h3>Physicians (read-only)</h3>
             <div id="phys"></div>
+            <button id="phys-next7" class="btn">Next 7 days</button>
           </section>
         </div>
       </div>
     `;
 
     // Debounced save
-    let saveTimer: any;
+    let saveTimer: ReturnType<typeof setTimeout>;
     const queueSave = () => {
       clearTimeout(saveTimer);
       saveTimer = setTimeout(() => {
@@ -141,7 +148,10 @@ export async function renderBoard(
       ctx.dateISO
     );
 
-    // Removed testBoardFit call; allow natural scroll for overflow
+    const btn = document.getElementById('phys-next7');
+    btn?.addEventListener('click', () => {
+      renderPhysicianPopup(ctx.dateISO, 7);
+    });
 
     // Re-render on config changes (e.g., zone list or colors)
     document.addEventListener('config-changed', () => {
@@ -163,8 +173,6 @@ export async function renderBoard(
     });
   }
 }
-
-
 
 // --- leadership ------------------------------------------------------------
 
@@ -256,7 +264,12 @@ function assignLeadDialog(
 
 // --- zones & tiles ---------------------------------------------------------
 
-function renderZones(active: ActiveBoard, cfg: any, staff: Staff[], save: () => void) {
+function renderZones(
+  active: ActiveBoard,
+  cfg: Config,
+  staff: Staff[],
+  save: () => void
+) {
   const pctCont = document.getElementById('pct-zones')!;
   const cont = document.getElementById('zones')!;
   pctCont.innerHTML = '';
@@ -351,7 +364,7 @@ function renderZones(active: ActiveBoard, cfg: any, staff: Staff[], save: () => 
     container.addEventListener('dragover', (e) => e.preventDefault());
     container.addEventListener('drop', async (e) => {
       e.preventDefault();
-      const zoneIdxStr = e.dataTransfer?.getData('zone-index');
+      const zoneIdxStr = (e as DragEvent).dataTransfer?.getData('zone-index');
       if (!zoneIdxStr) return;
       const idx = Number(zoneIdxStr);
       if (isNaN(idx)) return;
@@ -378,15 +391,14 @@ function wireComments(active: ActiveBoard, save: () => void) {
     save();
   };
 
-  el.addEventListener('input', () =>
-    debouncedSave(
-      () => {
-        active.comments = el.value;
-      },
-      () => save()
-    )
+  const debounced = createDebouncer(
+    () => {
+      active.comments = el.value;
+    },
+    () => save()
   );
 
+  el.addEventListener('input', debounced);
   el.addEventListener('blur', commit);
 }
 
@@ -426,7 +438,7 @@ async function renderIncoming(active: ActiveBoard, save: () => void) {
   if (active.incoming.length === 0) {
     cont.innerHTML = '<div class="incoming-placeholder"></div>';
   } else {
-    active.incoming.forEach((inc: any) => {
+    active.incoming.forEach((inc) => {
       const div = document.createElement('div');
       const name = labelFromId(inc.nurseId);
       div.textContent = `${name} ${inc.eta}${inc.arrived ? ' ✓' : ''}`;
@@ -476,7 +488,7 @@ async function renderIncoming(active: ActiveBoard, save: () => void) {
 function renderOffgoing(active: ActiveBoard, save: () => void) {
   const cont = document.getElementById('offgoing')!;
   const cutoff = Date.now() - 60 * 60 * 1000; // 60 min
-  active.offgoing = (active.offgoing || []).filter((o: any) => o.ts > cutoff);
+  active.offgoing = (active.offgoing || []).filter((o) => o.ts > cutoff);
 
   cont.innerHTML = '';
   for (const o of active.offgoing) {
@@ -497,8 +509,8 @@ function manageSlot(
   rerender: () => void,
   zone: string,
   index: number,
-  board: any,
-  cfg: any
+  board: ActiveBoard,
+  cfg: Config
 ): void {
   if (!st) return;
 
@@ -558,7 +570,13 @@ function manageSlot(
     board.offgoing.push({ nurseId: st.id, ts: Date.now() });
 
     // Append to history
-    const hist = (await DB.get<any[]>(KS.HISTORY)) || [];
+    interface HistoryEntry {
+      nurseId: string;
+      dateISO: string;
+      shift: 'day' | 'night';
+      endedISO: string;
+    }
+    const hist = (await DB.get<HistoryEntry[]>(KS.HISTORY)) || [];
     hist.push({
       nurseId: st.id,
       dateISO: board.dateISO,
@@ -585,8 +603,8 @@ function manageSlot(
     // Only nurses have a nurse type
     if (st.role === 'nurse') {
       const tval = (overlay.querySelector('#mg-type') as HTMLSelectElement).value;
-      const canon = canonNurseType(tval) || st.type;
-      st.type = canon as any;
+      const canon = (canonNurseType(tval) || st.type) as NurseType;
+      st.type = canon;
     }
 
     // Slot-level fields

@@ -62,3 +62,19 @@ zone Alpha.
 - “pending” → draft
 - “traveler/contract” → travel
 - UK spellings (colour/favour/organise/cancelled) → US spelling
+
+## PHP API deployment
+
+- Requires **PHP ≥ 8.0**.
+- Set environment variables in cPanel or `.htaccess`:
+
+```apache
+SetEnv HEYBRE_API_KEY "REPLACE_WITH_RANDOM_LONG_STRING"
+# Recommended: store JSON outside webroot
+SetEnv HEYBRE_DATA_DIR "/home/<cpanel-user>/heybre-board-data"
+```
+
+- Make sure the data path is writable by PHP.
+- Validate with:
+  - `GET https://board.heybre.com/api.php?res=staff`
+  - Save something from the UI and confirm `active-YYYY-MM-DD-<shift>.json` appears in the data dir.

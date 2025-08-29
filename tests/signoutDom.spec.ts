@@ -14,6 +14,7 @@ vi.mock('@/db', () => {
   };
 });
 vi.mock('@/main', () => ({ manualHandoff: () => {} }));
+vi.mock('@/signout', () => ({ signOut: () => {} }));
 
 import { saveUIConfig, applyUI } from '@/state/uiConfig';
 import { saveConfig } from '@/state/config';
@@ -26,6 +27,12 @@ beforeEach(async () => {
   initState();
   await saveConfig({});
   await saveStaff([]);
+  await saveUIConfig({
+    signoutMode: 'shiftHuddle',
+    rightSidebarWidthPx: 300,
+    rightSidebarMinPx: 260,
+    rightSidebarMaxPx: 420,
+  });
   document.body.innerHTML = '<div id="app"></div><div id="panel"></div>';
 });
 

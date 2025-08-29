@@ -13,10 +13,10 @@
       });
       if (!res.ok) throw new Error('Network');
       const data = await res.json();
-      localStorage.setItem(keyName, JSON.stringify(data));
+      sessionStorage.setItem(keyName, JSON.stringify(data));
       return data;
     } catch (err) {
-      const cached = localStorage.getItem(keyName);
+      const cached = sessionStorage.getItem(keyName);
       if (cached) return JSON.parse(cached);
       throw err;
     }
@@ -33,7 +33,7 @@
     if (!res.ok) throw new Error('Network');
     const j = await res.json();
     if (!j.ok) throw new Error(j.error || 'save failed');
-    localStorage.setItem(keyName, JSON.stringify(payload));
+    sessionStorage.setItem(keyName, JSON.stringify(payload));
     return j;
   }
 

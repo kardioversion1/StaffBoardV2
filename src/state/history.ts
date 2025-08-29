@@ -1,12 +1,12 @@
 import * as DB from '@/db';
 
-/** Attempt IndexedDB first, fallback to localStorage. */
+/** Attempt IndexedDB first, fallback to sessionStorage. */
 async function kvGet<T>(key: string): Promise<T | undefined> {
   try {
     return await DB.get<T>(key);
   } catch {
-    if (typeof localStorage === 'undefined') return undefined;
-    const raw = localStorage.getItem(key);
+    if (typeof sessionStorage === 'undefined') return undefined;
+    const raw = sessionStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : undefined;
   }
 }
@@ -15,8 +15,8 @@ async function kvSet<T>(key: string, val: T): Promise<void> {
   try {
     await DB.set(key, val);
   } catch {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(key, JSON.stringify(val));
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(key, JSON.stringify(val));
     }
   }
 }
@@ -25,8 +25,8 @@ async function kvDel(key: string): Promise<void> {
   try {
     await DB.del(key);
   } catch {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(key);
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(key);
     }
   }
 }

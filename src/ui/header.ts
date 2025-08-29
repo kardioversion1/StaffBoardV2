@@ -3,16 +3,17 @@
 import * as Server from '@/server';
 import {
   STATE,
-  getConfig,
   DB,
   KS,
   getActiveBoardCache,
   type ActiveBoard,
   type Staff,
 } from '@/state';
+import { getConfig } from '@/state/config';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
 import { manualHandoff, renderAll } from '@/main';
+import { signOut } from '@/signout';
 import { openHuddle } from '@/ui/huddle';
 import { showBanner } from '@/ui/banner';
 
@@ -60,7 +61,10 @@ export function renderHeader() {
       openHuddle(STATE.dateISO, shift)
     );
   } else if (mode === 'legacySignout') {
-    document.getElementById('handoff')?.addEventListener('click', manualHandoff);
+    document.getElementById('handoff')?.addEventListener('click', () => {
+      signOut();
+      manualHandoff();
+    });
   }
 
   document.getElementById('theme-toggle')!.addEventListener('click', async () => {
@@ -120,7 +124,7 @@ export function renderHeader() {
 
   document.getElementById('reset-cache')?.addEventListener('click', () => {
     ['config', 'roster', 'active'].forEach((k) =>
-      localStorage.removeItem(`staffboard:${k}`)
+      sessionStorage.removeItem(`staffboard:${k}`)
     );
     location.reload();
   });

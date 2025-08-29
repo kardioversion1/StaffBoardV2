@@ -36,7 +36,7 @@ const HANDOFF_KEY = 'sb_handoff_v1';
 
 export function loadShifts(): Shift[] {
   try {
-    const raw = localStorage.getItem(SHIFTS_KEY);
+    const raw = sessionStorage.getItem(SHIFTS_KEY);
     return raw ? (JSON.parse(raw) as Shift[]) : [];
   } catch {
     return [];
@@ -45,7 +45,7 @@ export function loadShifts(): Shift[] {
 
 export function saveShifts(list: Shift[]): void {
   try {
-    localStorage.setItem(SHIFTS_KEY, JSON.stringify(list));
+    sessionStorage.setItem(SHIFTS_KEY, JSON.stringify(list));
   } catch {
     /* ignore */
   }
@@ -53,7 +53,7 @@ export function saveShifts(list: Shift[]): void {
 
 export function loadActiveHandoff(): Handoff | undefined {
   try {
-    const raw = localStorage.getItem(HANDOFF_KEY);
+    const raw = sessionStorage.getItem(HANDOFF_KEY);
     return raw ? (JSON.parse(raw) as Handoff) : undefined;
   } catch {
     return undefined;
@@ -62,8 +62,8 @@ export function loadActiveHandoff(): Handoff | undefined {
 
 export function saveActiveHandoff(h: Handoff | undefined): void {
   try {
-    if (h) localStorage.setItem(HANDOFF_KEY, JSON.stringify(h));
-    else localStorage.removeItem(HANDOFF_KEY);
+    if (h) sessionStorage.setItem(HANDOFF_KEY, JSON.stringify(h));
+    else sessionStorage.removeItem(HANDOFF_KEY);
   } catch {
     /* ignore */
   }

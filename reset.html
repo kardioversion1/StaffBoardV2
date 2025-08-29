@@ -2,11 +2,10 @@
 <html><head><meta charset="utf-8"><title>Reset</title></head>
 <body style="font:16px system-ui;padding:24px">
 <h1>Reset Local Data</h1>
-<p>Clears localStorage/sessionStorage caches used by StaffBoard and reloads.</p>
+<p>Clears sessionStorage caches used by StaffBoard and reloads.</p>
 <button id="go">Reset Now</button>
 <script>
 document.getElementById('go').onclick = () => {
-  try { localStorage.clear(); } catch {}
   try { sessionStorage.clear(); } catch {}
   caches && caches.keys && caches.keys().then(keys => keys.forEach(caches.delete));
   location.href = '/';

@@ -12,10 +12,12 @@ declare(strict_types=1);
  *   ?action=history&mode=byNurse&nurseId=ID
  *   ?action=softDeleteStaff&id=ID
  *   ?action=exportHistoryCSV[&from=YYYY-MM-DD&to=YYYY-MM-DD&nurseId=ID]
+ *   ?action=physicians
  *   ?action=ping
  */
 
 header('Content-Type: application/json; charset=utf-8');
+// Prevent stale caches on phones
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 
@@ -24,6 +26,7 @@ $DATA_DIR = $ROOT_DIR . '/data';
 if (!is_dir($DATA_DIR)) { @mkdir($DATA_DIR, 0775, true); }
 
 require __DIR__ . '/db.php';
+require_once __DIR__ . '/validators.php';
 
 /* ---------- helpers ---------- */
 function bad(string $msg, int $code = 400): void {
@@ -42,7 +45,7 @@ function normalizeKey(string $key): string {
   return $key;
 }
 
-/** seed roster on first run from staff-roster-full.json */
+/** Seed roster on first run from staff-roster-full.json (marks missing 'active' as true) */
 function ensureRosterExists(string $rootDir): void {
   $existing = kvGet('roster', null);
   if ($existing !== null) return;
@@ -58,6 +61,7 @@ function ensureRosterExists(string $rootDir): void {
   kvSet('roster', $default);
 }
 
+/* ---------- auth ---------- */
 $API_KEY = getenv('HEYBRE_API_KEY') ?: '';
 $REQ_KEY = $_SERVER['HTTP_X_API_KEY'] ?? '';
 if ($API_KEY === '' || $REQ_KEY !== $API_KEY) {
@@ -74,7 +78,7 @@ try {
 
   switch ($action) {
     case 'ping':
-      ok(['ok'=>true,'time'=>gmdate('c')]);
+      ok(['ok' => true, 'time' => gmdate('c')]);
 
     case 'load': {
       if ($key === '') bad('missing key');
@@ -91,7 +95,6 @@ try {
         ];
         $data = kvGet($key, $defaults[$key] ?? new stdClass());
       }
-
       ok($data);
     }
 
@@ -100,8 +103,7 @@ try {
       $key = normalizeKey($key);
 
       $raw  = file_get_contents('php://input') ?: '';
-      $data = $raw === '' ? new stdClass() : json_decode($raw, true);
-      if ($raw !== '' && json_last_error() !== JSON_ERROR_NONE) bad('invalid JSON');
+      $data = validateSavePayload($raw);
 
       if ($key === 'roster' && is_array($data)) {
         foreach ($data as &$s) if (!isset($s['active'])) $s['active'] = true;
@@ -123,19 +125,18 @@ try {
     }
 
     case 'history': {
-      $mode = $_GET['mode'] ?? '';
-      $hist = historyAll();
+      // Unified DB-backed implementation
+      $params = validateHistoryQuery($_GET); // expects mode + (date|nurseId)
+      $hist = historyAll(); // returns array of published shift snapshots
 
-      if ($mode === 'list') {
-        $date = $_GET['date'] ?? '';
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) bad('invalid date');
+      if ($params['mode'] === 'list') {
+        $date = $params['date'];
         $out = array_values(array_filter($hist, fn($h) => ($h['dateISO'] ?? '') === $date));
         ok($out);
       }
 
-      if ($mode === 'byNurse') {
-        $id = $_GET['nurseId'] ?? '';
-        if ($id === '') bad('missing nurseId');
+      if ($params['mode'] === 'byNurse') {
+        $id = $params['nurseId'];
         $out = [];
         foreach ($hist as $entry) {
           foreach (($entry['assignments'] ?? []) as $a) {
@@ -197,6 +198,7 @@ try {
     }
 
     case 'physicians': {
+      // ICS proxy with short-lived cache
       header('Content-Type: text/calendar; charset=utf-8');
       $cachePath = $DATA_DIR . '/physicians.ics';
       $ttl = 300; // 5 minutes

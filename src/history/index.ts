@@ -7,6 +7,7 @@ import type {
   NurseShiftIndexEntry,
   HuddleRecord,
 } from '@/state/history';
+import * as Server from '@/server';
 
 /**
  * Render History tab with sub-views.

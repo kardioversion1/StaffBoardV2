@@ -10,7 +10,9 @@ export interface ZoneDef {
  * Normalize zones into a consistent array of { id, name, color }.
  * Accepts either string[] or object[] from config.json.
  */
-export function normalizeZones(input: any[]): ZoneDef[] {
+export function normalizeZones(
+  input: Array<string | Partial<ZoneDef>>
+): ZoneDef[] {
   if (!Array.isArray(input)) return [];
 
   return input.map((z, i) => {
@@ -27,7 +29,7 @@ export function normalizeZones(input: any[]): ZoneDef[] {
         id: (z.id ?? name).toLowerCase().replace(/\s+/g, '_'),
         name,
         color: z.color ?? '#ffffff',
-        pct: !!(z as any).pct,
+        pct: Boolean(z.pct),
       };
     } else {
       return {
@@ -44,10 +46,13 @@ export function normalizeZones(input: any[]): ZoneDef[] {
  * Ensure active.zones keys align with normalized zone names.
  * Mutates the active object in place.
  */
-export function normalizeActiveZones(active: any, zones: ZoneDef[]): void {
+export function normalizeActiveZones<T>(
+  active: { zones?: Record<string, T[]> } | undefined,
+  zones: ZoneDef[]
+): void {
   if (!active || typeof active !== 'object') return;
   if (!active.zones || typeof active.zones !== 'object') active.zones = {};
-  const normalized: Record<string, any[]> = {};
+  const normalized: Record<string, T[]> = {};
   for (const z of zones) {
     const arr = active.zones[z.name];
     normalized[z.name] = Array.isArray(arr) ? arr : [];

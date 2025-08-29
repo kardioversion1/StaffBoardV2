@@ -27,7 +27,7 @@ export async function get<T>(key: string): Promise<T | undefined> {
   });
 }
 
-export async function set(key: string, val: any): Promise<void> {
+export async function set<T>(key: string, val: T): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, "readwrite");
@@ -56,8 +56,10 @@ export async function keys(prefix = ""): Promise<string[]> {
     const store = tx.objectStore(STORE);
     const req = store.getAllKeys();
     req.onsuccess = () => {
-      const all: string[] = req.result as any;
-      resolve(all.filter((k) => k.startsWith(prefix)));
+      const all = req.result as IDBValidKey[];
+      resolve(
+        (all as string[]).filter((k) => typeof k === 'string' && k.startsWith(prefix))
+      );
     };
     req.onerror = () => reject(req.error);
   });

@@ -101,7 +101,17 @@ try {
 
     case 'load': {
       if ($key === '') bad('missing key');
-      $path = "$DATA_DIR/$key.json";
+      if ($key === 'active') {
+        $date = $_GET['date'] ?? '';
+        $shift = $_GET['shift'] ?? '';
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && ($shift === 'day' || $shift === 'night')) {
+          $path = "$DATA_DIR/active-$date-$shift.json";
+        } else {
+          $path = "$DATA_DIR/$key.json";
+        }
+      } else {
+        $path = "$DATA_DIR/$key.json";
+      }
       // Sensible defaults
       $defaults = [
         'roster' => [],
@@ -124,7 +134,17 @@ try {
         }
       }
 
-      $path = "$DATA_DIR/$key.json";
+      if ($key === 'active') {
+        $date = $data['dateISO'] ?? ($_GET['date'] ?? '');
+        $shift = $data['shift'] ?? ($_GET['shift'] ?? '');
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && ($shift === 'day' || $shift === 'night')) {
+          $path = "$DATA_DIR/active-$date-$shift.json";
+        } else {
+          $path = "$DATA_DIR/$key.json";
+        }
+      } else {
+        $path = "$DATA_DIR/$key.json";
+      }
       safeWriteJson($path, $data);
 
       // Optional: append to history when saving active

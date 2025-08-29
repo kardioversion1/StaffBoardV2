@@ -49,7 +49,17 @@ $historyPath = $DATA_DIR . '/history.json';
 switch ($action) {
   case 'load':
     if (!$key) bad('missing key');
-    $path = "$DATA_DIR/$key.json";
+    if ($key === 'active') {
+      $date = $_GET['date'] ?? '';
+      $shift = $_GET['shift'] ?? '';
+      if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && ($shift === 'day' || $shift === 'night')) {
+        $path = "$DATA_DIR/active-$date-$shift.json";
+      } else {
+        $path = "$DATA_DIR/$key.json";
+      }
+    } else {
+      $path = "$DATA_DIR/$key.json";
+    }
     $defaults = [
       'roster' => [],
       'config' => new stdClass(),
@@ -63,7 +73,17 @@ switch ($action) {
     $raw = file_get_contents('php://input');
     $data = json_decode($raw, true);
     if ($data === null && $raw !== '') bad('invalid JSON');
-    $path = "$DATA_DIR/$key.json";
+    if ($key === 'active') {
+      $date = $data['dateISO'] ?? ($_GET['date'] ?? '');
+      $shift = $data['shift'] ?? ($_GET['shift'] ?? '');
+      if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && ($shift === 'day' || $shift === 'night')) {
+        $path = "$DATA_DIR/active-$date-$shift.json";
+      } else {
+        $path = "$DATA_DIR/$key.json";
+      }
+    } else {
+      $path = "$DATA_DIR/$key.json";
+    }
     safeWriteJson($path, $data);
     if ($key === 'active' && (($_GET['appendHistory'] ?? '') === 'true')) {
       $hist = safeReadJson($historyPath, []);

@@ -82,6 +82,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
   renderZones();
   renderLeads();
 
+  // Resolved version: keep return type + remove listener if element is gone.
   function adjustRosterHeight(): void {
     const cont = document.getElementById('builder-roster');
     if (!cont) {

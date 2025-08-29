@@ -1,5 +1,12 @@
-export type ShiftSchedule = { dayStart: string; nightStart: string }; // "07:00", "19:00"
+/** Shift start times in HH:MM. */
+export type ShiftSchedule = { dayStart: string; nightStart: string };
 
+/**
+ * Generate compact shift code like YYYYMMDD-D/N.
+ * @param d date to encode
+ * @param sched shift start times
+ * @returns formatted code
+ */
 export function generateShiftCode(
   d: Date,
   sched: ShiftSchedule = { dayStart: '07:00', nightStart: '19:00' }
@@ -14,6 +21,12 @@ export function generateShiftCode(
   return `${y}${m}${day}-${isDay ? 'D' : 'N'}`;
 }
 
+/**
+ * Determine upcoming shift window from current time.
+ * @param now reference time
+ * @param sched shift schedule
+ * @returns start and end ISO strings plus label
+ */
 export function nextShiftWindow(
   now = new Date(),
   sched: ShiftSchedule = { dayStart: '07:00', nightStart: '19:00' }

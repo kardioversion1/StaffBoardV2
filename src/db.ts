@@ -2,17 +2,38 @@ const DB_NAME = "edb-v28";
 const STORE = "kv";
 const DB_VERSION = 1;
 
+/**
+ * Opens (and initializes) the IndexedDB database.
+ * @returns Resolves with the open database.
+ */
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    let req: IDBOpenDBRequest;
+    try {
+      req = indexedDB.open(DB_NAME, DB_VERSION);
+    } catch (err) {
+      reject(err);
+      return;
+    }
+
     req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE);
+      const db = req.result;
+      // Create the simple key-value store if it doesn't exist.
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE);
+      }
     };
+
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
 
+/**
+ * Reads and parses a value from the key-value store.
+ * @param key Key to retrieve.
+ * @returns The stored value, or undefined if not present.
+ */
 export async function get<T>(key: string): Promise<T | undefined> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -20,13 +41,28 @@ export async function get<T>(key: string): Promise<T | undefined> {
     const store = tx.objectStore(STORE);
     const req = store.get(key);
     req.onsuccess = () => {
-      const val = req.result;
-      resolve(val === undefined ? undefined : JSON.parse(val));
+      const val = req.result as unknown;
+      if (val === undefined) {
+        resolve(undefined);
+        return;
+      }
+      // We save as JSON strings; be defensive in case legacy values exist.
+      try {
+        resolve(typeof val === "string" ? (JSON.parse(val) as T) : (val as T));
+      } catch {
+        // If parsing somehow fails, return as-is (typed) rather than throwing.
+        resolve(val as T);
+      }
     };
     req.onerror = () => reject(req.error);
   });
 }
 
+/**
+ * Serializes and stores a value under the given key.
+ * @param key Storage key.
+ * @param val Value to store.
+ */
 export async function set<T>(key: string, val: T): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -38,6 +74,10 @@ export async function set<T>(key: string, val: T): Promise<void> {
   });
 }
 
+/**
+ * Removes a key from the store.
+ * @param key Key to delete.
+ */
 export async function del(key: string): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -49,6 +89,11 @@ export async function del(key: string): Promise<void> {
   });
 }
 
+/**
+ * Lists all keys in the store with an optional prefix filter.
+ * @param prefix Optional key prefix to match.
+ * @returns Array of keys that start with the prefix.
+ */
 export async function keys(prefix = ""): Promise<string[]> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -57,10 +102,23 @@ export async function keys(prefix = ""): Promise<string[]> {
     const req = store.getAllKeys();
     req.onsuccess = () => {
       const all = req.result as IDBValidKey[];
-      resolve(
-        (all as string[]).filter((k) => typeof k === 'string' && k.startsWith(prefix))
-      );
+      const strKeys = all.filter((k): k is string => typeof k === "string");
+      resolve(prefix ? strKeys.filter((k) => k.startsWith(prefix)) : strKeys);
     };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * (Optional) Clears the entire store.
+ */
+export async function clear(): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    const req = store.clear();
+    req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
   });
 }

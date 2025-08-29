@@ -184,7 +184,7 @@ export function getConfig(): Config {
 
 export async function loadConfig(): Promise<Config> {
   try {
-    const cfg = (await Server.load('config')) as Config;
+    const cfg = await Server.load('config');
     CONFIG_CACHE = cfg;
     await DB.set(KS.CONFIG, CONFIG_CACHE);
   } catch {
@@ -352,7 +352,7 @@ export const KS = {
 
 export async function loadStaff(): Promise<Staff[]> {
   try {
-    const remote = (await Server.load('roster')) as Staff[];
+    const remote = await Server.load('roster');
     await DB.set(KS.STAFF, remote);
   } catch {}
   const list = (await DB.get<Staff[]>(KS.STAFF)) || [];

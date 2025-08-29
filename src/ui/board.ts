@@ -19,7 +19,7 @@ import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWeather } from './widgets';
 import { renderPhysicians } from './physicians';
 import { nurseTile } from './nurseTile';
-import { debouncedSave } from '@/utils/debouncedSave';
+import { createDebouncer } from '@/utils/debouncedSave';
 import './mainBoard/boardLayout.css';
 import { startBreak, endBreak, moveSlot, upsertSlot, removeSlot, type Slot } from '@/slots';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
@@ -387,14 +387,14 @@ function wireComments(active: ActiveBoard, save: () => void) {
     save();
   };
 
-  el.addEventListener('input', () =>
-    debouncedSave(
-      () => {
-        active.comments = el.value;
-      },
-      () => save()
-    )
+  const debounced = createDebouncer(
+    () => {
+      active.comments = el.value;
+    },
+    () => save()
   );
+
+  el.addEventListener('input', debounced);
 
   el.addEventListener('blur', commit);
 }

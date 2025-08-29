@@ -2,7 +2,11 @@ import { listHuddles, type HuddleRecord } from '@/state/history';
 import { exportHuddlesCSV } from '@/history';
 import './history.css';
 
-/** Render table of saved huddle records. */
+/**
+ * Render table of saved huddle records.
+ * @param root element to populate
+ * @returns nothing
+ */
 export function renderHuddleTable(root: HTMLElement): void {
   root.innerHTML = `
     <div class="history-huddles">

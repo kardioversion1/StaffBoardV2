@@ -21,7 +21,11 @@ function isPublishedShiftSnapshot(obj: any): obj is PublishedShiftSnapshot {
   );
 }
 
-/** Render the calendar-based history view with listing, saving, and export. */
+/**
+ * Render the calendar-based history view with listing, saving, and export.
+ * @param root element to populate
+ * @returns nothing
+ */
 export function renderCalendarView(root: HTMLElement): void {
   root.innerHTML = `
     <div class="history-calendar">

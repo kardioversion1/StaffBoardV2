@@ -8,7 +8,11 @@ import type {
   HuddleRecord,
 } from '@/state/history';
 
-/** Render History tab with sub-views. */
+/**
+ * Render History tab with sub-views.
+ * @param root element to populate
+ * @returns nothing
+ */
 export function renderHistory(root: HTMLElement): void {
   root.innerHTML = `
     <div class="history-nav">
@@ -35,7 +39,11 @@ export function renderHistory(root: HTMLElement): void {
   show('calendar');
 }
 
-/** Export a single shift snapshot to CSV. */
+/**
+ * Export a single shift snapshot to CSV.
+ * @param snapshot shift snapshot to serialize
+ * @returns CSV string
+ */
 export function exportShiftCSV(snapshot: PublishedShiftSnapshot): string {
   const header = 'date,shift,zone,staffId,displayName,role,startISO,endISO,dto';
   const rows = snapshot.zoneAssignments
@@ -56,7 +64,11 @@ export function exportShiftCSV(snapshot: PublishedShiftSnapshot): string {
   return `${header}\n${rows}`;
 }
 
-/** Export nurse history entries to CSV. */
+/**
+ * Export nurse history entries to CSV.
+ * @param entries list of nurse history rows
+ * @returns CSV string
+ */
 export function exportNurseHistoryCSV(entries: NurseShiftIndexEntry[]): string {
   const header = 'staffId,displayName,role,date,shift,zone,startISO,endISO,dto';
   const rows = entries
@@ -77,7 +89,11 @@ export function exportNurseHistoryCSV(entries: NurseShiftIndexEntry[]): string {
   return `${header}\n${rows}`;
 }
 
-/** Export huddle records to CSV. */
+/**
+ * Export huddle records to CSV.
+ * @param records saved huddle records
+ * @returns CSV string
+ */
 export function exportHuddlesCSV(records: HuddleRecord[]): string {
   const header = 'date,shift,recordedAt,recordedBy,notes';
   const rows = records

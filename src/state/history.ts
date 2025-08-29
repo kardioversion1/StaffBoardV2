@@ -207,3 +207,29 @@ export async function adminOverrideShift(
   await kvSet(SHIFT_KEY(dateISO, shift), updated);
 }
 
+/** List all dates that have saved shift snapshots. */
+export async function listShiftDates(): Promise<string[]> {
+  await ensureVersion();
+  const keys = await DB.keys('history:shift:');
+  const dates = new Set<string>();
+  keys.forEach((k) => {
+    const parts = k.split(':');
+    if (parts.length >= 4) dates.add(parts[2]);
+  });
+  return Array.from(dates).sort();
+}
+
+/** Retrieve all saved huddle records. */
+export async function listHuddles(): Promise<HuddleRecord[]> {
+  await ensureVersion();
+  const keys = await DB.keys('history:huddle:');
+  const out: HuddleRecord[] = [];
+  for (const k of keys) {
+    const rec = await kvGet<HuddleRecord>(k);
+    if (rec) out.push(rec);
+  }
+  return out.sort((a, b) =>
+    `${a.dateISO}-${a.shift}`.localeCompare(`${b.dateISO}-${b.shift}`)
+  );
+}
+

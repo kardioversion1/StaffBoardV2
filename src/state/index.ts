@@ -1,17 +1,13 @@
-// state/index.ts (merged)
-
-// NOTE: This file merges the functionality from `main` and drops the bare re-exports.
-// If you really want a split-module structure later, we can move the concrete pieces
-// into ./config, ./staff, ./board and keep only re-exports here.
+// state/index.ts (merged & cleaned)
 
 import { Shift, hhmmNowLocal, toDateISO, deriveShift } from '@/utils/time';
 import * as DB from '@/db';
 import * as Server from '@/server';
-import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { ensureStaffId } from '@/utils/id';
 import { ensureRole } from '@/utils/role';
 import { normalizeZones, type ZoneDef } from '@/utils/zones';
+import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 import {
   savePublishedShift,
   indexStaffAssignments,
@@ -110,7 +106,6 @@ export interface ActiveShift {
 }
 
 export type ActiveBoard = ActiveShift;
-
 export type DraftShift = Omit<ActiveShift, 'comments'>;
 
 export interface AppState {
@@ -142,6 +137,8 @@ export function setActiveBoardCache(board: ActiveBoard): void {
 export function getActiveBoardCache(): ActiveBoard | undefined {
   return ACTIVE_BOARD_CACHE;
 }
+
+// ------- Config defaults / loaders (single-source implementation) -------
 
 export const WIDGETS_DEFAULTS: WidgetsConfig = {
   show: true,
@@ -205,9 +202,7 @@ export async function loadConfig(): Promise<Config> {
 }
 
 export async function saveConfig(
-  partial: Partial<Omit<Config, 'zones'>> & {
-    zones?: Array<string | Partial<ZoneDef>>;
-  }
+  partial: Partial<Omit<Config, 'zones'>> & { zones?: Array<string | Partial<ZoneDef>> }
 ): Promise<Config> {
   const updated: Config = { ...CONFIG_CACHE, ...partial } as Config;
   if (partial.zones) {
@@ -305,7 +300,7 @@ export function mergeConfigDefaults(): Config {
       typeof cfg.ui?.rightSidebarMaxPx === 'number' ? cfg.ui.rightSidebarMaxPx : 420,
   };
 
-  // Theme defaults
+  // Theme defaults (validate against preset catalog)
   const lightDefault = 'light-soft-gray';
   const darkDefault = 'dark-charcoal-navy';
   const light = cfg.uiTheme?.lightPreset;
@@ -329,6 +324,8 @@ export function mergeConfigDefaults(): Config {
   CONFIG_CACHE = cfg as Config;
   return CONFIG_CACHE;
 }
+
+// ------- Active board migration -------
 
 export function migrateActiveBoard(raw: unknown): ActiveBoard {
   const r = raw as Partial<ActiveBoard> | undefined;
@@ -361,6 +358,8 @@ export function migrateActiveBoard(raw: unknown): ActiveBoard {
   };
 }
 
+// ------- Keyspace -------
+
 export const KS = {
   CONFIG: 'CONFIG',
   STAFF: 'STAFF',
@@ -370,6 +369,8 @@ export const KS = {
   ONBAT: (dateISO: string, shift: Shift) => `ONBAT:${dateISO}:${shift}`,
   DRAFT: (dateISO: string, shift: Shift) => `DRAFT:${dateISO}:${shift}`,
 } as const;
+
+// ------- Staff load/save -------
 
 export async function loadStaff(): Promise<Staff[]> {
   try {
@@ -396,6 +397,8 @@ export async function saveStaff(list: Staff[]): Promise<void> {
   } catch {}
   await DB.set(KS.STAFF, list);
 }
+
+// ------- History import / apply draft -------
 
 export async function importHistoryFromJSON(json: string): Promise<DraftShift[]> {
   const data = JSON.parse(json) as DraftShift[];

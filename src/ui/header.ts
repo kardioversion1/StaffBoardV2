@@ -1,8 +1,9 @@
-import { STATE, getConfig } from '@/state';
+import { STATE, getConfig, DB, KS } from '@/state';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
 import { manualHandoff } from '@/main';
 import { openHuddle } from '@/ui/huddle';
+import { showBanner } from '@/ui/banner';
 
 export function renderHeader() {
   const app = document.getElementById("app")!;
@@ -33,6 +34,8 @@ export function renderHeader() {
     <div class="actions">
       <button id="theme-toggle" class="btn">🌓</button>
       ${actionBtn}
+      <button id="publish-btn" class="btn">Sync</button>
+      <button id="reset-cache" class="btn">Reset</button>
     </div>
   `;
   if (mode === 'shiftHuddle')
@@ -46,5 +49,22 @@ export function renderHeader() {
     const next = t.mode === 'dark' ? 'light' : 'dark';
     await saveThemeConfig({ mode: next });
     applyTheme();
+  });
+  document.getElementById('publish-btn')?.addEventListener('click', async () => {
+    const board = await DB.get(KS.ACTIVE(STATE.dateISO, shift));
+    if (board) {
+      try {
+        await Server.save('active', board);
+        showBanner('Published');
+      } catch {
+        showBanner('Publish failed');
+      }
+    }
+  });
+  document.getElementById('reset-cache')?.addEventListener('click', () => {
+    ['config', 'roster', 'active'].forEach((k) =>
+      localStorage.removeItem(`staffboard:${k}`)
+    );
+    location.reload();
   });
 }

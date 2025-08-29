@@ -124,7 +124,10 @@ export async function renderBoard(
     let saveTimer: any;
     const queueSave = () => {
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => DB.set(saveKey, active), 300);
+      saveTimer = setTimeout(() => {
+        DB.set(saveKey, active);
+        Server.save('active', active).catch(() => {});
+      }, 300);
     };
 
     renderLeadership(active, staff, queueSave);

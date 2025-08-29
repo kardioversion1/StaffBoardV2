@@ -62,11 +62,11 @@ export function renderCalendarView(root: HTMLElement): void {
     if (!d) return;
     const day = await DB.get(KS.ACTIVE(d, 'day')).catch(() => null);
     const night = await DB.get(KS.ACTIVE(d, 'night')).catch(() => null);
-    if (day) {
+    if (day && typeof day === 'object' && 'version' in day) {
       await savePublishedShift(day);
       await indexStaffAssignments(day);
     }
-    if (night) {
+    if (night && typeof night === 'object' && 'version' in night) {
       await savePublishedShift(night);
       await indexStaffAssignments(night);
     }

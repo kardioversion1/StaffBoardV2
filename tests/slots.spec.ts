@@ -7,7 +7,7 @@ import {
   type Board,
 } from "../src/slots";
 import { isEmployeeIdUnique } from "../src/utils/staff";
-import type { Staff } from '@/state';
+import type { Staff } from '@/state/staff';
 import { nurseTile as renderTile } from "@/ui/nurseTile";
 
 describe("ensureUniqueAssignment", () => {

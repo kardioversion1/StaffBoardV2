@@ -28,7 +28,7 @@ vi.mock('@/server', () => ({
   exportHistoryCSV: vi.fn(),
 }));
 
-import { loadConfig } from '@/state';
+import { loadConfig } from '@/state/config';
 
 describe('config anchors defaults', () => {
   it('adds day/night defaults when anchors missing', async () => {

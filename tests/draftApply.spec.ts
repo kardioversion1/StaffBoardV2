@@ -13,7 +13,7 @@ vi.mock('@/db', () => ({
     Array.from(store.keys()).filter((k) => k.startsWith(prefix)),
 }));
 
-import { applyDraftToActive, KS, DB, type DraftShift } from '@/state';
+import { applyDraftToActive, KS, DB, type DraftShift } from '@/state/board';
 
 async function clearDB() {
   store.clear();

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { STATE, initState } from '@/state';
+import { STATE, initState } from '@/state/board';
 
 describe('initState lock', () => {
   it('unlocks board by default', () => {

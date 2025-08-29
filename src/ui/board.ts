@@ -1,10 +1,9 @@
 // mainBoard.ts — merged & de-conflicted
 
+import * as Server from '@/server';
 import {
   DB,
   KS,
-  getConfig,
-  saveConfig,
   STATE,
   loadStaff,
   saveStaff,
@@ -13,8 +12,12 @@ import {
   setActiveBoardCache,
   type Staff,
   type ActiveBoard,
+  type DraftShift,
+  getConfig,
+  saveConfig,
   type Config,
 } from '@/state';
+
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWeather } from './widgets';
 import { renderPhysicians, renderPhysicianPopup } from './physicians';
@@ -24,7 +27,6 @@ import './mainBoard/boardLayout.css';
 import { startBreak, endBreak, moveSlot, upsertSlot, removeSlot, type Slot } from '@/slots';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
-import type { DraftShift } from '@/state';
 
 // --- helpers ---------------------------------------------------------------
 
@@ -58,21 +60,21 @@ export async function renderBoard(
 ): Promise<void> {
   try {
     const cfg = getConfig();
-      if (!cfg.zones) cfg.zones = [];
+    if (!cfg.zones) cfg.zones = [];
 
     const staff: Staff[] = await loadStaff();
     setNurseCache(staff);
 
     // Load or initialize active shift tuple
     const saveKey = KS.ACTIVE(ctx.dateISO, ctx.shift);
-      let active = await DB.get<ActiveBoard>(saveKey);
-      if (!active) {
-        active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones);
-      } else {
-        active = migrateActiveBoard(active);
-      }
-      normalizeActiveZones(active, cfg.zones);
-      setActiveBoardCache(active);
+    let active = await DB.get<ActiveBoard>(saveKey);
+    if (!active) {
+      active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones);
+    } else {
+      active = migrateActiveBoard(active);
+    }
+    normalizeActiveZones(active, cfg.zones);
+    setActiveBoardCache(active);
 
     // Layout
     root.innerHTML = `
@@ -151,8 +153,6 @@ export async function renderBoard(
       renderPhysicianPopup(ctx.dateISO, 7);
     });
 
-    // Removed testBoardFit call; allow natural scroll for overflow
-
     // Re-render on config changes (e.g., zone list or colors)
     document.addEventListener('config-changed', () => {
       const c = getConfig();
@@ -173,8 +173,6 @@ export async function renderBoard(
     });
   }
 }
-
-
 
 // --- leadership ------------------------------------------------------------
 
@@ -366,7 +364,7 @@ function renderZones(
     container.addEventListener('dragover', (e) => e.preventDefault());
     container.addEventListener('drop', async (e) => {
       e.preventDefault();
-      const zoneIdxStr = e.dataTransfer?.getData('zone-index');
+      const zoneIdxStr = (e as DragEvent).dataTransfer?.getData('zone-index');
       if (!zoneIdxStr) return;
       const idx = Number(zoneIdxStr);
       if (isNaN(idx)) return;
@@ -401,7 +399,6 @@ function wireComments(active: ActiveBoard, save: () => void) {
   );
 
   el.addEventListener('input', debounced);
-
   el.addEventListener('blur', commit);
 }
 

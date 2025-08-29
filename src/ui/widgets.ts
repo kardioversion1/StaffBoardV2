@@ -1,4 +1,4 @@
-import { getConfig, saveConfig, mergeConfigDefaults } from '@/state';
+import { getConfig, saveConfig, mergeConfigDefaults } from '@/state/config';
 import { formatDateUS, formatTime24h } from '@/utils/format';
 
 function svgIcon(paths: string) {

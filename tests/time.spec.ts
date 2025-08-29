@@ -13,7 +13,7 @@ vi.mock('@/db', () => {
   };
 });
 import { deriveShift, nextShiftTuple } from '@/utils/time';
-import { loadConfig } from '@/state';
+import { loadConfig } from '@/state/config';
 import { set } from '@/db';
 
 describe("deriveShift", () => {

@@ -14,7 +14,7 @@ vi.mock('@/db', () => {
   };
 });
 
-import { saveConfig, loadConfig } from '@/state';
+import { saveConfig, loadConfig } from '@/state/config';
 
 describe('config round trip', () => {
   it('persists new keys', async () => {

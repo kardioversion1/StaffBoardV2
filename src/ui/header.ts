@@ -1,4 +1,4 @@
-import { STATE, getConfig, DB, KS } from '@/state';
+import { STATE, getConfig, DB, KS, getActiveBoardCache } from '@/state';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
 import { manualHandoff, renderAll } from '@/main';
@@ -55,8 +55,11 @@ export function renderHeader() {
     try {
       const tasks: Promise<any>[] = [];
 
-      const board = await DB.get(KS.ACTIVE(STATE.dateISO, shift));
-      if (board) tasks.push(Server.save('active', board));
+      const board = getActiveBoardCache() ?? (await DB.get(KS.ACTIVE(STATE.dateISO, shift)));
+      if (board) {
+        await DB.set(KS.ACTIVE(STATE.dateISO, shift), board);
+        tasks.push(Server.save('active', board));
+      }
 
       tasks.push(Server.save('config', getConfig()));
 
@@ -72,6 +75,13 @@ export function renderHeader() {
   document.getElementById('refresh-btn')?.addEventListener('click', async () => {
     try {
       const { dateISO, shift } = STATE;
+      const local = getActiveBoardCache();
+      if (local) {
+        await DB.set(KS.ACTIVE(dateISO, shift), local);
+        try {
+          await Server.save('active', local);
+        } catch {}
+      }
       const board = await Server.load('active', { date: dateISO, shift });
       if (board) await DB.set(KS.ACTIVE(dateISO, shift), board);
       await renderAll();

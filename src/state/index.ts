@@ -126,6 +126,14 @@ export function initState() {
   STATE.shift = deriveShift(STATE.clockHHMM);
 }
 
+let ACTIVE_BOARD_CACHE: ActiveBoard | undefined;
+export function setActiveBoardCache(board: ActiveBoard): void {
+  ACTIVE_BOARD_CACHE = board;
+}
+export function getActiveBoardCache(): ActiveBoard | undefined {
+  return ACTIVE_BOARD_CACHE;
+}
+
 export const WIDGETS_DEFAULTS: WidgetsConfig = {
   show: true,
   weather: {

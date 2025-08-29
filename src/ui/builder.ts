@@ -236,7 +236,10 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
         const ev = e as DragEvent;
         ev.dataTransfer?.setData('zone-index', String(i));
       });
-      section.addEventListener('dragover', (e) => e.preventDefault());
+      section.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
 
       const title = document.createElement('h2');
       title.className = 'zone-card__title';

@@ -217,6 +217,17 @@ export function mergeConfigDefaults(): Config {
     };
   }
 
+  cfg.anchors = {
+    day:
+      typeof cfg.anchors?.day === 'string' && cfg.anchors.day
+        ? cfg.anchors.day
+        : '07:00',
+    night:
+      typeof cfg.anchors?.night === 'string' && cfg.anchors.night
+        ? cfg.anchors.night
+        : '19:00',
+  };
+
   cfg.zoneColors = cfg.zoneColors || {};
   ZONES_INVALID = false;
   const normalized = normalizeZones(cfg.zones as any);

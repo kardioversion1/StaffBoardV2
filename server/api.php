@@ -22,7 +22,15 @@ header('Pragma: no-cache');
 
 $ROOT_DIR = __DIR__;
 $DATA_DIR = $ROOT_DIR . '/data';
-if (!is_dir($DATA_DIR)) { @mkdir($DATA_DIR, 0775, true); }
+if (!is_dir($DATA_DIR)) {
+  try {
+    if (!mkdir($DATA_DIR, 0775, true) && !is_dir($DATA_DIR)) {
+      throw new RuntimeException('data directory creation failed');
+    }
+  } catch (Throwable $e) {
+    error_log('data dir: ' . $e->getMessage());
+  }
+}
 
 /* ---------- helpers ---------- */
 function bad(string $msg, int $code = 400): void {
@@ -41,23 +49,40 @@ function normalizeKey(string $key): string {
   return $key;
 }
 function safeReadJson(string $path, $default) {
-  if (!file_exists($path)) return $default;
-  $raw = @file_get_contents($path);
-  if ($raw === false) return $default;
-  $data = json_decode($raw, true);
-  return (json_last_error() === JSON_ERROR_NONE && $data !== null) ? $data : $default;
+  try {
+    if (!file_exists($path)) return $default;
+    $raw = file_get_contents($path);
+    if ($raw === false) throw new RuntimeException('read failed');
+    $data = json_decode($raw, true);
+    return (json_last_error() === JSON_ERROR_NONE && $data !== null) ? $data : $default;
+  } catch (Throwable $e) {
+    error_log('safeReadJson: ' . $e->getMessage());
+    return $default;
+  }
 }
 function safeWriteJson(string $path, $data): void {
   $dir = dirname($path);
-  if (!is_dir($dir)) @mkdir($dir, 0775, true);
-  $tmp = $path . '.tmp';
-  $fp = @fopen($tmp, 'w');
-  if (!$fp) throw new RuntimeException('write open failed');
-  $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-  if ($json === false) { @fclose($fp); @unlink($tmp); throw new RuntimeException('encode failed'); }
-  if (@fwrite($fp, $json) === false) { @fclose($fp); @unlink($tmp); throw new RuntimeException('write failed'); }
-  @fclose($fp);
-  if (!@rename($tmp, $path)) { @unlink($path); if (!@rename($tmp, $path)) throw new RuntimeException('rename failed'); }
+  try {
+    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+      throw new RuntimeException('dir create failed');
+    }
+    $tmp = $path . '.tmp';
+    $fp = fopen($tmp, 'w');
+    if (!$fp) throw new RuntimeException('write open failed');
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    if ($json === false) { fclose($fp); unlink($tmp); throw new RuntimeException('encode failed'); }
+    if (fwrite($fp, $json) === false) { fclose($fp); unlink($tmp); throw new RuntimeException('write failed'); }
+    fclose($fp);
+    if (!rename($tmp, $path)) {
+      if (file_exists($path) && !unlink($path)) {
+        throw new RuntimeException('unlink failed');
+      }
+      if (!rename($tmp, $path)) throw new RuntimeException('rename failed');
+    }
+  } catch (Throwable $e) {
+    error_log('safeWriteJson: ' . $e->getMessage());
+    throw $e;
+  }
 }
 /** seed roster on first run from staff-roster-full.json */
 function ensureRosterExists(string $dataDir, string $rootDir): void {
@@ -82,6 +107,7 @@ function activePath(string $dataDir, ?string $date, ?string $shift): string {
 $API_KEY = getenv('HEYBRE_API_KEY') ?: '';
 $REQ_KEY = $_SERVER['HTTP_X_API_KEY'] ?? '';
 if ($API_KEY === '' || $REQ_KEY !== $API_KEY) {
+  error_log('unauthorized');
   bad('unauthorized', 401);
 }
 
@@ -233,26 +259,32 @@ try {
       header('Content-Type: text/calendar; charset=utf-8');
       $cachePath = $DATA_DIR . '/physicians.ics';
       $ttl = 300; // 5 minutes
-      $ics = null;
-      if (is_file($cachePath) && (time() - filemtime($cachePath) < $ttl)) {
-        $ics = @file_get_contents($cachePath);
-      }
-      if ($ics === null) {
-        $ics = @file_get_contents($physiciansUrl);
-        if ($ics === false) {
-          $ics = is_file($cachePath) ? @file_get_contents($cachePath) : null;
-        } else {
-          @file_put_contents($cachePath, $ics);
+      try {
+        $ics = null;
+        if (is_file($cachePath) && (time() - filemtime($cachePath) < $ttl)) {
+          $ics = file_get_contents($cachePath);
         }
+        if ($ics === null) {
+          $ics = file_get_contents($physiciansUrl);
+          if ($ics === false) {
+            $ics = is_file($cachePath) ? file_get_contents($cachePath) : null;
+          } else {
+            file_put_contents($cachePath, $ics);
+          }
+        }
+        if ($ics === null) bad('calendar fetch failed', 502);
+        echo $ics;
+        exit;
+      } catch (Throwable $e) {
+        error_log('physicians: ' . $e->getMessage());
+        bad('calendar fetch failed', 502);
       }
-      if ($ics === null) bad('calendar fetch failed', 502);
-      echo $ics;
-      exit;
     }
 
     default:
       bad('unknown action', 404);
   }
 } catch (Throwable $e) {
+  error_log('api: ' . $e->getMessage());
   bad('server error: ' . $e->getMessage(), 500);
 }

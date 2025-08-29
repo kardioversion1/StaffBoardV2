@@ -98,10 +98,23 @@ initState();
     }
   }, 10 * 60 * 1000);
 
+  const activeTimer = setInterval(async () => {
+    const { dateISO, shift } = STATE;
+    try {
+      const remote = await Server.load('active', { date: dateISO, shift });
+      const local = await DB.get(KS.ACTIVE(dateISO, shift));
+      if (remote && JSON.stringify(remote) !== JSON.stringify(local)) {
+        await DB.set(KS.ACTIVE(dateISO, shift), remote);
+        renderAll();
+      }
+    } catch {}
+  }, 60 * 1000);
+
     if (import.meta.hot) {
       import.meta.hot.dispose(() => {
         clearInterval(clockTimer);
         clearInterval(weatherTimer);
+        clearInterval(activeTimer);
       });
     }
   });

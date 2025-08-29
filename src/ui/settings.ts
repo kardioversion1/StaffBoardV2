@@ -12,15 +12,6 @@ import { getUIConfig, saveUIConfig, applyUI } from '@/state/uiConfig';
 import { renderHeader } from '@/ui/header';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 
-declare global {
-  interface Window {
-    STAFF_API: {
-      deleteStaffById: (id: string) => Promise<void>;
-      // add other STAFF_API methods here as needed
-    };
-  }
-}
-
 function mapIcon(cond: string) {
   const c = (cond || '').toLowerCase();
   if (c.includes('storm') || c.includes('thunder')) return 'storm';
@@ -97,7 +88,7 @@ async function renderRosterPane() {
       if (target.classList.contains('roster-del')) {
         const id = target.getAttribute('data-id')!;
         if (confirm('Remove from roster?')) {
-          await window.STAFF_API.deleteStaffById(id);
+          await Server.softDeleteStaff(id);
           staff = staff.filter((s) => s.id !== id);
           alert('Removed from roster. Past history is preserved.');
           renderList(search.value.toLowerCase());

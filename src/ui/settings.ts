@@ -11,6 +11,15 @@ import { fetchWeather, renderWeather } from './widgets';
 import { getUIConfig, saveUIConfig, applyUI } from '@/state/uiConfig';
 import { renderHeader } from '@/ui/header';
 
+declare global {
+  interface Window {
+    STAFF_API: {
+      deleteStaffById: (id: string) => Promise<void>;
+      // add other STAFF_API methods here as needed
+    };
+  }
+}
+
 function mapIcon(cond: string) {
   const c = (cond || '').toLowerCase();
   if (c.includes('storm') || c.includes('thunder')) return 'storm';

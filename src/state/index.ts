@@ -126,7 +126,7 @@ export function initState() {
   STATE.shift = deriveShift(STATE.clockHHMM);
 }
 
-const WIDGETS_DEFAULTS: WidgetsConfig = {
+export const WIDGETS_DEFAULTS: WidgetsConfig = {
   show: true,
   weather: {
     mode: 'manual',
@@ -174,7 +174,6 @@ export function getConfig(): Config {
   return CONFIG_CACHE;
 }
 
-
 export async function loadConfig(): Promise<Config> {
   try {
     const cfg = (await Server.load('config')) as Config;
@@ -204,6 +203,7 @@ export async function saveConfig(partial: Partial<Config>): Promise<Config> {
 export function mergeConfigDefaults(): Config {
   const cfg = { ...CONFIG_CACHE } as Config & { widgets?: WidgetsConfig | undefined };
 
+  // Widgets defaults
   if (!cfg.widgets) {
     cfg.widgets = structuredClone(WIDGETS_DEFAULTS);
   } else {
@@ -217,46 +217,68 @@ export function mergeConfigDefaults(): Config {
     };
   }
 
+  // Anchors: ensure HH:MM format with safe fallback
+  const safeTime = (s: unknown, fallback: string) =>
+    typeof s === 'string' && /^\d{2}:\d{2}$/.test(s) ? s : fallback;
+
   cfg.anchors = {
-    day: cfg.anchors?.day || '07:00',
-    night: cfg.anchors?.night || '19:00',
+    day: safeTime(cfg.anchors?.day, '07:00'),
+    night: safeTime(cfg.anchors?.night, '19:00'),
   };
 
+  // Zone colors map
   cfg.zoneColors = cfg.zoneColors || {};
-  ZONES_INVALID = false;
-  const normalized = normalizeZones(cfg.zones as any);
-  if (!Array.isArray(cfg.zones) || normalized.length !== cfg.zones.length) {
+
+  // Normalize zones & flag validity
+  try {
+    const normalized = normalizeZones((cfg.zones as any) ?? []);
+    // Apply color overrides
+    for (const z of normalized) {
+      if (cfg.zoneColors && cfg.zoneColors[z.name]) z.color = cfg.zoneColors[z.name];
+    }
+    cfg.zones = normalized;
+    ZONES_INVALID = false;
+  } catch {
+    cfg.zones = [];
     ZONES_INVALID = true;
   }
-  for (const z of normalized) {
-    if (cfg.zoneColors && cfg.zoneColors[z.name]) z.color = cfg.zoneColors[z.name];
-  }
-  cfg.zones = normalized;
+
+  // Shift durations
   cfg.shiftDurations = {
-    day: cfg.shiftDurations?.day || 12,
-    night: cfg.shiftDurations?.night || 12,
+    day: typeof cfg.shiftDurations?.day === 'number' ? cfg.shiftDurations.day : 12,
+    night: typeof cfg.shiftDurations?.night === 'number' ? cfg.shiftDurations.night : 12,
   };
+
+  // DTO minutes
   cfg.dtoMinutes = typeof cfg.dtoMinutes === 'number' ? cfg.dtoMinutes : 60;
+
+  // Pinned roles visibility
   cfg.showPinned = {
     charge: cfg.showPinned?.charge !== false,
     triage: cfg.showPinned?.triage !== false,
   };
+
+  // RSS
   cfg.rss = {
     url: cfg.rss?.url || '',
     enabled: cfg.rss?.enabled === true,
   };
+
+  // Privacy (default true)
   cfg.privacy = cfg.privacy !== false;
 
+  // UI layout
   cfg.ui = {
     signoutMode: cfg.ui?.signoutMode || 'shiftHuddle',
     rightSidebarWidthPx:
-      typeof cfg.ui?.rightSidebarWidthPx === 'number'
-        ? cfg.ui.rightSidebarWidthPx
-        : 300,
-    rightSidebarMinPx: cfg.ui?.rightSidebarMinPx || 260,
-    rightSidebarMaxPx: cfg.ui?.rightSidebarMaxPx || 420,
+      typeof cfg.ui?.rightSidebarWidthPx === 'number' ? cfg.ui.rightSidebarWidthPx : 300,
+    rightSidebarMinPx:
+      typeof cfg.ui?.rightSidebarMinPx === 'number' ? cfg.ui.rightSidebarMinPx : 260,
+    rightSidebarMaxPx:
+      typeof cfg.ui?.rightSidebarMaxPx === 'number' ? cfg.ui.rightSidebarMaxPx : 420,
   };
 
+  // Theme defaults
   cfg.uiTheme = {
     mode: cfg.uiTheme?.mode || 'system',
     scale: cfg.uiTheme?.scale ?? 1,
@@ -265,6 +287,11 @@ export function mergeConfigDefaults(): Config {
     highContrast: cfg.uiTheme?.highContrast === true,
     compact: cfg.uiTheme?.compact === true,
   };
+
+  // Misc
+  cfg.pin = cfg.pin || '4911';
+  cfg.relockMin = typeof cfg.relockMin === 'number' ? cfg.relockMin : 0;
+  cfg.dateISO = cfg.dateISO || STATE.dateISO;
 
   CONFIG_CACHE = cfg as Config;
   return CONFIG_CACHE;

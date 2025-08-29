@@ -12,6 +12,15 @@ import { getUIConfig, saveUIConfig, applyUI } from '@/state/uiConfig';
 import { renderHeader } from '@/ui/header';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 
+declare global {
+  interface Window {
+    STAFF_API: {
+      deleteStaffById: (id: string) => Promise<void>;
+      // add other STAFF_API methods here as needed
+    };
+  }
+}
+
 function mapIcon(cond: string) {
   const c = (cond || '').toLowerCase();
   if (c.includes('storm') || c.includes('thunder')) return 'storm';

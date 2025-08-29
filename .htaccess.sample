@@ -1,4 +1,4 @@
-# cPanel-safe .htaccess sample for SPA routing
+# cPanel-safe .htaccess for SPA routing
 # Disable directory listing.
 Options -Indexes
 

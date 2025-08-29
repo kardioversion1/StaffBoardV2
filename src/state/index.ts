@@ -114,14 +114,14 @@ export interface AppState {
 const _clock = hhmmNowLocal();
 export const STATE: AppState = {
   dateISO: toDateISO(new Date()),
-  locked: true,
+  locked: false,
   clockHHMM: _clock,
   shift: deriveShift(_clock),
 };
 
 export function initState() {
   STATE.dateISO = toDateISO(new Date());
-  STATE.locked = true;
+  STATE.locked = false;
   STATE.clockHHMM = hhmmNowLocal();
   STATE.shift = deriveShift(STATE.clockHHMM);
 }

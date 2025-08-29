@@ -7,8 +7,9 @@ export interface ZoneDef {
 }
 
 /**
- * Normalize zones into a consistent array of { id, name, color }.
- * Accepts either string[] or object[] from config.json.
+ * Normalize zones into { id, name, color } objects.
+ * @param input raw config zone list
+ * @returns normalized zone definitions
  */
 export function normalizeZones(input: any[]): ZoneDef[] {
   if (!Array.isArray(input)) return [];
@@ -42,7 +43,9 @@ export function normalizeZones(input: any[]): ZoneDef[] {
 
 /**
  * Ensure active.zones keys align with normalized zone names.
- * Mutates the active object in place.
+ * @param active active board object
+ * @param zones normalized zones
+ * @returns nothing
  */
 export function normalizeActiveZones(active: any, zones: ZoneDef[]): void {
   if (!active || typeof active !== 'object') return;

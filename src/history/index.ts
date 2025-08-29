@@ -15,6 +15,7 @@ export function renderHistory(root: HTMLElement): void {
       <button data-view="nurse">By Nurse</button>
       <button data-view="huddles">Huddles</button>
     </div>
+    <div class="history-actions"><button id="history-export" class="btn">Export CSV</button></div>
     <div id="history-view"></div>
   `;
   const viewRoot = root.querySelector('#history-view') as HTMLElement;
@@ -26,6 +27,9 @@ export function renderHistory(root: HTMLElement): void {
   root.querySelectorAll('.history-nav button').forEach((btn) => {
     const el = btn as HTMLButtonElement;
     el.addEventListener('click', () => show(el.dataset.view!));
+  });
+  root.querySelector('#history-export')?.addEventListener('click', () => {
+    Server.exportHistoryCSV();
   });
   show('calendar');
 }

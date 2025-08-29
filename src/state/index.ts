@@ -176,8 +176,14 @@ export function getConfig(): Config {
 
 
 export async function loadConfig(): Promise<Config> {
-  const existing = await DB.get<Config>(KS.CONFIG);
-  if (existing) CONFIG_CACHE = existing as Config;
+  try {
+    const cfg = (await Server.load('config')) as Config;
+    CONFIG_CACHE = cfg;
+    await DB.set(KS.CONFIG, CONFIG_CACHE);
+  } catch {
+    const existing = await DB.get<Config>(KS.CONFIG);
+    if (existing) CONFIG_CACHE = existing as Config;
+  }
   return mergeConfigDefaults();
 }
 
@@ -188,6 +194,9 @@ export async function saveConfig(partial: Partial<Config>): Promise<Config> {
   }
   CONFIG_CACHE = updated;
   mergeConfigDefaults();
+  try {
+    await Server.save('config', CONFIG_CACHE);
+  } catch {}
   await DB.set(KS.CONFIG, CONFIG_CACHE);
   return CONFIG_CACHE;
 }
@@ -293,6 +302,10 @@ export const KS = {
 } as const;
 
 export async function loadStaff(): Promise<Staff[]> {
+  try {
+    const remote = (await Server.load('roster')) as Staff[];
+    await DB.set(KS.STAFF, remote);
+  } catch {}
   const list = (await DB.get<Staff[]>(KS.STAFF)) || [];
   let changed = false;
   const normalized = list.map((s) => {
@@ -308,6 +321,9 @@ export async function loadStaff(): Promise<Staff[]> {
 }
 
 export async function saveStaff(list: Staff[]): Promise<void> {
+  try {
+    await Server.save('roster', list);
+  } catch {}
   await DB.set(KS.STAFF, list);
 }
 

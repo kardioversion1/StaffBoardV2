@@ -7,6 +7,8 @@ import {
   loadConfig,
   getConfig,
   zonesInvalid,
+  DB,
+  KS,
 } from '@/state';
 import { applyTheme } from '@/state/theme';
 import { applyUI } from '@/state/uiConfig';
@@ -53,6 +55,16 @@ export async function manualHandoff() {
 }
 
 initState();
+(async () => {
+  const { dateISO, shift } = STATE;
+  try {
+    const roster = await Server.load('roster');
+    await DB.set(KS.STAFF, roster);
+  } catch {}
+  try {
+    const active = await Server.load('active', { date: dateISO, shift });
+    if (active) await DB.set(KS.ACTIVE(dateISO, shift), active);
+  } catch {}
   loadConfig().then(async () => {
     await seedDefaults();
     if (zonesInvalid()) {
@@ -86,10 +98,11 @@ initState();
     }
   }, 10 * 60 * 1000);
 
-  if (import.meta.hot) {
-    import.meta.hot.dispose(() => {
-      clearInterval(clockTimer);
-      clearInterval(weatherTimer);
-    });
-  }
-});
+    if (import.meta.hot) {
+      import.meta.hot.dispose(() => {
+        clearInterval(clockTimer);
+        clearInterval(weatherTimer);
+      });
+    }
+  });
+})();

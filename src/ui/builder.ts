@@ -83,7 +83,8 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
   renderLeads();
 
   function adjustRosterHeight() {
-    const cont = document.getElementById('builder-roster') as HTMLElement;
+    const cont = document.getElementById('builder-roster');
+    if (!cont) return;
     const top = cont.getBoundingClientRect().top;
     cont.style.maxHeight = `${window.innerHeight - top}px`;
     cont.style.overflow = 'hidden';

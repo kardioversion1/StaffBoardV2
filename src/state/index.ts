@@ -46,6 +46,7 @@ export type Config = {
   dtoMinutes?: number;
   showPinned?: { charge: boolean; triage: boolean };
   rss?: { url: string; enabled: boolean };
+  physicians?: { calendarUrl: string };
   privacy?: boolean;
   ui?: {
     signoutMode?: 'shiftHuddle' | 'disabled' | 'legacySignout';
@@ -270,6 +271,11 @@ export function mergeConfigDefaults(): Config {
   cfg.rss = {
     url: cfg.rss?.url || '',
     enabled: cfg.rss?.enabled === true,
+  };
+
+  // Physicians calendar
+  cfg.physicians = {
+    calendarUrl: cfg.physicians?.calendarUrl || '',
   };
 
   // Privacy (default true)

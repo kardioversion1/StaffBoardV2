@@ -1,3 +1,7 @@
+/**
+ * Outline full-screen blocking elements for debugging.
+ * @returns nothing
+ */
 export function outlineBlockers(): void {
   const els = Array.from(document.querySelectorAll<HTMLElement>('body *'));
   els.forEach((el) => {

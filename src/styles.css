@@ -63,14 +63,14 @@
 
   --zone-fg: #0a0a0a;
   /* light palette */
-  --zone-bg-1:#dbeafe; --zone-bg-2:#bfdbfe; --zone-bg-3:#93c5fd;
-  --zone-bg-4:#fee2e2; --zone-bg-5:#fecaca;
-  --zone-bg-6:#d1fae5; --zone-bg-7:#a7f3d0; --zone-bg-8:#ede9fe;
+  --zone-bg-1:#dbeafe; --zone-bg-2:#93c5fd; --zone-bg-3:#3b82f6;
+  --zone-bg-4:#fee2e2; --zone-bg-5:#f87171;
+  --zone-bg-6:#d1fae5; --zone-bg-7:#34d399; --zone-bg-8:#c4b5fd;
 
   /* nurse tones for light theme */
   --nurse-bg-1:#bfdbfe; --nurse-bg-2:#93c5fd; --nurse-bg-3:#60a5fa;
-  --nurse-bg-4:#fecaca; --nurse-bg-5:#fca5a5;
-  --nurse-bg-6:#a7f3d0; --nurse-bg-7:#6ee7b7; --nurse-bg-8:#ddd6fe;
+  --nurse-bg-4:#fecaca; --nurse-bg-5:#f87171;
+  --nurse-bg-6:#a7f3d0; --nurse-bg-7:#34d399; --nurse-bg-8:#a78bfa;
 }
 
 :root[data-contrast='high']{

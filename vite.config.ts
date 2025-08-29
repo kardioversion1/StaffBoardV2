@@ -4,4 +4,9 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   base: '/',
   resolve: { alias: { '@': resolve(__dirname, 'src') } },
+  build: {
+    rollupOptions: {
+      external: ['/server-adapter.js'],
+    },
+  },
 });

@@ -20,7 +20,7 @@ import { debouncedSave } from '@/utils/debouncedSave';
 import './mainBoard/boardLayout.css';
 import { startBreak, endBreak, moveSlot, upsertSlot, removeSlot, type Slot } from '@/slots';
 import { canonNurseType } from '@/domain/lexicon';
-import { normalizeZones, normalizeActiveZones, type ZoneDef } from '@/utils/zones';
+import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 import type { DraftShift } from '@/state';
 
 // --- helpers ---------------------------------------------------------------
@@ -36,9 +36,7 @@ function buildEmptyActive(
     charge: undefined,
     triage: undefined,
     admin: undefined,
-    zones: Object.fromEntries(
-      [...zones.map((z) => z.name), 'Bullpen'].map((z) => [z, [] as Slot[]])
-    ),
+    zones: Object.fromEntries(zones.map((z) => [z.name, [] as Slot[]])),
     incoming: [],
     offgoing: [],
     comments: '',
@@ -58,9 +56,6 @@ export async function renderBoard(
   try {
     const cfg = getConfig();
       if (!cfg.zones) cfg.zones = [];
-      if (!cfg.zones.some((z: ZoneDef) => z.name === 'Bullpen')) {
-        cfg.zones.push(normalizeZones(['Bullpen'])[0]);
-      }
 
     const staff: Staff[] = await loadStaff();
     setNurseCache(staff);

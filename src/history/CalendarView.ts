@@ -1,7 +1,25 @@
-import { listShiftDates, getShiftByDate, savePublishedShift, indexStaffAssignments } from '@/state/history';
+import {
+  listShiftDates,
+  getShiftByDate,
+  savePublishedShift,
+  indexStaffAssignments,
+  PublishedShiftSnapshot,
+} from '@/state/history';
 import { exportShiftCSV } from '@/history';
 import { DB, KS } from '@/state';
 import './history.css';
+
+function isPublishedShiftSnapshot(obj: any): obj is PublishedShiftSnapshot {
+  return (
+    obj &&
+    typeof obj === 'object' &&
+    'version' in obj &&
+    'dateISO' in obj &&
+    'shift' in obj &&
+    'publishedAtISO' in obj &&
+    'publishedBy' in obj
+  );
+}
 
 /** Render the calendar-based history view with listing, saving, and export. */
 export function renderCalendarView(root: HTMLElement): void {
@@ -62,11 +80,11 @@ export function renderCalendarView(root: HTMLElement): void {
     if (!d) return;
     const day = await DB.get(KS.ACTIVE(d, 'day')).catch(() => null);
     const night = await DB.get(KS.ACTIVE(d, 'night')).catch(() => null);
-    if (day) {
+    if (isPublishedShiftSnapshot(day)) {
       await savePublishedShift(day);
       await indexStaffAssignments(day);
     }
-    if (night) {
+    if (isPublishedShiftSnapshot(night)) {
       await savePublishedShift(night);
       await indexStaffAssignments(night);
     }

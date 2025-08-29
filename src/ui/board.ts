@@ -144,6 +144,9 @@ export async function renderBoard(
       ctx.dateISO
     );
 
+    testBoardFit();
+    window.addEventListener('resize', testBoardFit);
+
     // Re-render on config changes (e.g., zone list or colors)
     document.addEventListener('config-changed', () => {
       const c = getConfig();
@@ -163,6 +166,26 @@ export async function renderBoard(
       renderBoard(root, ctx);
     });
   }
+}
+
+/** Log and ensure the board fits within the viewport. */
+export function testBoardFit(): boolean {
+  const board = document.querySelector('[data-testid="main-board"]') as HTMLElement | null;
+  if (!board) return true;
+  const viewport = window.innerHeight;
+  const boardHeight = board.getBoundingClientRect().height;
+  const fits = boardHeight <= viewport;
+  console.log(`board height ${boardHeight}, viewport ${viewport}, fits: ${fits}`);
+  if (!fits) {
+    const scale = viewport / boardHeight;
+    board.style.transformOrigin = 'top left';
+    board.style.transform = `scale(${scale})`;
+    document.documentElement.style.setProperty('--scale', String(scale));
+  } else {
+    board.style.transform = '';
+    document.documentElement.style.setProperty('--scale', '1');
+  }
+  return fits;
 }
 
 // --- leadership ------------------------------------------------------------

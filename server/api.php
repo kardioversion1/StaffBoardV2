@@ -5,6 +5,7 @@ declare(strict_types=1);
  * StaffBoard API (cPanel-safe, file-backed JSON store)
  * - Data directory: /data (auto-created)
  * - Keys: roster.json, config.json, active.json, history.json
+ * - Auth: send `X-API-Key` header matching `HEYBRE_API_KEY`
  * - Endpoints:
  *   ?action=load&key=roster|config|active[&date=YYYY-MM-DD&shift=day|night]
  *   ?action=save&key=roster|config|active[&appendHistory=true]   (POST JSON)
@@ -78,10 +79,17 @@ function activePath(string $dataDir, ?string $date, ?string $shift): string {
   return ($dateOk && $shiftOk) ? "$dataDir/active-$date-$shift.json" : "$dataDir/active.json";
 }
 
+$API_KEY = getenv('HEYBRE_API_KEY') ?: '';
+$REQ_KEY = $_SERVER['HTTP_X_API_KEY'] ?? '';
+if ($API_KEY === '' || $REQ_KEY !== $API_KEY) {
+  bad('unauthorized', 401);
+}
+
 /* ---------- router ---------- */
 $action = $_GET['action'] ?? '';
 $key    = $_GET['key'] ?? '';
 $historyPath = $DATA_DIR . '/history.json';
+$physiciansUrl = 'https://www.bytebloc.com/sk/?76b6a156';
 
 try {
   ensureRosterExists($DATA_DIR, $ROOT_DIR);
@@ -218,6 +226,27 @@ try {
         }
       }
       fclose($out);
+      exit;
+    }
+
+    case 'physicians': {
+      header('Content-Type: text/calendar; charset=utf-8');
+      $cachePath = $DATA_DIR . '/physicians.ics';
+      $ttl = 300; // 5 minutes
+      $ics = null;
+      if (is_file($cachePath) && (time() - filemtime($cachePath) < $ttl)) {
+        $ics = @file_get_contents($cachePath);
+      }
+      if ($ics === null) {
+        $ics = @file_get_contents($physiciansUrl);
+        if ($ics === false) {
+          $ics = is_file($cachePath) ? @file_get_contents($cachePath) : null;
+        } else {
+          @file_put_contents($cachePath, $ics);
+        }
+      }
+      if ($ics === null) bad('calendar fetch failed', 502);
+      echo $ics;
       exit;
     }
 

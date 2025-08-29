@@ -242,6 +242,7 @@ function renderGeneralSettings() {
       <div class="form-row"><label><input type="checkbox" id="gs-privacy"${cfg.privacy!==false?' checked':''}> Privacy mode: First LastInitial</label></div>
       <div class="form-row"><label>RSS URL <input id="gs-rss" value="${cfg.rss?.url || ''}"></label></div>
       <div class="form-row"><label><input type="checkbox" id="gs-rss-en"${cfg.rss?.enabled?' checked':''}> Enable feed</label></div>
+      <div class="form-row"><label>Physicians calendar URL <input id="gs-phys-url" value="${cfg.physicians?.calendarUrl || ''}"></label></div>
       <div class="form-row">
         <label>Signout Button Mode</label>
         <div>
@@ -337,6 +338,10 @@ function renderGeneralSettings() {
   (document.getElementById('gs-rss-en') as HTMLInputElement).addEventListener('change', async (e) => {
     cfg.rss!.enabled = (e.target as HTMLInputElement).checked;
     await saveConfig({ rss: cfg.rss });
+  });
+  (document.getElementById('gs-phys-url') as HTMLInputElement).addEventListener('input', async (e) => {
+    cfg.physicians!.calendarUrl = (e.target as HTMLInputElement).value;
+    await saveConfig({ physicians: cfg.physicians });
   });
 
   el.querySelectorAll('input[name="signout-mode"]').forEach((r) => {

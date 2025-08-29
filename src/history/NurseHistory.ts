@@ -3,7 +3,11 @@ import { findShiftsByStaff } from '@/state/history';
 import { exportNurseHistoryCSV } from '@/history';
 import './history.css';
 
-/** Render the nurse-centric history search view. */
+/**
+ * Render the nurse-centric history search view.
+ * @param root element to populate
+ * @returns nothing
+ */
 export function renderNurseHistory(root: HTMLElement): void {
   root.innerHTML = `
     <div class="history-nurse">

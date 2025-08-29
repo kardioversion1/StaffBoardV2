@@ -74,6 +74,7 @@ SetEnv HEYBRE_API_KEY "REPLACE_WITH_RANDOM_LONG_STRING"
 SetEnv HEYBRE_DATA_DIR "/home/<cpanel-user>/heybre-board-data"
 ```
 
+- Clients must send an `X-API-Key` header matching `HEYBRE_API_KEY`.
 - Make sure the data path is writable by PHP.
 - Validate with:
   - `GET https://board.heybre.com/api.php?res=staff`

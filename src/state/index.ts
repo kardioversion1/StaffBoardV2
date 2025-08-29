@@ -46,6 +46,7 @@ export type Config = {
   dtoMinutes?: number;
   showPinned?: { charge: boolean; triage: boolean };
   rss?: { url: string; enabled: boolean };
+  physicians?: { calendarUrl: string };
   privacy?: boolean;
   ui?: {
     signoutMode?: 'shiftHuddle' | 'disabled' | 'legacySignout';
@@ -184,7 +185,7 @@ export function getConfig(): Config {
 
 export async function loadConfig(): Promise<Config> {
   try {
-    const cfg = (await Server.load('config')) as Config;
+    const cfg = await Server.load('config');
     CONFIG_CACHE = cfg;
     await DB.set(KS.CONFIG, CONFIG_CACHE);
   } catch {
@@ -194,10 +195,14 @@ export async function loadConfig(): Promise<Config> {
   return mergeConfigDefaults();
 }
 
-export async function saveConfig(partial: Partial<Config>): Promise<Config> {
+export async function saveConfig(
+  partial: Partial<Omit<Config, 'zones'>> & {
+    zones?: Array<string | Partial<ZoneDef>>;
+  }
+): Promise<Config> {
   const updated: Config = { ...CONFIG_CACHE, ...partial } as Config;
   if (partial.zones) {
-    updated.zones = normalizeZones(partial.zones as any);
+    updated.zones = normalizeZones(partial.zones);
   }
   CONFIG_CACHE = updated;
   mergeConfigDefaults();
@@ -239,7 +244,7 @@ export function mergeConfigDefaults(): Config {
 
   // Normalize zones & flag validity
   try {
-    const normalized = normalizeZones((cfg.zones as any) ?? []);
+    const normalized = normalizeZones(cfg.zones ?? []);
     // Apply color overrides
     for (const z of normalized) {
       if (cfg.zoneColors && cfg.zoneColors[z.name]) z.color = cfg.zoneColors[z.name];
@@ -270,6 +275,11 @@ export function mergeConfigDefaults(): Config {
   cfg.rss = {
     url: cfg.rss?.url || '',
     enabled: cfg.rss?.enabled === true,
+  };
+
+  // Physicians calendar
+  cfg.physicians = {
+    calendarUrl: cfg.physicians?.calendarUrl || '',
   };
 
   // Privacy (default true)
@@ -305,28 +315,33 @@ export function mergeConfigDefaults(): Config {
   return CONFIG_CACHE;
 }
 
-export function migrateActiveBoard(raw: any): ActiveBoard {
-  const zones = raw?.zones && typeof raw.zones === 'object' ? raw.zones : {};
+export function migrateActiveBoard(raw: unknown): ActiveBoard {
+  const r = raw as Partial<ActiveBoard> | undefined;
+  const zones = r?.zones && typeof r.zones === 'object' ? r.zones : {};
   return {
-    dateISO: raw?.dateISO ?? toDateISO(new Date()),
-    shift: raw?.shift === 'night' ? 'night' : 'day',
-    charge: raw?.charge ?? undefined,
-    triage: raw?.triage ?? undefined,
-    admin: raw?.admin ?? undefined,
+    dateISO: r?.dateISO ?? toDateISO(new Date()),
+    shift: r?.shift === 'night' ? 'night' : 'day',
+    charge: r?.charge ?? undefined,
+    triage: r?.triage ?? undefined,
+    admin: r?.admin ?? undefined,
     zones: Object.fromEntries(
-      Object.entries(zones).map(([k, v]) => [k, Array.isArray(v) ? v : []])
+      Object.entries(zones).map(([k, v]) => [k, Array.isArray(v) ? (v as Slot[]) : []])
     ),
-    incoming: Array.isArray(raw?.incoming)
-      ? raw.incoming.filter((i: any) => typeof i?.nurseId === 'string')
-      : [],
-    offgoing: Array.isArray(raw?.offgoing)
-      ? raw.offgoing.filter(
-          (o: any) => typeof o?.nurseId === 'string' && typeof o?.ts === 'number'
+    incoming: Array.isArray(r?.incoming)
+      ? r.incoming.filter(
+          (i): i is ActiveBoard['incoming'][number] =>
+            typeof i?.nurseId === 'string'
         )
       : [],
-    comments: typeof raw?.comments === 'string' ? raw.comments : '',
-    huddle: typeof raw?.huddle === 'string' ? raw.huddle : '',
-    handoff: typeof raw?.handoff === 'string' ? raw.handoff : '',
+    offgoing: Array.isArray(r?.offgoing)
+      ? r.offgoing.filter(
+          (o): o is ActiveBoard['offgoing'][number] =>
+            typeof o?.nurseId === 'string' && typeof o?.ts === 'number'
+        )
+      : [],
+    comments: typeof r?.comments === 'string' ? r.comments : '',
+    huddle: typeof r?.huddle === 'string' ? r.huddle : '',
+    handoff: typeof r?.handoff === 'string' ? r.handoff : '',
     version: CURRENT_SCHEMA_VERSION,
   };
 }
@@ -343,7 +358,7 @@ export const KS = {
 
 export async function loadStaff(): Promise<Staff[]> {
   try {
-    const remote = (await Server.load('roster')) as Staff[];
+    const remote = await Server.load('roster');
     await DB.set(KS.STAFF, remote);
   } catch {}
   const list = (await DB.get<Staff[]>(KS.STAFF)) || [];
@@ -351,7 +366,7 @@ export async function loadStaff(): Promise<Staff[]> {
   const normalized = list.map((s) => {
     ensureRole(s);
     const id = ensureStaffId(s.id);
-    const rawType = (s as any).type;
+    const rawType = (s as { type?: string | null }).type;
     const type = (canonNurseType(rawType) || rawType || 'home') as NurseType;
     if (id !== s.id) changed = true;
     return { ...s, id, type } as Staff;

@@ -93,6 +93,7 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 /* choose the variable-based sidebar width */
 .layout{display:grid;grid-template-columns:1fr var(--right-sidebar-w);gap:var(--gap)}
 .layout[data-testid="main-board"]{min-height:100vh}
+.layout[data-testid="main-board"] .col{height:auto;overflow:visible}
 .builder-layout{grid-template-columns:minmax(200px,25%) 1fr}
 
 .panel{background:var(--panel);color:var(--text-high);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--elev-1);display:flex;flex-direction:column;min-height:0}

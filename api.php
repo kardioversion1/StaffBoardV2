@@ -42,6 +42,20 @@ function bad(string $msg, int $code = 400): void {
   exit;
 }
 
+/**
+ * Restrict a requested key to known safe filenames.
+ *
+ * Only allow simple keys that map to files within the data directory.
+ */
+function normalizeKey(string $key): string {
+  $key = basename($key);
+  $allowed = ['roster', 'config', 'active'];
+  if (!in_array($key, $allowed, true)) {
+    bad('invalid key');
+  }
+  return $key;
+}
+
 $action = $_GET['action'] ?? '';
 $key = $_GET['key'] ?? '';
 $historyPath = $DATA_DIR . '/history.json';
@@ -49,6 +63,7 @@ $historyPath = $DATA_DIR . '/history.json';
 switch ($action) {
   case 'load':
     if (!$key) bad('missing key');
+    $key = normalizeKey($key);
     $path = "$DATA_DIR/$key.json";
     $defaults = [
       'roster' => [],
@@ -60,6 +75,7 @@ switch ($action) {
 
   case 'save':
     if (!$key) bad('missing key');
+    $key = normalizeKey($key);
     $raw = file_get_contents('php://input');
     $data = json_decode($raw, true);
     if ($data === null && $raw !== '') bad('invalid JSON');

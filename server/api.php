@@ -40,6 +40,20 @@ function ok($payload = null): void {
   exit;
 }
 
+/**
+ * Restrict a requested key to known safe filenames.
+ *
+ * Prevents directory traversal and access to unintended files.
+ */
+function normalizeKey(string $key): string {
+  $key = basename($key);
+  $allowed = ['roster', 'config', 'active'];
+  if (!in_array($key, $allowed, true)) {
+    bad('invalid key');
+  }
+  return $key;
+}
+
 function safeReadJson(string $path, $default) {
   if (!file_exists($path)) return $default;
   $raw = @file_get_contents($path);
@@ -101,6 +115,7 @@ try {
 
     case 'load': {
       if ($key === '') bad('missing key');
+      $key = normalizeKey($key);
       $path = "$DATA_DIR/$key.json";
       // Sensible defaults
       $defaults = [
@@ -113,6 +128,7 @@ try {
 
     case 'save': {
       if ($key === '') bad('missing key');
+      $key = normalizeKey($key);
       $raw = file_get_contents('php://input') ?: '';
       $data = $raw === '' ? new stdClass() : json_decode($raw, true);
       if ($raw !== '' && (json_last_error() !== JSON_ERROR_NONE)) bad('invalid JSON');

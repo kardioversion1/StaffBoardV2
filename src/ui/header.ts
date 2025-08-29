@@ -51,14 +51,21 @@ export function renderHeader() {
     applyTheme();
   });
   document.getElementById('publish-btn')?.addEventListener('click', async () => {
-    const board = await DB.get(KS.ACTIVE(STATE.dateISO, shift));
-    if (board) {
-      try {
-        await Server.save('active', board);
-        showBanner('Published');
-      } catch {
-        showBanner('Publish failed');
-      }
+    try {
+      const tasks: Promise<any>[] = [];
+
+      const board = await DB.get(KS.ACTIVE(STATE.dateISO, shift));
+      if (board) tasks.push(Server.save('active', board));
+
+      tasks.push(Server.save('config', getConfig()));
+
+      const roster = await DB.get(KS.STAFF);
+      if (roster) tasks.push(Server.save('roster', roster));
+
+      await Promise.all(tasks);
+      showBanner('Published');
+    } catch {
+      showBanner('Publish failed');
     }
   });
   document.getElementById('reset-cache')?.addEventListener('click', () => {

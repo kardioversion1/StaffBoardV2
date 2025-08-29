@@ -2,6 +2,7 @@ import * as DB from '@/db';
 import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 import { normalizeZones, type ZoneDef } from '@/utils/zones';
 import type { UIThemeConfig } from '@/state/theme';
+import * as Server from '@/server';
 import { KS } from './keys';
 import { STATE } from './board';
 
@@ -137,8 +138,8 @@ export function mergeConfigDefaults(): Config {
     cfg.widgets.show = cfg.widgets.show === false ? false : true;
     cfg.widgets.weather = {
       ...WIDGETS_DEFAULTS.weather,
-      ...cfg.widgets.weather,
-      current: cfg.widgets.weather.current
+      ...(cfg.widgets.weather || {}),
+      current: cfg.widgets.weather?.current
         ? { ...cfg.widgets.weather.current }
         : undefined,
     };

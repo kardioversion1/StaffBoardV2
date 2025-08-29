@@ -15,8 +15,8 @@ export function debouncedSave<T>(
   commit: (v: T) => void,
   ms = 500
 ): void {
-  if (saveTimer !== undefined) window.clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(() => commit(fn()), ms);
+  if (saveTimer !== undefined) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => commit(fn()), ms) as unknown as number;
 }
 
 /**
@@ -35,7 +35,7 @@ export function createDebouncer<T>(
 ): () => void {
   let timer: number | undefined;
   return () => {
-    if (timer !== undefined) window.clearTimeout(timer);
-    timer = window.setTimeout(() => commit(fn()), ms);
+    if (timer !== undefined) clearTimeout(timer);
+    timer = setTimeout(() => commit(fn()), ms) as unknown as number;
   };
 }

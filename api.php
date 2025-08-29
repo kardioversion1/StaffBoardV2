@@ -7,160 +7,195 @@ header('Pragma: no-cache');
 
 $DATA_DIR = __DIR__ . '/data';
 if (!is_dir($DATA_DIR)) {
-  mkdir($DATA_DIR, 0775, true);
+  @mkdir($DATA_DIR, 0775, true);
 }
 
+/* ----------------- Utils ----------------- */
 function safeReadJson(string $path, $default) {
-  if (!file_exists($path)) return $default;
-  $raw = file_get_contents($path);
+  if (!is_file($path)) return $default;
+  $raw = @file_get_contents($path);
   if ($raw === false) return $default;
   $data = json_decode($raw, true);
-  return $data === null ? $default : $data;
+  return (json_last_error() === JSON_ERROR_NONE && $data !== null) ? $data : $default;
 }
 
 function safeWriteJson(string $path, $data): void {
   $dir = dirname($path);
-  if (!is_dir($dir)) {
-    mkdir($dir, 0775, true);
-  }
-  $fp = fopen($path, 'c+');
-  if (!$fp) throw new RuntimeException('open');
-  try {
-    if (!flock($fp, LOCK_EX)) throw new RuntimeException('lock');
-    ftruncate($fp, 0);
-    fwrite($fp, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    fflush($fp);
-  } finally {
-    flock($fp, LOCK_UN);
-    fclose($fp);
-  }
+  if (!is_dir($dir)) @mkdir($dir, 0775, true);
+  // lock on the final file, write atomically with tmp
+  $tmp = $path . '.tmp';
+  $fp = @fopen($tmp, 'w');
+  if (!$fp) throw new RuntimeException('open tmp failed');
+  $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+  if ($json === false) throw new RuntimeException('encode failed');
+  if (@fwrite($fp, $json) === false) { @fclose($fp); @unlink($tmp); throw new RuntimeException('write failed'); }
+  @fclose($fp);
+  if (!@rename($tmp, $path)) { @unlink($path); if (!@rename($tmp, $path)) throw new RuntimeException('rename failed'); }
 }
 
 function bad(string $msg, int $code = 400): void {
   http_response_code($code);
-  echo json_encode(['ok' => false, 'error' => $msg]);
+  echo json_encode(['ok' => false, 'error' => $msg], JSON_UNESCAPED_UNICODE);
   exit;
 }
 
-/**
- * Restrict a requested key to known safe filenames.
- *
- * Only allow simple keys that map to files within the data directory.
- */
+/** Allow only known keys to map to files in /data */
 function normalizeKey(string $key): string {
   $key = basename($key);
   $allowed = ['roster', 'config', 'active'];
-  if (!in_array($key, $allowed, true)) {
-    bad('invalid key');
-  }
+  if (!in_array($key, $allowed, true)) bad('invalid key');
   return $key;
 }
 
-$action = $_GET['action'] ?? '';
-$key = $_GET['key'] ?? '';
+/** Validate date/shift and build path for active snapshots */
+function activePath(string $dataDir, ?string $date, ?string $shift): string {
+  $dateOk  = $date !== null && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date);
+  $shiftOk = $shift === 'day' || $shift === 'night';
+  if ($dateOk && $shiftOk) {
+    return "$dataDir/active-$date-$shift.json";
+  }
+  return "$dataDir/active.json"; // fallback
+}
+
+/* ----------------- Router ----------------- */
+$action      = $_GET['action'] ?? '';
+$keyParam    = $_GET['key'] ?? '';
 $historyPath = $DATA_DIR . '/history.json';
 
 switch ($action) {
-  case 'load':
-    if (!$key) bad('missing key');
-    $key = normalizeKey($key);
-    $path = "$DATA_DIR/$key.json";
+  case 'load': {
+    if ($keyParam === '') bad('missing key');
+    $key  = normalizeKey($keyParam);
+
+    if ($key === 'active') {
+      $date  = $_GET['date']  ?? null;
+      $shift = $_GET['shift'] ?? null;
+      $path  = activePath($DATA_DIR, $date, $shift);
+    } else {
+      $path = "$DATA_DIR/$key.json";
+    }
+
     $defaults = [
       'roster' => [],
       'config' => new stdClass(),
       'active' => new stdClass(),
     ];
-    echo json_encode(safeReadJson($path, $defaults[$key] ?? new stdClass()));
+    echo json_encode(safeReadJson($path, $defaults[$key] ?? new stdClass()), JSON_UNESCAPED_UNICODE);
     exit;
+  }
 
-  case 'save':
-    if (!$key) bad('missing key');
-    $key = normalizeKey($key);
-    $raw = file_get_contents('php://input');
-    $data = json_decode($raw, true);
-    if ($data === null && $raw !== '') bad('invalid JSON');
-    $path = "$DATA_DIR/$key.json";
-    safeWriteJson($path, $data);
+  case 'save': {
+    if ($keyParam === '') bad('missing key');
+    $key = normalizeKey($keyParam);
+
+    $raw  = file_get_contents('php://input');
+    $data = ($raw === '' ? new stdClass() : json_decode($raw, true));
+    if ($raw !== '' && json_last_error() !== JSON_ERROR_NONE) bad('invalid JSON');
+
+    // choose path (and also update latest pointer for active)
+    if ($key === 'active') {
+      $date  = (is_array($data) ? ($data['dateISO'] ?? null) : null) ?? ($_GET['date']  ?? null);
+      $shift = (is_array($data) ? ($data['shift']   ?? null) : null) ?? ($_GET['shift'] ?? null);
+      $snapPath = activePath($DATA_DIR, $date, $shift);
+      safeWriteJson($snapPath, $data);
+      // also write the latest pointer so clients without date/shift stay in sync
+      safeWriteJson("$DATA_DIR/active.json", $data);
+    } else {
+      safeWriteJson("$DATA_DIR/$key.json", $data);
+    }
+
+    // optional history append
     if ($key === 'active' && (($_GET['appendHistory'] ?? '') === 'true')) {
       $hist = safeReadJson($historyPath, []);
+      if (!is_array($hist)) $hist = [];
+      if (is_array($data))  $data['publishedAt'] = gmdate('c');
       $hist[] = $data;
       safeWriteJson($historyPath, $hist);
     }
-    echo json_encode(['ok' => true]);
-    exit;
 
-  case 'history':
+    echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+    exit;
+  }
+
+  case 'history': {
     $mode = $_GET['mode'] ?? '';
     $hist = safeReadJson($historyPath, []);
+    if (!is_array($hist)) $hist = [];
+
     if ($mode === 'list') {
       $date = $_GET['date'] ?? '';
       if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) bad('invalid date');
       $out = array_values(array_filter($hist, fn($h) => ($h['dateISO'] ?? '') === $date));
-      echo json_encode($out);
-      exit;
+      echo json_encode($out, JSON_UNESCAPED_UNICODE); exit;
     }
+
     if ($mode === 'byNurse') {
       $id = $_GET['nurseId'] ?? '';
       if ($id === '') bad('missing nurseId');
       $out = [];
       foreach ($hist as $entry) {
-        foreach ($entry['assignments'] ?? [] as $a) {
+        foreach (($entry['assignments'] ?? []) as $a) {
           $nid = $a['id'] ?? $a['staffId'] ?? '';
-          if ($nid === $id) {
-            $out[] = $entry;
-            break;
-          }
+          if ($nid === $id) { $out[] = $entry; break; }
         }
       }
-      echo json_encode($out);
-      exit;
+      echo json_encode($out, JSON_UNESCAPED_UNICODE); exit;
     }
-    bad('unknown history mode');
 
-  case 'softDeleteStaff':
+    bad('unknown history mode');
+  }
+
+  case 'softDeleteStaff': {
     $id = $_GET['id'] ?? '';
     if ($id === '') bad('missing id');
     $rosterPath = "$DATA_DIR/roster.json";
     $roster = safeReadJson($rosterPath, []);
+    if (!is_array($roster)) $roster = [];
     $found = false;
     foreach ($roster as &$s) {
-      if (($s['id'] ?? '') === $id) {
-        $s['active'] = false;
-        $found = true;
-        break;
-      }
+      if (($s['id'] ?? '') === $id) { $s['active'] = false; $found = true; break; }
     }
     if (!$found) bad('not found', 404);
     safeWriteJson($rosterPath, $roster);
-    echo json_encode(['ok' => true]);
+    echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
     exit;
+  }
 
-  case 'exportHistoryCSV':
-    $from = $_GET['from'] ?? '';
-    $to = $_GET['to'] ?? '';
+  case 'exportHistoryCSV': {
+    // switch to CSV headers
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="history.csv"');
+
+    $from  = $_GET['from'] ?? '';
+    $to    = $_GET['to'] ?? '';
     $nurse = $_GET['nurseId'] ?? '';
+
     $hist = safeReadJson($historyPath, []);
-    $rows = [];
+    if (!is_array($hist)) $hist = [];
+
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['date','shift','zone','id','name','type']);
     foreach ($hist as $entry) {
       $d = $entry['dateISO'] ?? '';
       if ($from && $d < $from) continue;
-      if ($to && $d > $to) continue;
-      foreach ($entry['assignments'] ?? [] as $a) {
+      if ($to   && $d > $to)   continue;
+      foreach (($entry['assignments'] ?? []) as $a) {
         $nid = $a['id'] ?? $a['staffId'] ?? '';
         if ($nurse && $nid !== $nurse) continue;
-        $rows[] = [$d, $entry['shift'] ?? '', $a['zone'] ?? '', $nid, $a['name'] ?? ($a['label'] ?? ''), $a['type'] ?? ''];
+        fputcsv($out, [
+          $d,
+          $entry['shift'] ?? '',
+          $a['zone'] ?? '',
+          $nid,
+          $a['name'] ?? ($a['label'] ?? ''),
+          $a['type'] ?? ''
+        ]);
       }
     }
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="history.csv"');
-    $out = fopen('php://output', 'w');
-    fputcsv($out, ['date', 'shift', 'zone', 'id', 'name', 'type']);
-    foreach ($rows as $r) fputcsv($out, $r);
     fclose($out);
     exit;
+  }
 
   default:
     bad('unknown action', 404);
 }
-
-?>

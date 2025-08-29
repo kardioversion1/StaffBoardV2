@@ -1,11 +1,6 @@
-Nice. I merged the two `@/server` implementations into a single, type-safe module that uses a global adapter **if present** and otherwise falls back to the built-in `fetch` wrappers. This should resolve module resolution + type errors anywhere you `import * as Server from '@/server'`.
-
-```ts
 // server.ts — unified adapter with fallback
 
-/**
- * Server API types
- */
+/** ---------- Types ---------- */
 export type LoadFn = <T = any>(
   key: string,
   params?: Record<string, any>
@@ -32,22 +27,16 @@ export interface ServerAPI {
   exportHistoryCSV: ExportFn;
 }
 
-/**
- * If a global adapter is provided (e.g., by the host app),
- * we delegate to it; otherwise, we use fetch-based fallbacks.
- */
+/** Use global adapter if provided by host app */
 const globalApi: Partial<ServerAPI> | undefined = (globalThis as any)?.Server;
 
-/* -------------------- Fallbacks -------------------- */
-
+/** ---------- Fallbacks (fetch-based) ---------- */
 async function fallbackLoad<T = any>(
   key: string,
   params?: Record<string, any>
 ): Promise<T> {
   const url = new URL(`/api/${key}`, window.location.origin);
-  if (params) {
-    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
-  }
+  if (params) for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
   const res = await fetch(url, { credentials: 'same-origin' });
   if (!res.ok) throw new Error(`load ${key} failed`);
   return res.json() as Promise<T>;
@@ -59,9 +48,7 @@ async function fallbackSave(
   params?: Record<string, any>
 ): Promise<void> {
   const url = new URL(`/api/${key}`, window.location.origin);
-  if (params) {
-    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
-  }
+  if (params) for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -93,8 +80,7 @@ function fallbackExportHistoryCSV(filters?: {
   window.location.href = url.toString();
 }
 
-/* -------------------- Unified exports -------------------- */
-
+/** ---------- Unified exports ---------- */
 export const load: LoadFn = (...args) =>
   (globalApi?.load ? globalApi.load(...args) : fallbackLoad(...args));
 
@@ -112,4 +98,3 @@ export const exportHistoryCSV: ExportFn = (...args) =>
     : fallbackExportHistoryCSV(...args));
 
 export default { load, save, softDeleteStaff, exportHistoryCSV };
-```

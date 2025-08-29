@@ -81,7 +81,7 @@
 *{box-sizing:border-box}
 html,body{height:100%;overflow:auto}
 body{margin:0;background:var(--bg);color:var(--text-high);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-.wrap{max-width:1920px;margin:0 auto;padding:var(--gap)}
+.wrap{width:100%;padding:var(--gap)}
 header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-items:center;margin-bottom:var(--gap);position:sticky;top:0;z-index:var(--z-sticky)}
 .title{font-size:var(--f-xl);font-weight:800;letter-spacing:.2px}
 .subtitle{color:var(--text-muted);font-size:var(--f)}

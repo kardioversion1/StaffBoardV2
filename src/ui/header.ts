@@ -124,5 +124,3 @@ export function renderHeader() {
     location.reload();
   });
 }
-
-

@@ -1,0 +1,33 @@
+# cPanel-safe .htaccess sample for SPA routing
+# Disable directory listing.
+Options -Indexes
+
+# Avoid MultiViews only if available.
+<IfModule mod_negotiation.c>
+  Options -MultiViews
+</IfModule>
+
+# Use index.html as the default document.
+DirectoryIndex index.html
+
+# Serve .json files with the proper MIME type.
+<IfModule mod_mime.c>
+  AddType application/json .json
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  # Enable rewrite engine and set base path.
+  RewriteEngine On
+  RewriteBase /
+
+  # Skip rewriting for existing files or directories.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Allow direct access to API and reset scripts.
+  RewriteRule ^(api|reset)\.php$ - [L]
+
+  # Redirect all other requests to the SPA entry point.
+  RewriteRule ^ index.html [L]
+</IfModule>

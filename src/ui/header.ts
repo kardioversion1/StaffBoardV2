@@ -1,7 +1,7 @@
 import { STATE, getConfig, DB, KS } from '@/state';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
-import { manualHandoff } from '@/main';
+import { manualHandoff, renderAll } from '@/main';
 import { openHuddle } from '@/ui/huddle';
 import { showBanner } from '@/ui/banner';
 
@@ -35,6 +35,7 @@ export function renderHeader() {
       <button id="theme-toggle" class="btn">🌓</button>
       ${actionBtn}
       <button id="publish-btn" class="btn">Sync</button>
+      <button id="refresh-btn" class="btn">Refresh</button>
       <button id="reset-cache" class="btn">Reset</button>
     </div>
   `;
@@ -66,6 +67,17 @@ export function renderHeader() {
       showBanner('Published');
     } catch {
       showBanner('Publish failed');
+    }
+  });
+  document.getElementById('refresh-btn')?.addEventListener('click', async () => {
+    try {
+      const { dateISO, shift } = STATE;
+      const board = await Server.load('active', { date: dateISO, shift });
+      if (board) await DB.set(KS.ACTIVE(dateISO, shift), board);
+      await renderAll();
+      showBanner('Refreshed');
+    } catch {
+      showBanner('Refresh failed');
     }
   });
   document.getElementById('reset-cache')?.addEventListener('click', () => {

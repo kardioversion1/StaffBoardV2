@@ -1,7 +1,4 @@
-Here’s the cleaned, unified `renderHeader` module with the consolidated `@/state` imports and the missing `Server` import wired up.
-
-```ts
-// header.ts — merged & de-conflicted
+// header.ts — merged & type-safe
 
 import * as Server from '@/server';
 import {
@@ -11,6 +8,7 @@ import {
   KS,
   getActiveBoardCache,
   type ActiveBoard,
+  type Staff,
 } from '@/state';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
@@ -85,8 +83,10 @@ export function renderHeader() {
 
       tasks.push(Server.save('config', getConfig()));
 
-      const roster = (await DB.get(KS.STAFF)) ?? [];
-      if (Array.isArray(roster)) tasks.push(Server.save('roster', roster));
+      const roster = (await DB.get<Staff[]>(KS.STAFF)) ?? [];
+      if (Array.isArray(roster) && roster.length) {
+        tasks.push(Server.save('roster', roster));
+      }
 
       await Promise.all(tasks);
       showBanner('Published');
@@ -124,5 +124,5 @@ export function renderHeader() {
     location.reload();
   });
 }
-```
+
 

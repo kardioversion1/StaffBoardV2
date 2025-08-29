@@ -1,4 +1,5 @@
-import { STATE, getConfig, saveConfig, applyThemeAndScale } from '@/state';
+import { STATE, getConfig } from '@/state';
+import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
 import { manualHandoff } from '@/main';
 import { openHuddle } from '@/ui/huddle';
@@ -41,9 +42,9 @@ export function renderHeader() {
   else if (mode === 'legacySignout')
     document.getElementById('handoff')?.addEventListener('click', manualHandoff);
   document.getElementById('theme-toggle')!.addEventListener('click', async () => {
-    const cfg = getConfig();
-    const next = cfg.theme === 'light' ? 'dark' : 'light';
-    await saveConfig({ theme: next });
-    applyThemeAndScale({ ...cfg, theme: next });
+    const t = getThemeConfig();
+    const next = t.mode === 'dark' ? 'light' : 'dark';
+    await saveThemeConfig({ mode: next });
+    applyTheme();
   });
 }

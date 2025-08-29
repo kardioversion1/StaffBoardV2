@@ -13,6 +13,7 @@ import {
   type PublishedShiftSnapshot,
   type Assignment,
 } from '@/state/history';
+import type { UIThemeConfig } from '@/state/theme';
 
 export type WidgetsConfig = {
   show?: boolean;
@@ -40,9 +41,6 @@ export type Config = {
   pin: string;
   relockMin: number;
   widgets: WidgetsConfig;
-  theme?: 'light' | 'dark';
-  fontScale?: number;
-  highContrast?: boolean;
   zoneColors?: Record<string, string>;
   shiftDurations?: { day: number; night: number };
   dtoMinutes?: number;
@@ -55,6 +53,7 @@ export type Config = {
     rightSidebarMinPx?: number;
     rightSidebarMaxPx?: number;
   };
+  uiTheme?: UIThemeConfig;
 };
 
 export type Staff = {
@@ -144,9 +143,6 @@ let CONFIG_CACHE: Config = {
   pin: '4911',
   relockMin: 0,
   widgets: structuredClone(WIDGETS_DEFAULTS),
-  theme: 'dark',
-  fontScale: 1,
-  highContrast: false,
   zoneColors: {},
   shiftDurations: { day: 12, night: 12 },
   dtoMinutes: 60,
@@ -159,6 +155,14 @@ let CONFIG_CACHE: Config = {
     rightSidebarMinPx: 260,
     rightSidebarMaxPx: 420,
   },
+  uiTheme: {
+    mode: 'system',
+    scale: 1,
+    lightPreset: 'fog',
+    darkPreset: 'midnight',
+    highContrast: false,
+    compact: false,
+  },
 };
 
 let ZONES_INVALID = false;
@@ -170,12 +174,6 @@ export function getConfig(): Config {
   return CONFIG_CACHE;
 }
 
-export function applyThemeAndScale(cfg: Config = CONFIG_CACHE) {
-  const root = document.documentElement;
-  root.setAttribute('data-theme', cfg.theme === 'light' ? 'light' : 'dark');
-  root.style.setProperty('--scale', String(cfg.fontScale ?? 1));
-  root.setAttribute('data-contrast', cfg.highContrast ? 'high' : 'normal');
-}
 
 export async function loadConfig(): Promise<Config> {
   const existing = await DB.get<Config>(KS.CONFIG);
@@ -245,9 +243,14 @@ export function mergeConfigDefaults(): Config {
     rightSidebarMaxPx: cfg.ui?.rightSidebarMaxPx || 420,
   };
 
-  cfg.theme = cfg.theme === 'light' ? 'light' : 'dark';
-  cfg.fontScale = cfg.fontScale && !isNaN(cfg.fontScale) ? cfg.fontScale : 1;
-  cfg.highContrast = cfg.highContrast === true;
+  cfg.uiTheme = {
+    mode: cfg.uiTheme?.mode || 'system',
+    scale: cfg.uiTheme?.scale ?? 1,
+    lightPreset: cfg.uiTheme?.lightPreset || 'fog',
+    darkPreset: cfg.uiTheme?.darkPreset || 'midnight',
+    highContrast: cfg.uiTheme?.highContrast === true,
+    compact: cfg.uiTheme?.compact === true,
+  };
 
   CONFIG_CACHE = cfg as Config;
   return CONFIG_CACHE;

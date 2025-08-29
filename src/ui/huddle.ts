@@ -1,4 +1,4 @@
-import { saveHuddle, getHuddle, type HuddleRecord } from '@/state/history';
+import { saveHuddle, getHuddle, submitHuddle, type HuddleRecord } from '@/state/history';
 import { DEFAULT_HUDDLE_ITEMS } from '@/config/huddle';
 
 let record: HuddleRecord;
@@ -22,8 +22,9 @@ export async function openHuddle(dateISO: string, shift: 'day' | 'night'): Promi
   renderChecklist();
   wireNotes();
   wireTimer();
-  document.getElementById('huddle-save')!.addEventListener('click', async () => {
+  document.getElementById('huddle-submit')!.addEventListener('click', async () => {
     await save();
+    await submitHuddle(record);
     close();
   });
   document.getElementById('huddle-close')!.addEventListener('click', close);
@@ -51,7 +52,7 @@ function renderOverlay() {
           <span id="huddle-timer-display" aria-live="polite"></span>
         </div>
         <div class="btn-row" style="margin-top:auto;">
-          <button id="huddle-save" class="btn">Save</button>
+          <button id="huddle-submit" class="btn">Submit</button>
           <button id="huddle-close" class="btn">Close</button>
         </div>
       </section>

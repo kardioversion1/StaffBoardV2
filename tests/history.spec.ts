@@ -9,6 +9,8 @@ vi.mock('@/db', () => ({
   del: async (k: string) => {
     delete store[k];
   },
+  keys: async (prefix: string) =>
+    Object.keys(store).filter((k) => k.startsWith(prefix)),
 }));
 
 import {
@@ -18,6 +20,8 @@ import {
   findShiftsByStaff,
   saveHuddle,
   getHuddle,
+  submitHuddle,
+  listHuddles,
   adminOverrideShift,
   type PublishedShiftSnapshot,
   type HuddleRecord,
@@ -80,6 +84,23 @@ describe('history persistence', () => {
     await saveHuddle(rec);
     const loaded = await getHuddle('2024-01-01', 'day');
     expect(loaded?.notes).toBe('all good');
+  });
+
+  it('submits huddle to history and clears draft', async () => {
+    const rec: HuddleRecord = {
+      dateISO: '2024-01-02',
+      shift: 'night',
+      recordedAtISO: '2024-01-02T20:00:00.000Z',
+      recordedBy: 'me',
+      checklist: [{ id: 'airway', label: 'Airway', checked: true }],
+      notes: 'done',
+    };
+    await saveHuddle(rec);
+    await submitHuddle(rec);
+    const draft = await getHuddle('2024-01-02', 'night');
+    expect(draft).toBeUndefined();
+    const all = await listHuddles();
+    expect(all.find((r) => r.notes === 'done')).toBeTruthy();
   });
 
   it('overrides snapshot with audit trail', async () => {

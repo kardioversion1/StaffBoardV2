@@ -1,8 +1,3 @@
-Here’s the cleaned, unified `renderHeader` module with the consolidated `@/state` imports and the missing `Server` import wired up.
-
-```ts
-// header.ts — merged & de-conflicted
-
 import * as Server from '@/server';
 import {
   STATE,
@@ -124,5 +119,3 @@ export function renderHeader() {
     location.reload();
   });
 }
-```
-

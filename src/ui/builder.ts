@@ -1,15 +1,6 @@
-import {
-  STATE,
-  getConfig,
-  loadStaff,
-  KS,
-  DB,
-  type DraftShift,
-  type Staff,
-  CURRENT_SCHEMA_VERSION,
-  applyDraftToActive,
-  saveConfig,
-} from '@/state';
+import { STATE, KS, DB, type DraftShift, CURRENT_SCHEMA_VERSION, applyDraftToActive } from '@/state/board';
+import { getConfig, saveConfig } from '@/state/config';
+import { loadStaff, type Staff } from '@/state/staff';
 import { upsertSlot, removeSlot, type Slot } from '@/slots';
 import { nurseTile } from './nurseTile';
 import { setNurseCache, labelFromId } from '@/utils/names';

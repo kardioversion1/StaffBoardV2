@@ -1,5 +1,5 @@
-import type { Staff } from '@/state';
-import { getConfig } from '@/state';
+import type { Staff } from '@/state/staff';
+import { getConfig } from '@/state/config';
 
 let NURSES: Staff[] = [];
 

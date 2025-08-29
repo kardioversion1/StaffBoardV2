@@ -1,4 +1,5 @@
-import { STATE, getConfig, DB, KS, getActiveBoardCache } from '@/state';
+import { STATE, DB, KS, getActiveBoardCache } from '@/state/board';
+import { getConfig } from '@/state/config';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
 import { manualHandoff, renderAll } from '@/main';

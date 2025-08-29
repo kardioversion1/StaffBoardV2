@@ -3,17 +3,15 @@
 import {
   DB,
   KS,
-  getConfig,
-  saveConfig,
   STATE,
-  loadStaff,
-  saveStaff,
-  Staff,
   ActiveBoard,
   CURRENT_SCHEMA_VERSION,
   migrateActiveBoard,
   setActiveBoardCache,
-} from '@/state';
+  type DraftShift,
+} from '@/state/board';
+import { getConfig, saveConfig } from '@/state/config';
+import { loadStaff, saveStaff, type Staff } from '@/state/staff';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWeather } from './widgets';
 import { renderPhysicians } from './physicians';
@@ -23,7 +21,6 @@ import './mainBoard/boardLayout.css';
 import { startBreak, endBreak, moveSlot, upsertSlot, removeSlot, type Slot } from '@/slots';
 import { canonNurseType } from '@/domain/lexicon';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
-import type { DraftShift } from '@/state';
 
 // --- helpers ---------------------------------------------------------------
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { loadStaff } from '@/state';
+import { loadStaff } from '@/state/staff';
 import * as DB from '@/db';
 
 vi.mock('@/db', () => ({

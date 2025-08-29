@@ -1,11 +1,5 @@
-import {
-  getConfig,
-  saveConfig,
-  mergeConfigDefaults,
-  loadStaff,
-  saveStaff,
-  Staff,
-} from '@/state';
+import { getConfig, saveConfig, mergeConfigDefaults } from '@/state/config';
+import { loadStaff, saveStaff, Staff } from '@/state/staff';
 import { createStaffId, ensureStaffId } from '@/utils/id';
 import { fetchWeather, renderWeather } from './widgets';
 import { getUIConfig, saveUIConfig, applyUI } from '@/state/uiConfig';

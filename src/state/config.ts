@@ -2,6 +2,7 @@ import * as DB from '@/db';
 import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 import { normalizeZones, type ZoneDef } from '@/utils/zones';
 import type { UIThemeConfig } from '@/state/theme';
+import { THEME_PRESETS } from '@/state/theme';
 import * as Server from '@/server';
 import { KS } from './keys';
 import { STATE } from './board';
@@ -81,8 +82,8 @@ let CONFIG_CACHE: Config = {
   uiTheme: {
     mode: 'system',
     scale: 1,
-    lightPreset: 'fog',
-    darkPreset: 'midnight',
+    lightPreset: 'light-soft-gray',
+    darkPreset: 'dark-charcoal-navy',
     highContrast: false,
     compact: false,
   },
@@ -211,11 +212,17 @@ export function mergeConfigDefaults(): Config {
   };
 
   // Theme defaults
+  const lightDefault = 'light-soft-gray';
+  const darkDefault = 'dark-charcoal-navy';
+  const light = cfg.uiTheme?.lightPreset;
+  const dark = cfg.uiTheme?.darkPreset;
+  const validLight = THEME_PRESETS.some((p) => p.id === light && p.mode === 'light');
+  const validDark = THEME_PRESETS.some((p) => p.id === dark && p.mode === 'dark');
   cfg.uiTheme = {
     mode: cfg.uiTheme?.mode || 'system',
     scale: cfg.uiTheme?.scale ?? 1,
-    lightPreset: cfg.uiTheme?.lightPreset || 'fog',
-    darkPreset: cfg.uiTheme?.darkPreset || 'midnight',
+    lightPreset: validLight ? (light as string) : lightDefault,
+    darkPreset: validDark ? (dark as string) : darkDefault,
     highContrast: cfg.uiTheme?.highContrast === true,
     compact: cfg.uiTheme?.compact === true,
   };

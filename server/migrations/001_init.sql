@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS kv_store (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS active_snapshots (
+  date  TEXT NOT NULL,
+  shift TEXT NOT NULL,
+  data  TEXT NOT NULL,
+  PRIMARY KEY (date, shift)
+);
+
+CREATE TABLE IF NOT EXISTS history (
+  id   INTEGER PRIMARY KEY AUTOINCREMENT,
+  data TEXT NOT NULL
+);

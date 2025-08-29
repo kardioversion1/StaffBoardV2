@@ -3,6 +3,7 @@ import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { ensureStaffId } from '@/utils/id';
 import { ensureRole } from '@/utils/role';
 import { KS } from './keys';
+import * as Server from '@/server';
 
 export type Staff = {
   id: string;

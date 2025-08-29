@@ -2,9 +2,8 @@
 declare(strict_types=1);
 
 /**
- * StaffBoard API (cPanel-safe, file-backed JSON store)
- * - Data directory: /data (auto-created)
- * - Keys: roster.json, config.json, active.json, history.json
+ * StaffBoard API (DB-backed JSON store)
+ * - Database: SQLite file specified by `HEYBRE_DB_PATH` (defaults to server/data.sqlite)
  * - Auth: send `X-API-Key` header matching `HEYBRE_API_KEY`
  * - Endpoints:
  *   ?action=load&key=roster|config|active[&date=YYYY-MM-DD&shift=day|night]
@@ -13,6 +12,7 @@ declare(strict_types=1);
  *   ?action=history&mode=byNurse&nurseId=ID
  *   ?action=softDeleteStaff&id=ID
  *   ?action=exportHistoryCSV[&from=YYYY-MM-DD&to=YYYY-MM-DD&nurseId=ID]
+ *   ?action=physicians
  *   ?action=ping
  */
 
@@ -32,6 +32,9 @@ if (!is_dir($DATA_DIR)) {
   }
 }
 
+require __DIR__ . '/db.php';
+require_once __DIR__ . '/validators.php';
+
 /* ---------- helpers ---------- */
 function bad(string $msg, int $code = 400): void {
   http_response_code($code);
@@ -48,62 +51,24 @@ function normalizeKey(string $key): string {
   if (!in_array($key, $allowed, true)) bad('invalid key');
   return $key;
 }
-function safeReadJson(string $path, $default) {
-  try {
-    if (!file_exists($path)) return $default;
-    $raw = file_get_contents($path);
-    if ($raw === false) throw new RuntimeException('read failed');
-    $data = json_decode($raw, true);
-    return (json_last_error() === JSON_ERROR_NONE && $data !== null) ? $data : $default;
-  } catch (Throwable $e) {
-    error_log('safeReadJson: ' . $e->getMessage());
-    return $default;
-  }
-}
-function safeWriteJson(string $path, $data): void {
-  $dir = dirname($path);
-  try {
-    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
-      throw new RuntimeException('dir create failed');
-    }
-    $tmp = $path . '.tmp';
-    $fp = fopen($tmp, 'w');
-    if (!$fp) throw new RuntimeException('write open failed');
-    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-    if ($json === false) { fclose($fp); unlink($tmp); throw new RuntimeException('encode failed'); }
-    if (fwrite($fp, $json) === false) { fclose($fp); unlink($tmp); throw new RuntimeException('write failed'); }
-    fclose($fp);
-    if (!rename($tmp, $path)) {
-      if (file_exists($path) && !unlink($path)) {
-        throw new RuntimeException('unlink failed');
-      }
-      if (!rename($tmp, $path)) throw new RuntimeException('rename failed');
-    }
-  } catch (Throwable $e) {
-    error_log('safeWriteJson: ' . $e->getMessage());
-    throw $e;
-  }
-}
-/** seed roster on first run from staff-roster-full.json */
-function ensureRosterExists(string $dataDir, string $rootDir): void {
-  $rosterPath = $dataDir . '/roster.json';
-  if (file_exists($rosterPath)) return;
+
+/** Seed roster on first run from staff-roster-full.json (marks missing 'active' as true) */
+function ensureRosterExists(string $rootDir): void {
+  $existing = kvGet('roster', null);
+  if ($existing !== null) return;
   $seed = $rootDir . '/staff-roster-full.json';
   $default = [];
   if (file_exists($seed)) {
-    $seedData = safeReadJson($seed, []);
-    foreach ($seedData as &$r) if (!isset($r['active'])) $r['active'] = true;
-    $default = $seedData;
+    $seedData = json_decode(@file_get_contents($seed) ?: '[]', true);
+    if (is_array($seedData)) {
+      foreach ($seedData as &$r) if (!isset($r['active'])) $r['active'] = true;
+      $default = $seedData;
+    }
   }
-  safeWriteJson($rosterPath, $default);
-}
-/** build path for per-shift active snapshots; fallback to active.json */
-function activePath(string $dataDir, ?string $date, ?string $shift): string {
-  $dateOk  = $date && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date);
-  $shiftOk = $shift === 'day' || $shift === 'night';
-  return ($dateOk && $shiftOk) ? "$dataDir/active-$date-$shift.json" : "$dataDir/active.json";
+  kvSet('roster', $default);
 }
 
+/* ---------- auth ---------- */
 $API_KEY = getenv('HEYBRE_API_KEY') ?: '';
 $REQ_KEY = $_SERVER['HTTP_X_API_KEY'] ?? '';
 if ($API_KEY === '' || $REQ_KEY !== $API_KEY) {
@@ -114,15 +79,14 @@ if ($API_KEY === '' || $REQ_KEY !== $API_KEY) {
 /* ---------- router ---------- */
 $action = $_GET['action'] ?? '';
 $key    = $_GET['key'] ?? '';
-$historyPath = $DATA_DIR . '/history.json';
 $physiciansUrl = 'https://www.bytebloc.com/sk/?76b6a156';
 
 try {
-  ensureRosterExists($DATA_DIR, $ROOT_DIR);
+  ensureRosterExists($ROOT_DIR);
 
   switch ($action) {
     case 'ping':
-      ok(['ok'=>true,'time'=>gmdate('c')]);
+      ok(['ok' => true, 'time' => gmdate('c')]);
 
     case 'load': {
       if ($key === '') bad('missing key');
@@ -131,17 +95,15 @@ try {
       if ($key === 'active') {
         $date  = $_GET['date']  ?? null;
         $shift = $_GET['shift'] ?? null;
-        $path  = activePath($DATA_DIR, $date, $shift);
+        $data  = activeLoad($date, $shift);
       } else {
-        $path = "$DATA_DIR/$key.json";
+        $defaults = [
+          'roster' => [],
+          'config' => new stdClass(),
+        ];
+        $data = kvGet($key, $defaults[$key] ?? new stdClass());
       }
-
-      $defaults = [
-        'roster' => [],
-        'config' => new stdClass(),
-        'active' => new stdClass(),
-      ];
-      ok(safeReadJson($path, $defaults[$key] ?? new stdClass()));
+      ok($data);
     }
 
     case 'save': {
@@ -149,8 +111,7 @@ try {
       $key = normalizeKey($key);
 
       $raw  = file_get_contents('php://input') ?: '';
-      $data = $raw === '' ? new stdClass() : json_decode($raw, true);
-      if ($raw !== '' && json_last_error() !== JSON_ERROR_NONE) bad('invalid JSON');
+      $data = validateSavePayload($raw);
 
       if ($key === 'roster' && is_array($data)) {
         foreach ($data as &$s) if (!isset($s['active'])) $s['active'] = true;
@@ -159,40 +120,30 @@ try {
       if ($key === 'active') {
         $date  = (is_array($data) ? ($data['dateISO'] ?? null) : null) ?? ($_GET['date']  ?? null);
         $shift = (is_array($data) ? ($data['shift']   ?? null) : null) ?? ($_GET['shift'] ?? null);
-        $snapPath = activePath($DATA_DIR, $date, $shift);
-        safeWriteJson($snapPath, $data);
-        // also keep latest pointer for clients that don't pass date/shift
-        safeWriteJson("$DATA_DIR/active.json", $data);
+        activeSave($data, $date, $shift);
+        if (($_GET['appendHistory'] ?? '') === 'true') {
+          if (is_array($data)) $data['publishedAt'] = gmdate('c');
+          historyInsert($data);
+        }
       } else {
-        safeWriteJson("$DATA_DIR/$key.json", $data);
+        kvSet($key, $data);
       }
 
-      if ($key === 'active' && (($_GET['appendHistory'] ?? '') === 'true')) {
-        $hist = safeReadJson($historyPath, []);
-        if (!is_array($hist)) $hist = [];
-        if (is_array($data))  $data['publishedAt'] = gmdate('c');
-        $hist[] = $data;
-        safeWriteJson($historyPath, $hist);
-      }
-
-      ok(['ok'=>true]);
+      ok(['ok' => true]);
     }
 
     case 'history': {
-      $mode = $_GET['mode'] ?? '';
-      $hist = safeReadJson($historyPath, []);
-      if (!is_array($hist)) $hist = [];
+      $params = validateHistoryQuery($_GET); // expects mode + (date|nurseId)
+      $hist = historyAll(); // array of published shift snapshots
 
-      if ($mode === 'list') {
-        $date = $_GET['date'] ?? '';
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) bad('invalid date');
+      if ($params['mode'] === 'list') {
+        $date = $params['date'];
         $out = array_values(array_filter($hist, fn($h) => ($h['dateISO'] ?? '') === $date));
         ok($out);
       }
 
-      if ($mode === 'byNurse') {
-        $id = $_GET['nurseId'] ?? '';
-        if ($id === '') bad('missing nurseId');
+      if ($params['mode'] === 'byNurse') {
+        $id = $params['nurseId'];
         $out = [];
         foreach ($hist as $entry) {
           foreach (($entry['assignments'] ?? []) as $a) {
@@ -209,16 +160,15 @@ try {
     case 'softDeleteStaff': {
       $id = $_GET['id'] ?? '';
       if ($id === '') bad('missing id');
-      $rosterPath = "$DATA_DIR/roster.json";
-      $roster = safeReadJson($rosterPath, []);
+      $roster = kvGet('roster', []);
       if (!is_array($roster)) $roster = [];
       $found = false;
       foreach ($roster as &$s) {
         if (($s['id'] ?? '') === $id) { $s['active'] = false; $found = true; break; }
       }
       if (!$found) bad('not found', 404);
-      safeWriteJson($rosterPath, $roster);
-      ok(['ok'=>true]);
+      kvSet('roster', $roster);
+      ok(['ok' => true]);
     }
 
     case 'exportHistoryCSV': {
@@ -229,8 +179,7 @@ try {
       $to    = $_GET['to'] ?? '';
       $nurse = $_GET['nurseId'] ?? '';
 
-      $hist = safeReadJson($historyPath, []);
-      if (!is_array($hist)) $hist = [];
+      $hist = historyAll();
 
       $out = fopen('php://output', 'w');
       fputcsv($out, ['date','shift','zone','id','name','type']);

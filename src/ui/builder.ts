@@ -301,6 +301,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
           const fromIdx = Number(zoneIdxStr);
           if (!isNaN(fromIdx) && fromIdx !== i) {
             const [moved] = cfg.zones.splice(fromIdx, 1);
+            moved.pct = z.pct;
             cfg.zones.splice(i, 0, moved);
             board.zones = Object.fromEntries(
               cfg.zones.map((zz) => [zz.name, board.zones[zz.name] || []])

@@ -438,7 +438,20 @@ function renderDisplaySettings() {
     const saveBtn = document.getElementById('ds-save') as HTMLButtonElement;
     saveBtn.disabled = lr < 4.5 || dr < 4.5;
   };
-  el.querySelectorAll('input[name="ds-light"],input[name="ds-dark"]').forEach((i) => i.addEventListener('change', updateContrast));
+  el
+    .querySelectorAll('input[name="ds-light"],input[name="ds-dark"]')
+    .forEach((i) =>
+      i.addEventListener('change', () => {
+        updateContrast();
+        const lightId = (
+          document.querySelector('input[name="ds-light"]:checked') as HTMLInputElement
+        ).value;
+        const darkId = (
+          document.querySelector('input[name="ds-dark"]:checked') as HTMLInputElement
+        ).value;
+        applyTheme({ ...cfg, lightPreset: lightId, darkPreset: darkId });
+      })
+    );
   updateContrast();
 
   document.getElementById('ds-save')!.addEventListener('click', async () => {

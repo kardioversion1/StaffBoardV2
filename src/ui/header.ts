@@ -1,6 +1,15 @@
+// header.ts — merged & type-safe
+
 import * as Server from '@/server';
-import { STATE, DB, KS, getActiveBoardCache, type ActiveBoard } from '@/state';
-import { getConfig } from '@/state/config';
+import {
+  STATE,
+  getConfig,
+  DB,
+  KS,
+  getActiveBoardCache,
+  type ActiveBoard,
+  type Staff,
+} from '@/state';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
 import { manualHandoff, renderAll } from '@/main';
@@ -75,8 +84,10 @@ export function renderHeader() {
 
       tasks.push(Server.save('config', getConfig()));
 
-      const roster = (await DB.get(KS.STAFF)) ?? [];
-      if (Array.isArray(roster)) tasks.push(Server.save('roster', roster));
+      const roster = (await DB.get<Staff[]>(KS.STAFF)) ?? [];
+      if (Array.isArray(roster) && roster.length) {
+        tasks.push(Server.save('roster', roster));
+      }
 
       await Promise.all(tasks);
       showBanner('Published');

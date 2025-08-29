@@ -99,7 +99,9 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .panel h3{color:var(--text-high);font-size:clamp(14px,.95vw,16px)}
 .panel .muted{color:var(--text-muted)}
 .col{display:flex;flex-direction:column;gap:var(--gap);height:100%;min-height:0;overflow:hidden}
+/* merged resolution */
 .col>.panel{flex:1}
+#incoming,#offgoing{flex:1}
 .zones-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:clamp(8px,1.5vw,12px);max-width:1520px;margin:0 auto;flex:1;grid-auto-rows:auto}
 
 @media (max-width:900px){

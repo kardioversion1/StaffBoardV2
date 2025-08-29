@@ -1,5 +1,12 @@
+// state/index.ts (merged)
+
+// NOTE: This file merges the functionality from `main` and drops the bare re-exports.
+// If you really want a split-module structure later, we can move the concrete pieces
+// into ./config, ./staff, ./board and keep only re-exports here.
+
 import { Shift, hhmmNowLocal, toDateISO, deriveShift } from '@/utils/time';
 import * as DB from '@/db';
+import * as Server from '@/server';
 import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { ensureStaffId } from '@/utils/id';
@@ -46,6 +53,7 @@ export type Config = {
   dtoMinutes?: number;
   showPinned?: { charge: boolean; triage: boolean };
   rss?: { url: string; enabled: boolean };
+  physicians?: { calendarUrl: string };
   privacy?: boolean;
   ui?: {
     signoutMode?: 'shiftHuddle' | 'disabled' | 'legacySignout';
@@ -276,6 +284,11 @@ export function mergeConfigDefaults(): Config {
     enabled: cfg.rss?.enabled === true,
   };
 
+  // Physicians calendar
+  cfg.physicians = {
+    calendarUrl: cfg.physicians?.calendarUrl || '',
+  };
+
   // Privacy (default true)
   cfg.privacy = cfg.privacy !== false;
 
@@ -341,9 +354,9 @@ export function migrateActiveBoard(raw: unknown): ActiveBoard {
 }
 
 export const KS = {
-  CONFIG: "CONFIG",
-  STAFF: "STAFF",
-  HISTORY: "HISTORY",
+  CONFIG: 'CONFIG',
+  STAFF: 'STAFF',
+  HISTORY: 'HISTORY',
   PHYS: (dateISO: string) => `PHYS:${dateISO}`,
   ACTIVE: (dateISO: string, shift: Shift) => `ACTIVE:${dateISO}:${shift}`,
   ONBAT: (dateISO: string, shift: Shift) => `ONBAT:${dateISO}:${shift}`,

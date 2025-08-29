@@ -14,7 +14,7 @@ vi.mock('@/db', () => {
   };
 });
 
-import { saveConfig, loadConfig } from '@/state';
+import { saveConfig, loadConfig } from '@/state/config';
 
 describe('config round trip', () => {
   it('persists new keys', async () => {
@@ -23,6 +23,7 @@ describe('config round trip', () => {
       dtoMinutes: 50,
       showPinned: { charge: false, triage: true },
       rss: { url: 'http://x', enabled: true },
+      physicians: { calendarUrl: 'http://phys' },
       privacy: false,
       ui: { signoutMode: 'legacySignout', rightSidebarWidthPx: 350 },
     });
@@ -31,6 +32,7 @@ describe('config round trip', () => {
     expect(cfg.dtoMinutes).toBe(50);
     expect(cfg.showPinned?.charge).toBe(false);
     expect(cfg.rss?.url).toBe('http://x');
+    expect(cfg.physicians?.calendarUrl).toBe('http://phys');
     expect(cfg.privacy).toBe(false);
     expect(cfg.ui?.signoutMode).toBe('legacySignout');
     expect(cfg.ui?.rightSidebarWidthPx).toBe(350);

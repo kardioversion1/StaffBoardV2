@@ -1,6 +1,6 @@
 import type { Slot } from '../slots';
-import type { Staff } from '../state';
-import { getConfig } from '@/state';
+import type { Staff } from '@/state/staff';
+import { getConfig } from '@/state/config';
 import { formatName } from '@/utils/names';
 
 export function nurseTile(slot: Slot, staff: Staff): string {

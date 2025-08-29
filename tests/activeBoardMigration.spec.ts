@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { migrateActiveBoard, CURRENT_SCHEMA_VERSION } from '@/state';
+import { migrateActiveBoard, CURRENT_SCHEMA_VERSION } from '@/state/board';
 
 describe('migrateActiveBoard', () => {
   it('fills defaults and sets version', () => {

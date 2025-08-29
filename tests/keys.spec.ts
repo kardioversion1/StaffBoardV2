@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { KS } from '@/state';
+import { KS } from '@/state/board';
 
 describe("KS helpers", () => {
   it("produces key strings", () => {

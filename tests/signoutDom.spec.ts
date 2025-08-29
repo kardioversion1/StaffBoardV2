@@ -16,7 +16,9 @@ vi.mock('@/db', () => {
 vi.mock('@/main', () => ({ manualHandoff: () => {} }));
 
 import { saveUIConfig, applyUI } from '@/state/uiConfig';
-import { saveConfig, saveStaff, STATE, initState } from '@/state';
+import { saveConfig } from '@/state/config';
+import { saveStaff } from '@/state/staff';
+import { STATE, initState } from '@/state/board';
 import { renderHeader } from '@/ui/header';
 import { renderBoard } from '@/ui/board';
 

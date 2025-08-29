@@ -1,4 +1,4 @@
-import { getConfig, saveConfig } from '@/state';
+import { getConfig, saveConfig } from './config';
 
 export type UIConfig = {
   signoutMode: 'shiftHuddle' | 'disabled' | 'legacySignout';

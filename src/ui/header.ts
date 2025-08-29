@@ -1,4 +1,5 @@
 import { STATE, getConfig, DB, KS, getActiveBoardCache } from '@/state';
+import type { ActiveBoard } from '@/state';
 import { getThemeConfig, saveThemeConfig, applyTheme } from '@/state/theme';
 import { deriveShift, fmtLong } from '@/utils/time';
 import { manualHandoff, renderAll } from '@/main';
@@ -82,7 +83,10 @@ export function renderHeader() {
           await Server.save('active', local);
         } catch {}
       }
-      const board = await Server.load('active', { date: dateISO, shift });
+      const board: ActiveBoard | undefined = await Server.load('active', {
+        date: dateISO,
+        shift,
+      });
       if (board) await DB.set(KS.ACTIVE(dateISO, shift), board);
       await renderAll();
       showBanner('Refreshed');

@@ -19,7 +19,7 @@ export function normalizeZones(input: any[]): ZoneDef[] {
       return {
         id: z.toLowerCase().replace(/\s+/g, '_'),
         name: z,
-        color: '#ffffff',
+        color: 'var(--panel)',
         pct: false,
       };
     } else if (typeof z === 'object' && z !== null) {
@@ -27,14 +27,14 @@ export function normalizeZones(input: any[]): ZoneDef[] {
       return {
         id: (z.id ?? name).toLowerCase().replace(/\s+/g, '_'),
         name,
-        color: z.color ?? '#ffffff',
+        color: z.color ?? 'var(--panel)',
         pct: !!(z as any).pct,
       };
     } else {
       return {
         id: `zone_${i}`,
         name: `Zone ${i + 1}`,
-        color: '#ffffff',
+        color: 'var(--panel)',
         pct: false,
       };
     }

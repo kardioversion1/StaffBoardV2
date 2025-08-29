@@ -5,6 +5,7 @@ import './history.css';
 import type {
   PublishedShiftSnapshot,
   NurseShiftIndexEntry,
+  HuddleRecord,
 } from '@/state/history';
 
 /** Render History tab with sub-views. */
@@ -70,6 +71,23 @@ export function exportNurseHistoryCSV(entries: NurseShiftIndexEntry[]): string {
         e.startISO,
         e.endISO,
         e.dto ? '1' : '0',
+      ].join(',')
+    )
+    .join('\n');
+  return `${header}\n${rows}`;
+}
+
+/** Export huddle records to CSV. */
+export function exportHuddlesCSV(records: HuddleRecord[]): string {
+  const header = 'date,shift,recordedAt,recordedBy,notes';
+  const rows = records
+    .map((r) =>
+      [
+        r.dateISO,
+        r.shift,
+        r.recordedAtISO,
+        r.recordedBy,
+        `"${r.notes.replace(/"/g, '""')}"`,
       ].join(',')
     )
     .join('\n');

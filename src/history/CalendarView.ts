@@ -1,3 +1,6 @@
+import { listShiftDates, getShiftByDate, savePublishedShift, indexStaffAssignments } from '@/state/history';
+import { exportShiftCSV } from '@/history';
+import { DB, KS } from '@/state';
 import './history.css';
 
 /** Render the calendar-based history view with listing, saving, and export. */
@@ -22,21 +25,23 @@ export function renderCalendarView(root: HTMLElement): void {
 
   const listEl = root.querySelector('#hist-dates') as HTMLElement;
   const outEl = root.querySelector('#hist-output') as HTMLElement;
+  let loaded: { day?: any; night?: any } = {};
 
   const loadDates = async () => {
-    try {
-      const res = await (window as any).STAFF_API.listHistoryDates();
-      listEl.innerHTML = res.dates
-        .map((d: string) => `<li><button data-date="${d}">${d}</button></li>`)
-        .join('');
-    } catch {
-      listEl.innerHTML = '';
-    }
+    const dates = await listShiftDates();
+    listEl.innerHTML = dates
+      .map((d) => `<li><button data-date="${d}">${d}</button></li>`)
+      .join('');
   };
 
   const loadHistory = async (date: string) => {
-    const data = await (window as any).STAFF_API.getHistory(date);
-    outEl.textContent = JSON.stringify(data, null, 2);
+    loaded.day = await getShiftByDate(date, 'day');
+    loaded.night = await getShiftByDate(date, 'night');
+    outEl.textContent = JSON.stringify(
+      { dateISO: date, entries: [loaded.day, loaded.night].filter(Boolean) },
+      null,
+      2
+    );
   };
 
   listEl.addEventListener('click', async (e) => {
@@ -55,25 +60,54 @@ export function renderCalendarView(root: HTMLElement): void {
   document.getElementById('hist-save')!.addEventListener('click', async () => {
     const d = (document.getElementById('hist-date') as HTMLInputElement).value;
     if (!d) return;
-    const day = await (window as any).STAFF_API.getActive(d, 'day').catch(() => null);
-    const night = await (window as any).STAFF_API.getActive(d, 'night').catch(() => null);
-    const entries: any[] = [];
-    if (day) entries.push({ shift: 'day', ...day });
-    if (night) entries.push({ shift: 'night', ...night });
-    await (window as any).STAFF_API.saveHistory({ dateISO: d, entries });
+    const day = await DB.get(KS.ACTIVE(d, 'day')).catch(() => null);
+    const night = await DB.get(KS.ACTIVE(d, 'night')).catch(() => null);
+    if (day) {
+      await savePublishedShift(day);
+      await indexStaffAssignments(day);
+    }
+    if (night) {
+      await savePublishedShift(night);
+      await indexStaffAssignments(night);
+    }
     alert('History saved');
     loadDates();
   });
 
   document.getElementById('hist-export')!.addEventListener('click', () => {
-    const d = (document.getElementById('hist-date') as HTMLInputElement).value;
-    if (d) window.location.href = (window as any).STAFF_API.historyExportUrlForDate(d);
+    const parts: string[] = [];
+    if (loaded.day) parts.push(exportShiftCSV(loaded.day));
+    if (loaded.night) parts.push(exportShiftCSV(loaded.night));
+    if (parts.length === 0) return;
+    const blob = new Blob([parts.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'shift-history.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   });
 
-  document.getElementById('hist-export-range')!.addEventListener('click', () => {
+  document.getElementById('hist-export-range')!.addEventListener('click', async () => {
     const s = (document.getElementById('hist-start') as HTMLInputElement).value;
     const e = (document.getElementById('hist-end') as HTMLInputElement).value;
-    if (s && e) window.location.href = (window as any).STAFF_API.historyExportUrlForRange(s, e);
+    if (!s || !e) return;
+    const dates = (await listShiftDates()).filter((d) => d >= s && d <= e);
+    const parts: string[] = [];
+    for (const d of dates) {
+      const day = await getShiftByDate(d, 'day');
+      const night = await getShiftByDate(d, 'night');
+      if (day) parts.push(exportShiftCSV(day));
+      if (night) parts.push(exportShiftCSV(night));
+    }
+    if (parts.length === 0) return;
+    const blob = new Blob([parts.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'shift-history-range.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   });
 
   loadDates();

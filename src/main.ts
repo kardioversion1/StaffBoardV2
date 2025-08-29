@@ -13,6 +13,7 @@ import {
 import { applyTheme } from '@/state/theme';
 import { applyUI } from '@/state/uiConfig';
 import { seedDefaults } from '@/seedDefaults';
+import { seedDemoHistory } from '@/history/seed';
 import { fetchWeather, renderWeather } from '@/ui/widgets';
 import { hhmmNowLocal, deriveShift } from '@/utils/time';
 import { renderHeader } from '@/ui/header';
@@ -67,6 +68,7 @@ initState();
   } catch {}
   loadConfig().then(async () => {
     await seedDefaults();
+    await seedDemoHistory();
     if (zonesInvalid()) {
       showBanner('Zone data invalid, using defaults');
     }

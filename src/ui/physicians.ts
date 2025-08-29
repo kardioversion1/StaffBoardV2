@@ -33,7 +33,6 @@ function unfoldICSLines(text: string): string[] {
 
 /** Extract YYYY-MM-DD from DTSTART variants (DATE, DATE-TIME, TZID, etc.) */
 function extractDateISO(dtstart: string): string | null {
-  // Strip parameters before colon (e.g., "DTSTART;TZID=America/New_York:20250829T070000")
   const val = dtstart.includes(':') ? dtstart.split(':', 2)[1] : dtstart;
   const digits = (val || '').replace(/[^0-9]/g, '');
   if (digits.length >= 8) {
@@ -72,8 +71,8 @@ function parseICS(text: string): Event[] {
     if (current) {
       const idx = line.indexOf(':');
       if (idx > -1) {
-        const keyRaw = line.slice(0, idx);           // e.g., "DTSTART;TZID=America/New_York"
-        const key = keyRaw.split(';')[0];            // -> "DTSTART"
+        const keyRaw = line.slice(0, idx);  // e.g., "DTSTART;TZID=America/New_York"
+        const key = keyRaw.split(';')[0];   // -> "DTSTART"
         const value = line.slice(idx + 1);
         current[key] = value;
       }
@@ -96,14 +95,11 @@ async function fetchPhysicianICS(): Promise<string> {
   const cfgUrl: unknown = cfg?.physicians?.calendarUrl;
   const url = (typeof cfgUrl === 'string' && cfgUrl.trim()) ? cfgUrl.trim() : DEFAULT_CAL_URL;
 
-  // Try direct ICS fetch first (ByteBloc or user-provided). If it fails (CORS, network),
-  // fall back to server-side proxy: /api.php?action=physicians (should return ICS).
   try {
     const res = await fetch(url, { credentials: 'omit', mode: 'cors' });
     if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
     return await res.text();
   } catch {
-    // Same-origin PHP proxy (implement to read remote ICS server-side to bypass CORS).
     const proxied = await fetch('/api.php?action=physicians', { credentials: 'same-origin' });
     if (!proxied.ok) throw new Error('proxy fetch failed');
     return await proxied.text();
@@ -119,7 +115,6 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
     const isJewishDowntown = (loc: string) =>
       JEWISH_DOWNTOWN_PATTERNS.some((re) => re.test(loc));
 
-    // Filter by date + location heuristics; dedupe physician names.
     const docsSet = new Set(
       events
         .filter((e) => e.date === dateISO && (e.location ? isJewishDowntown(e.location) : true))
@@ -136,6 +131,97 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
   } catch {
     el.textContent = 'Physician schedule unavailable';
   }
+}
+
+/** Fetch physician schedules within a date range. */
+export async function getUpcomingDoctors(
+  startDateISO: string,
+  days: number
+): Promise<Record<string, string[]>> {
+  const ics = await fetchPhysicianICS();
+  const events = parseICS(ics);
+
+  const start = new Date(startDateISO + 'T00:00:00').getTime();
+  const end = start + days * 86400000;
+
+  const isJewishDowntown = (loc: string) =>
+    JEWISH_DOWNTOWN_PATTERNS.some((re) => re.test(loc));
+
+  const map: Record<string, string[]> = {};
+  for (const e of events) {
+    const t = new Date(e.date + 'T00:00:00').getTime();
+    if (t >= start && t < end && (e.location ? isJewishDowntown(e.location) : true)) {
+      (map[e.date] ||= []).push(e.summary.trim());
+    }
+  }
+  // De-dupe per date
+  for (const d of Object.keys(map)) {
+    map[d] = Array.from(new Set(map[d]));
+  }
+  return map;
+}
+
+/** Render a popup showing upcoming physicians. */
+export async function renderPhysicianPopup(
+  startDateISO: string,
+  days: number
+): Promise<void> {
+  try {
+    const data = await getUpcomingDoctors(startDateISO, days);
+    const dates = Object.keys(data).sort();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'phys-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+
+    const content =
+      dates.length === 0
+        ? '<p>No physicians scheduled</p>'
+        : dates
+            .map(
+              (d) =>
+                `<div class="phys-day">
+                  <strong class="phys-date">${d}</strong>
+                  <ul class="phys-list">${data[d].map((n) => `<li>${n}</li>`).join('')}</ul>
+                </div>`
+            )
+            .join('');
+
+    overlay.innerHTML = `
+      <div class="phys-modal">
+        <div class="phys-modal-header">
+          <h3 class="phys-title">Upcoming Physicians</h3>
+          <button id="phys-close" class="btn btn-ghost" aria-label="Close">✕</button>
+        </div>
+        <div class="phys-modal-body">${content}</div>
+      </div>
+    `;
+
+    const close = (): void => overlay.remove();
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close();
+    });
+    overlay.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Escape') close();
+    });
+
+    document.body.appendChild(overlay);
+    (overlay.querySelector('#phys-close') as HTMLButtonElement)?.addEventListener('click', close);
+    (overlay.querySelector('#phys-close') as HTMLButtonElement)?.focus();
+  } catch {
+    // no-op on failure
+  }
+}
+
+/** Optional: helper to wire a button that opens the popup. */
+export function attachPhysiciansButton(
+  button: HTMLElement,
+  startDateISO: string,
+  days: number
+): void {
+  button.addEventListener('click', () => { void renderPhysicianPopup(startDateISO, days); });
 }
 
 // Exported for testing

@@ -12,6 +12,7 @@ import {
   ActiveBoard,
   CURRENT_SCHEMA_VERSION,
   migrateActiveBoard,
+  setActiveBoardCache,
 } from '@/state';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWeather } from './widgets';
@@ -69,6 +70,7 @@ export async function renderBoard(
         active = migrateActiveBoard(active);
       }
       normalizeActiveZones(active, cfg.zones);
+      setActiveBoardCache(active);
 
     // Layout
     root.innerHTML = `

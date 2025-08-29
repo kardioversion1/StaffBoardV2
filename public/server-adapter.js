@@ -4,6 +4,24 @@
     return `staffboard:${key}${qs ? ':' + qs : ''}`;
   };
 
+  const cache = (() => {
+    try {
+      const s = window.sessionStorage;
+      return {
+        get: (k) => s.getItem(k),
+        set: (k, v) => s.setItem(k, v),
+      };
+    } catch {
+      const m = {};
+      return {
+        get: (k) => (k in m ? m[k] : null),
+        set: (k, v) => {
+          m[k] = v;
+        },
+      };
+    }
+  })();
+
   async function load(key, params = {}) {
     const keyName = cacheKey(key, params);
     const qs = new URLSearchParams({ action: 'load', key, ...params });
@@ -13,10 +31,10 @@
       });
       if (!res.ok) throw new Error('Network');
       const data = await res.json();
-      sessionStorage.setItem(keyName, JSON.stringify(data));
+      cache.set(keyName, JSON.stringify(data));
       return data;
     } catch (err) {
-      const cached = sessionStorage.getItem(keyName);
+      const cached = cache.get(keyName);
       if (cached) return JSON.parse(cached);
       throw err;
     }
@@ -33,7 +51,7 @@
     if (!res.ok) throw new Error('Network');
     const j = await res.json();
     if (!j.ok) throw new Error(j.error || 'save failed');
-    sessionStorage.setItem(keyName, JSON.stringify(payload));
+    cache.set(keyName, JSON.stringify(payload));
     return j;
   }
 

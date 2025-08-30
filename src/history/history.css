@@ -1,2 +1,5 @@
 .history-nav{display:flex;gap:8px;margin-bottom:12px}
 .history-nav button{padding:4px 8px}
+.history-table{border-collapse:collapse;width:100%}
+.history-table th,.history-table td{border:1px solid #ccc;padding:4px;text-align:left}
+.history-table thead{background:#f5f5f5}

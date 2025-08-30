@@ -72,6 +72,41 @@ describe('history persistence', () => {
     expect(rows[0].dto).toBe(true);
   });
 
+  it('records previous zone when nurse moves', async () => {
+    const first: PublishedShiftSnapshot = {
+      ...base,
+      zoneAssignments: [
+        {
+          staffId: '1',
+          displayName: 'Alice',
+          role: 'nurse',
+          zone: 'A',
+          startISO: '2024-01-01T07:00:00.000Z',
+          endISO: '2024-01-01T10:00:00.000Z',
+        },
+      ],
+    };
+    const second: PublishedShiftSnapshot = {
+      ...base,
+      zoneAssignments: [
+        {
+          staffId: '1',
+          displayName: 'Alice',
+          role: 'nurse',
+          zone: 'B',
+          startISO: '2024-01-01T10:00:00.000Z',
+          endISO: '2024-01-01T19:00:00.000Z',
+        },
+      ],
+    };
+    await indexStaffAssignments(first);
+    await indexStaffAssignments(second);
+    const rows = await findShiftsByStaff('1');
+    expect(rows.length).toBe(2);
+    expect(rows[0].zone).toBe('B');
+    expect(rows[0].previousZone).toBe('A');
+  });
+
   it('saves and fetches huddles', async () => {
     const rec: HuddleRecord = {
       dateISO: '2024-01-01',

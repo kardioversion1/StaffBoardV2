@@ -25,7 +25,7 @@ function buildEmptyDraft(dateISO: string, shift: 'day' | 'night', zones: ZoneDef
 
 /** Render the pending shift builder allowing drag-and-drop assignments. */
 export async function renderBuilder(root: HTMLElement): Promise<void> {
-  const cfg = getConfig();
+  let cfg = getConfig();
   const staff = await loadStaff();
   setNurseCache(staff);
   const key = KS.DRAFT(STATE.dateISO, STATE.shift);
@@ -72,6 +72,14 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
   renderRoster();
   renderZones();
   renderLeads();
+
+  document.addEventListener('config-changed', () => {
+    if (!document.getElementById('builder-zones')) return;
+    cfg = getConfig();
+    normalizeActiveZones(board, cfg.zones);
+    renderZones();
+    renderLeads();
+  });
 
   // Resolved version: keep return type + remove listener if element is gone.
   function adjustRosterHeight(): void {
@@ -261,6 +269,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
           board.zones[val] = board.zones[z.name] || [];
           delete board.zones[z.name];
           await saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
+          document.dispatchEvent(new Event('config-changed'));
           await save();
           renderZones();
         }
@@ -279,6 +288,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
           if (cfg.zoneColors) delete cfg.zoneColors[removed.name];
         }
         await saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
+        document.dispatchEvent(new Event('config-changed'));
         await save();
         renderZones();
       });
@@ -307,6 +317,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
               cfg.zones.map((zz) => [zz.name, board.zones[zz.name] || []])
             );
             await saveConfig({ zones: cfg.zones });
+            document.dispatchEvent(new Event('config-changed'));
             await save();
             renderZones();
             return;
@@ -386,6 +397,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
         if (!isNaN(fromIdx)) {
           cfg.zones[fromIdx].pct = pct;
           await saveConfig({ zones: cfg.zones });
+          document.dispatchEvent(new Event('config-changed'));
           await save();
           renderZones();
         }

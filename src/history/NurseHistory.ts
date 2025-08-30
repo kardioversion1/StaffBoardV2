@@ -17,8 +17,8 @@ export function renderNurseHistory(root: HTMLElement): void {
         <button id="hist-nurse-export" class="btn">Export CSV</button>
       </div>
       <table class="history-table">
-        <thead><tr><th>Date</th><th>Shift</th><th>Zone</th></tr></thead>
-        <tbody id="hist-nurse-body"></tbody>
+        <thead><tr><th>Date</th><th>Shift</th><th>Zone</th><th>Prev Zone</th></tr></thead>
+        <tbody id="hist-nurse-body"><tr><td colspan="4">Select a nurse</td></tr></tbody>
       </table>
     </div>
   `;
@@ -40,12 +40,14 @@ export function renderNurseHistory(root: HTMLElement): void {
   document.getElementById('hist-nurse-load')!.addEventListener('click', async () => {
     const id = sel.value;
     current = await findShiftsByStaff(id);
-    body.innerHTML = current
-      .map(
-        (r) =>
-          `<tr><td>${r.dateISO}</td><td>${r.shift}</td><td>${r.zone}</td></tr>`
-      )
-      .join('');
+    body.innerHTML = current.length
+      ? current
+          .map(
+            (r) =>
+              `<tr><td>${r.dateISO}</td><td>${r.shift}</td><td>${r.zone}</td><td>${r.previousZone ?? ''}</td></tr>`
+          )
+          .join('')
+      : '<tr><td colspan="4">No history found</td></tr>';
   });
 
   document

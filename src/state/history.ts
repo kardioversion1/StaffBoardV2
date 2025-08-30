@@ -95,6 +95,7 @@ export interface NurseShiftIndexEntry {
   dateISO: string;
   shift: ShiftKind;
   zone: string;
+  previousZone?: string;
   startISO: string;
   endISO: string;
   dto?: boolean;
@@ -144,6 +145,9 @@ export async function indexStaffAssignments(
   for (const a of snapshot.zoneAssignments) {
     const key = STAFF_KEY(a.staffId);
     const list = (await kvGet<NurseShiftIndexEntry[]>(key)) || [];
+    const prev = list.find(
+      (e) => e.dateISO === snapshot.dateISO && e.shift === snapshot.shift
+    );
     const entry: NurseShiftIndexEntry = {
       staffId: a.staffId,
       displayName: a.displayName,
@@ -151,6 +155,7 @@ export async function indexStaffAssignments(
       dateISO: snapshot.dateISO,
       shift: snapshot.shift,
       zone: a.zone,
+      previousZone: prev?.zone,
       startISO: a.startISO,
       endISO: a.endISO,
       dto: !!a.dto,

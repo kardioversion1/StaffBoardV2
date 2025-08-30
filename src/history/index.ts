@@ -71,7 +71,7 @@ export function exportShiftCSV(snapshot: PublishedShiftSnapshot): string {
  * @returns CSV string
  */
 export function exportNurseHistoryCSV(entries: NurseShiftIndexEntry[]): string {
-  const header = 'staffId,displayName,role,date,shift,zone,startISO,endISO,dto';
+  const header = 'staffId,displayName,role,date,shift,zone,previousZone,startISO,endISO,dto';
   const rows = entries
     .map((e) =>
       [
@@ -81,6 +81,7 @@ export function exportNurseHistoryCSV(entries: NurseShiftIndexEntry[]): string {
         e.dateISO,
         e.shift,
         e.zone,
+        e.previousZone ?? '',
         e.startISO,
         e.endISO,
         e.dto ? '1' : '0',

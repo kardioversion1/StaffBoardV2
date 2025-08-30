@@ -1,7 +1,7 @@
 # StaffBoard Visual Interface Guide
 
 ## Header
-The top header shows the current shift and date, a large clock, and action buttons to change the theme, open shift huddles or sign out, sync data, refresh, and reset the cache【F:src/ui/header.ts†L40-L55】
+The top header shows the current shift and date, a large clock, and action buttons to change the theme, open shift huddles or sign out, sync data, refresh, and reset the cache【F:src/ui/header.ts†L40-L55】. The Shift Huddle includes a "Completed By" field that lets you select a nurse or enter a name manually.
 
 ## Navigation Tabs
 Below the header, tabs switch between major views: **Board**, **Builder**, **Settings**, and **History**. The Builder tab appears only when enabled by a feature flag【F:src/ui/tabs.ts†L19-L24】
@@ -25,4 +25,4 @@ The calendar view lets you select a date, load or save snapshots, and export sin
 This view allows selecting a nurse, loading their recent shifts into a table, and exporting the results to CSV【F:src/history/NurseHistory.ts†L12-L21】
 
 ### Huddles
-The huddle table lists saved huddle records with an export option for CSV output【F:src/history/HuddleTable.ts†L11-L20】
+The huddle table lists saved huddle records with all checklist items and notes for each entry, plus an export option for CSV output that opens cleanly in spreadsheet tools【F:src/history/HuddleTable.ts†L11-L33】【F:src/history/index.ts†L99-L123】

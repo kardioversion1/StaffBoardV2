@@ -14,7 +14,7 @@ export function renderHuddleTable(root: HTMLElement): void {
         <button id="huddle-export" class="btn">Export CSV</button>
       </div>
       <table class="history-table">
-        <thead><tr><th>Date</th><th>Shift</th><th>By</th><th>Notes</th></tr></thead>
+        <thead><tr><th>Date</th><th>Shift</th><th>By</th><th>Checklist</th><th>Notes</th></tr></thead>
         <tbody id="huddle-body"></tbody>
       </table>
     </div>
@@ -26,10 +26,15 @@ export function renderHuddleTable(root: HTMLElement): void {
   (async () => {
     records = await listHuddles();
     body.innerHTML = records
-      .map(
-        (r) =>
-          `<tr><td>${r.dateISO}</td><td>${r.shift}</td><td>${r.recordedBy}</td><td>${r.notes}</td></tr>`
-      )
+      .map((r) => {
+        const items = r.checklist
+          .map(
+            (i) =>
+              `${i.label}: ${i.state}${i.note ? ` (${i.note})` : ''}`
+          )
+          .join('<br>');
+        return `<tr><td>${r.dateISO}</td><td>${r.shift}</td><td>${r.recordedBy}</td><td>${items}</td><td>${r.notes}</td></tr>`;
+      })
       .join('');
   })();
 

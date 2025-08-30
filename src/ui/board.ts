@@ -287,6 +287,25 @@ function renderZones(
       ev.dataTransfer?.setData('zone-index', String(i));
     });
 
+    section.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    section.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const zoneIdxStr = (e as DragEvent).dataTransfer?.getData('zone-index');
+      if (!zoneIdxStr) return;
+      const fromIdx = Number(zoneIdxStr);
+      if (isNaN(fromIdx) || fromIdx === i) return;
+      const [moved] = cfg.zones.splice(fromIdx, 1);
+      moved.pct = z.pct;
+      cfg.zones.splice(i, 0, moved);
+      await saveConfig({ zones: cfg.zones });
+      renderZones(active, cfg, staff, save);
+    });
+
     // Highlight color: explicit or from palette
     const explicit = z.color || cfg.zoneColors?.[zName];
     if (explicit) {

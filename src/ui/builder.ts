@@ -377,15 +377,16 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
 
     const enableDrop = (container: HTMLElement, pct: boolean) => {
       container.addEventListener('dragover', (e) => e.preventDefault());
-      container.addEventListener('drop', async (e) => {
-        const zoneIdxStr = e.dataTransfer?.getData('zone-index');
-        if (!zoneIdxStr) return;
+      container.addEventListener('drop', async (e: DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        const zoneIdxStr = e.dataTransfer?.getData('zone-index');
+        if (!zoneIdxStr) return;
         const fromIdx = Number(zoneIdxStr);
         if (!isNaN(fromIdx)) {
           cfg.zones[fromIdx].pct = pct;
           await saveConfig({ zones: cfg.zones });
+          await save();
           renderZones();
         }
       });

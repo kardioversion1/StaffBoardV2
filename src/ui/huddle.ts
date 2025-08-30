@@ -1,5 +1,11 @@
-import { saveHuddle, getHuddle, submitHuddle, type HuddleRecord } from '@/state/history';
+import {
+  saveHuddle,
+  getHuddle,
+  submitHuddle,
+  type HuddleRecord,
+} from '@/state/history';
 import { DEFAULT_HUDDLE_ITEMS } from '@/config/huddle';
+import { loadStaff, type Staff } from '@/state/staff';
 
 let record: HuddleRecord;
 
@@ -8,7 +14,11 @@ async function save() {
   await saveHuddle(record);
 }
 
-export async function openHuddle(dateISO: string, shift: 'day' | 'night'): Promise<void> {
+export async function openHuddle(
+  dateISO: string,
+  shift: 'day' | 'night'
+): Promise<void> {
+  const staff = await loadStaff();
   record =
     (await getHuddle(dateISO, shift)) || {
       dateISO,
@@ -19,6 +29,7 @@ export async function openHuddle(dateISO: string, shift: 'day' | 'night'): Promi
       notes: '',
     };
   renderOverlay();
+  wireRecorder(staff);
   renderChecklist();
   wireNotes();
   wireTimer();
@@ -39,6 +50,11 @@ function renderOverlay() {
     wrap.innerHTML = `<div class="offcanvas open" role="dialog" aria-labelledby="huddle-title">
       <section class="panel" style="height:100%;overflow:auto;display:flex;flex-direction:column;gap:8px;">
         <h2 id="huddle-title">Shift Huddle</h2>
+        <div class="form-row">
+          <label for="huddle-recorder">Completed By</label>
+          <input id="huddle-recorder" class="input" list="huddle-recorder-list">
+          <datalist id="huddle-recorder-list"></datalist>
+        </div>
         <div id="huddle-checklist"></div>
         <div>
           <label for="huddle-notes">Quick Notes</label>
@@ -103,6 +119,23 @@ function renderChecklist() {
       item.note = note.value;
       await save();
     });
+  });
+}
+
+function wireRecorder(staff: Staff[]) {
+  const input = document.getElementById('huddle-recorder') as HTMLInputElement;
+  const list = document.getElementById(
+    'huddle-recorder-list'
+  ) as HTMLDataListElement;
+  const names = staff
+    .filter((s) => s.role === 'nurse')
+    .map((s) => s.name || `${s.first ?? ''} ${s.last ?? ''}`.trim())
+    .filter((n) => n);
+  list.innerHTML = names.map((n) => `<option value="${n}"></option>`).join('');
+  input.value = record.recordedBy === 'unknown' ? '' : record.recordedBy;
+  input.addEventListener('blur', async () => {
+    record.recordedBy = input.value || 'unknown';
+    await save();
   });
 }
 

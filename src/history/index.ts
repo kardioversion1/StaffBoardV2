@@ -8,6 +8,7 @@ import type {
   HuddleRecord,
 } from '@/state/history';
 import * as Server from '@/server';
+import { DEFAULT_HUDDLE_ITEMS } from '@/config/huddle';
 
 /**
  * Render History tab with sub-views.
@@ -97,17 +98,30 @@ export function exportNurseHistoryCSV(entries: NurseShiftIndexEntry[]): string {
  * @returns CSV string
  */
 export function exportHuddlesCSV(records: HuddleRecord[]): string {
-  const header = 'date,shift,recordedAt,recordedBy,notes';
+  const ids = DEFAULT_HUDDLE_ITEMS.map((i) => i.id);
+  const header = ['date', 'shift', 'recordedAt', 'recordedBy', 'notes', ...ids].join(
+    ','
+  );
   const rows = records
-    .map((r) =>
-      [
+    .map((r) => {
+      const map = Object.fromEntries(r.checklist.map((c) => [c.id, c]));
+      const vals = ids.map((id) => {
+        const item = map[id];
+        if (!item) return '';
+        const base = item.state;
+        return item.note
+          ? `${base}:${item.note.replace(/"/g, '""')}`
+          : base;
+      });
+      return [
         r.dateISO,
         r.shift,
         r.recordedAtISO,
         r.recordedBy,
         `"${r.notes.replace(/"/g, '""')}"`,
-      ].join(',')
-    )
+        ...vals,
+      ].join(',');
+    })
     .join('\n');
   return `${header}\n${rows}`;
 }

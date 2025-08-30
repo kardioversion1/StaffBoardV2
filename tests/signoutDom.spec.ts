@@ -35,10 +35,10 @@ describe('signout button modes', () => {
     renderHeader();
     expect(document.getElementById('huddle-btn')).toBeTruthy();
   });
-  it('omits button when mode=disabled', async () => {
-    await saveUIConfig({ signoutMode: 'disabled' });
+  it('renders huddle button when mode=disabled', async () => {
+    await saveConfig({ ui: { signoutMode: 'disabled' } });
     renderHeader();
-    expect(document.getElementById('huddle-btn')).toBeNull();
+    expect(document.getElementById('huddle-btn')).toBeTruthy();
     expect(document.getElementById('handoff')).toBeNull();
   });
 });

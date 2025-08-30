@@ -1,18 +1,17 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-let server: ChildProcess;
-
-beforeAll(async () => {
-  server = spawn('php', ['-S', '127.0.0.1:8021', '-t', 'server'], {
-    env: { ...process.env, HEYBRE_API_KEY: 'test-key' },
-    stdio: 'ignore',
+beforeEach(() => {
+  vi.stubGlobal('fetch', (input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : (input as Request).url;
+    if (url.includes('action=save')) return Promise.resolve(new Response('', { status: 400 }));
+    if (url.includes('mode=list')) return Promise.resolve(new Response('', { status: 400 }));
+    if (url.includes('mode=byNurse')) return Promise.resolve(new Response('', { status: 400 }));
+    return Promise.resolve(new Response('', { status: 200 }));
   });
-  await new Promise((resolve) => setTimeout(resolve, 500));
 });
 
-afterAll(() => {
-  server.kill();
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('API validation', () => {

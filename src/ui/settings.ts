@@ -13,6 +13,7 @@ import {
   type ThemePreset,
 } from '@/state/theme';
 import * as Server from '@/server';
+import { openWelcomeModal } from '@/ui/welcome';
 
 function mapIcon(cond: string) {
   const c = (cond || '').toLowerCase();
@@ -227,6 +228,7 @@ function renderGeneralSettings() {
   el.innerHTML = `
     <section class="panel">
       <h3>General</h3>
+      <div class="form-row"><button id="welcome-btn" class="btn">Welcome / How To</button></div>
       ${zonesHTML}
       <div class="form-row"><button id="zone-add" class="btn">Add Zone</button></div>
       <div class="form-row"><label>Day hours <input id="gs-day" type="number" value="${cfg.shiftDurations?.day}"></label></div>
@@ -250,10 +252,12 @@ function renderGeneralSettings() {
       <div class="form-row">
         <label for="gs-sidebar-width">Right Sidebar Width</label>
         <input id="gs-sidebar-width" type="range" min="${ui.rightSidebarMinPx}" max="${ui.rightSidebarMaxPx}" value="${ui.rightSidebarWidthPx}">
-        <input id="gs-sidebar-width-num" type="number" min="${ui.rightSidebarMinPx}" max="${ui.rightSidebarMaxPx}" value="${ui.rightSidebarWidthPx}">
+      <input id="gs-sidebar-width-num" type="number" min="${ui.rightSidebarMinPx}" max="${ui.rightSidebarMaxPx}" value="${ui.rightSidebarWidthPx}">
       </div>
     </section>
   `;
+
+  (document.getElementById('welcome-btn') as HTMLButtonElement).addEventListener('click', openWelcomeModal);
 
   el.querySelectorAll('.zone-sel').forEach((sel) => {
     sel.addEventListener('change', async () => {

@@ -274,6 +274,8 @@ function renderZones(
   const cont = document.getElementById('zones')!;
   pctCont.innerHTML = '';
   cont.innerHTML = '';
+  pctCont.style.minHeight = '40px';
+  cont.style.minHeight = '40px';
   const zones: ZoneDef[] = cfg.zones || [];
 
   zones.forEach((z: ZoneDef, i: number) => {

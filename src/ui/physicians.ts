@@ -47,22 +47,30 @@ function extractDateISO(dtstart: string): string | null {
 function parseICS(text: string): Event[] {
   const lines = unfoldICSLines(text);
   const events: Event[] = [];
-  let current: Record<string, string> | null = null;
+  let current: Record<string, unknown> | null = null;
 
   for (const line of lines) {
     if (line === 'BEGIN:VEVENT') {
-      current = {};
+      current = { attendees: [] as string[] };
       continue;
     }
     if (line === 'END:VEVENT') {
-      if (current?.DTSTART && current.SUMMARY) {
-        const dateISO = extractDateISO(current.DTSTART);
+      if (current?.DTSTART) {
+        const dateISO = extractDateISO(String(current.DTSTART));
         if (dateISO) {
-          events.push({
-            date: dateISO,
-            summary: icsUnescape(current.SUMMARY).trim(),
-            location: icsUnescape(current.LOCATION || '').trim(),
-          });
+          const location = icsUnescape(String(current.LOCATION || '')).trim();
+          const attendees = current.attendees as string[];
+          if (attendees.length) {
+            for (const name of attendees) {
+              events.push({ date: dateISO, summary: name, location });
+            }
+          } else if (current.SUMMARY) {
+            events.push({
+              date: dateISO,
+              summary: icsUnescape(String(current.SUMMARY)).trim(),
+              location,
+            });
+          }
         }
       }
       current = null;
@@ -71,10 +79,17 @@ function parseICS(text: string): Event[] {
     if (current) {
       const idx = line.indexOf(':');
       if (idx > -1) {
-        const keyRaw = line.slice(0, idx);  // e.g., "DTSTART;TZID=America/New_York"
-        const key = keyRaw.split(';')[0];   // -> "DTSTART"
+        const keyRaw = line.slice(0, idx); // e.g., "DTSTART;TZID=America/New_York"
+        const key = keyRaw.split(';')[0]; // -> "DTSTART"
         const value = line.slice(idx + 1);
-        current[key] = value;
+
+        if (key === 'ATTENDEE') {
+          const cnMatch = /CN=([^;:]+)/i.exec(keyRaw);
+          const name = cnMatch ? icsUnescape(cnMatch[1]).replace(/^"|"$/g, '').trim() : '';
+          if (name) (current.attendees as string[]).push(name);
+        } else {
+          current[key] = value;
+        }
       }
     }
   }

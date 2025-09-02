@@ -156,6 +156,8 @@ export async function renderBoard(
     // Re-render on config changes (e.g., zone list or colors)
     document.addEventListener('config-changed', () => {
       const c = getConfig();
+      normalizeActiveZones(active, c.zones);
+      queueSave();
       renderLeadership(active, staff, queueSave);
       renderZones(active, c, staff, queueSave);
     });

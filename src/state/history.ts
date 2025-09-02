@@ -61,6 +61,7 @@ export interface HuddleRecord {
   shift: ShiftKind;
   recordedAtISO: string;
   recordedBy: string;
+  nedocs: number;
   checklist: HuddleChecklistItem[];
   notes: string;
 }

@@ -25,11 +25,14 @@ export async function openHuddle(
       shift,
       recordedAtISO: new Date().toISOString(),
       recordedBy: 'unknown',
+      nedocs: 0,
       checklist: DEFAULT_HUDDLE_ITEMS.map((i) => ({ ...i, state: 'ok' })),
       notes: '',
     };
+  if (record.nedocs === undefined) record.nedocs = 0;
   renderOverlay();
   wireRecorder(staff);
+  wireNedocs();
   renderChecklist();
   wireNotes();
   wireTimer();
@@ -54,6 +57,10 @@ function renderOverlay() {
           <label for="huddle-recorder">Completed By</label>
           <input id="huddle-recorder" class="input" list="huddle-recorder-list">
           <datalist id="huddle-recorder-list"></datalist>
+        </div>
+        <div class="form-row">
+          <label for="huddle-nedocs">NEDOCS Score <a href="https://www.mdcalc.com/calc/3143/nedocs-score-emergency-department-overcrowding" target="_blank" rel="noopener">calc</a></label>
+          <input id="huddle-nedocs" class="input" type="number" min="0" max="200" value="${record.nedocs}">
         </div>
         <div id="huddle-checklist"></div>
         <div>
@@ -135,6 +142,16 @@ function wireRecorder(staff: Staff[]) {
   input.value = record.recordedBy === 'unknown' ? '' : record.recordedBy;
   input.addEventListener('blur', async () => {
     record.recordedBy = input.value || 'unknown';
+    await save();
+  });
+}
+
+function wireNedocs() {
+  const input = document.getElementById('huddle-nedocs') as HTMLInputElement;
+  input.value = String(record.nedocs);
+  input.addEventListener('blur', async () => {
+    const val = parseInt(input.value, 10);
+    record.nedocs = isNaN(val) ? 0 : val;
     await save();
   });
 }

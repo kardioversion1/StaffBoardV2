@@ -99,7 +99,7 @@ export function exportNurseHistoryCSV(entries: NurseShiftIndexEntry[]): string {
  */
 export function exportHuddlesCSV(records: HuddleRecord[]): string {
   const ids = DEFAULT_HUDDLE_ITEMS.map((i) => i.id);
-  const header = ['date', 'shift', 'recordedAt', 'recordedBy', 'notes', ...ids].join(
+  const header = ['date', 'shift', 'recordedAt', 'recordedBy', 'nedocs', 'notes', ...ids].join(
     ','
   );
   const rows = records
@@ -118,6 +118,7 @@ export function exportHuddlesCSV(records: HuddleRecord[]): string {
         r.shift,
         r.recordedAtISO,
         r.recordedBy,
+        r.nedocs,
         `"${r.notes.replace(/"/g, '""')}"`,
         ...vals,
       ].join(',');

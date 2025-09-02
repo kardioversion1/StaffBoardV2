@@ -1,5 +1,6 @@
 # Changelog
 
+- fix: stop seeding default zones so board starts empty
 - fix: normalize zone definitions and guard against invalid data
 - fix: prevent full app re-render on clock tick to stop input focus loss; throttle weather updates.
 - feat: seed defaults via `staff_and_zones.json` and `seedDefaults()`; enforce canonical zones.

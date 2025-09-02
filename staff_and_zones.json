@@ -1,14 +1,5 @@
 {
   "version": 1,
-  "zones": [
-    { "id": "z-01", "name": "Rooms 1-7 & 10", "color": "#f6e5f5" },
-    { "id": "z-02", "name": "Rooms 8-12", "color": "#e5f0ff" },
-    { "id": "z-03", "name": "Rooms 13-16", "color": "#e5fff8" },
-    { "id": "z-04", "name": "Rooms 17-20", "color": "#fffbe5" },
-    { "id": "z-05", "name": "Rooms 21-24", "color": "#ffe5e5" },
-    { "id": "z-06", "name": "Faster", "color": "#e5ffe5" },
-    { "id": "z-07", "name": "Cardiac Obs", "color": "#e5e5ff" }
-  ],
   "staff": [
     { "id": "00-aaaaaa-001", "name": "Alice Nurse", "role": "nurse" },
     { "id": "00-bbbbbb-001", "name": "Bob Tech", "role": "tech" }

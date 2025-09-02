@@ -113,6 +113,7 @@ describe('history persistence', () => {
       shift: 'day',
       recordedAtISO: '2024-01-01T08:00:00.000Z',
       recordedBy: 'me',
+      nedocs: 0,
       checklist: [{ id: 'airway', label: 'Airway', checked: true }],
       notes: 'all good',
     };
@@ -127,6 +128,7 @@ describe('history persistence', () => {
       shift: 'night',
       recordedAtISO: '2024-01-02T20:00:00.000Z',
       recordedBy: 'me',
+      nedocs: 0,
       checklist: [{ id: 'airway', label: 'Airway', checked: true }],
       notes: 'done',
     };

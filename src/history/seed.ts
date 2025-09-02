@@ -42,6 +42,7 @@ export async function seedDemoHistory(): Promise<void> {
     shift: 'day',
     recordedAtISO: publishedAt,
     recordedBy: 'demo',
+    nedocs: 0,
     checklist: [],
     notes: 'demo huddle',
   };

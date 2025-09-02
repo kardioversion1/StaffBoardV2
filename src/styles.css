@@ -13,6 +13,8 @@
   --text-high: #fff;
   --text-med: #C8D2E0;
   --text-muted: #9aa8be;
+  --pill-fg: #1A2233;
+  --pill-meta-fg: #2C3A52;
 
   --accent-home: #4CC9F0;
   --accent-travel: #F72585;
@@ -58,6 +60,8 @@
   --text-high:#1A2233;
   --text-med:#2C3A52;
   --text-muted:#54627A;
+  --pill-fg:#1A2233;
+  --pill-meta-fg:#2C3A52;
   --elev-1: 0 2px 8px rgba(0,0,0,.08);
   --elev-2: 0 6px 20px rgba(0,0,0,.12);
 
@@ -149,6 +153,12 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
   background: var(--pill, var(--control));
   border:1px solid var(--line);
   color:var(--zone-fg);
+}
+.nurse-pill[data-type]{
+  color:var(--pill-fg);
+}
+.nurse-pill[data-type] .nurse-meta{
+  color:var(--pill-meta-fg);
 }
 .nurse-pill[data-type="home"]{--pill:var(--accent-home)}
 .nurse-pill[data-type="travel"]{--pill:var(--accent-travel)}

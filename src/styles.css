@@ -39,14 +39,14 @@
   --ring: rgba(0,120,212,.45);
 
   /* dark palette */
-  --zone-bg-1:#3b82f6; --zone-bg-2:#2563eb; --zone-bg-3:#1d4ed8;
-  --zone-bg-4:#ef4444; --zone-bg-5:#b91c1c;
-  --zone-bg-6:#10b981; --zone-bg-7:#047857; --zone-bg-8:#8b5cf6;
+  --zone-bg-1:#60a5fa; --zone-bg-2:#3b82f6; --zone-bg-3:#2563eb;
+  --zone-bg-4:#f87171; --zone-bg-5:#ef4444;
+  --zone-bg-6:#34d399; --zone-bg-7:#10b981; --zone-bg-8:#a78bfa;
 
   /* nurse tones harmonized with zone colors */
-  --nurse-bg-1:#60a5fa; --nurse-bg-2:#3b82f6; --nurse-bg-3:#2563eb;
-  --nurse-bg-4:#f87171; --nurse-bg-5:#ef4444;
-  --nurse-bg-6:#34d399; --nurse-bg-7:#10b981; --nurse-bg-8:#a78bfa;
+  --nurse-bg-1:#93c5fd; --nurse-bg-2:#60a5fa; --nurse-bg-3:#3b82f6;
+  --nurse-bg-4:#fca5a5; --nurse-bg-5:#f87171;
+  --nurse-bg-6:#86efac; --nurse-bg-7:#34d399; --nurse-bg-8:#c4b5fd;
 }
 
 :root[data-theme='light']{
@@ -63,14 +63,14 @@
 
   --zone-fg: #0a0a0a;
   /* light palette */
-  --zone-bg-1:#dbeafe; --zone-bg-2:#bfdbfe; --zone-bg-3:#93c5fd;
-  --zone-bg-4:#fee2e2; --zone-bg-5:#fecaca;
-  --zone-bg-6:#d1fae5; --zone-bg-7:#a7f3d0; --zone-bg-8:#ede9fe;
+  --zone-bg-1:#93c5fd; --zone-bg-2:#60a5fa; --zone-bg-3:#3b82f6;
+  --zone-bg-4:#fca5a5; --zone-bg-5:#f87171;
+  --zone-bg-6:#86efac; --zone-bg-7:#34d399; --zone-bg-8:#c4b5fd;
 
   /* nurse tones for light theme */
-  --nurse-bg-1:#bfdbfe; --nurse-bg-2:#93c5fd; --nurse-bg-3:#60a5fa;
-  --nurse-bg-4:#fecaca; --nurse-bg-5:#fca5a5;
-  --nurse-bg-6:#a7f3d0; --nurse-bg-7:#6ee7b7; --nurse-bg-8:#ddd6fe;
+  --nurse-bg-1:#60a5fa; --nurse-bg-2:#3b82f6; --nurse-bg-3:#2563eb;
+  --nurse-bg-4:#f87171; --nurse-bg-5:#ef4444;
+  --nurse-bg-6:#34d399; --nurse-bg-7:#10b981; --nurse-bg-8:#a78bfa;
 }
 
 :root[data-contrast='high']{
@@ -142,14 +142,13 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .assignments{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 .assignment-card{background:var(--control);border:1px solid var(--line);border-radius:14px;padding:10px 12px;min-height:84px;box-shadow:var(--elev-1)}
 
-/* no color-mix: overlay + control */
+/* color-coded nurse pills */
 .nurse-pill{
   position:relative;display:flex;align-items:center;gap:8px;
   padding:6px 10px;border-radius:999px;
-  background:
-    linear-gradient(0deg, rgba(0,0,0,.08), rgba(0,0,0,.08)),
-    var(--control);
-  border:1px solid var(--line);color:var(--text-high)
+  background: var(--pill, var(--control));
+  border:1px solid var(--line);
+  color:var(--zone-fg);
 }
 .nurse-pill[data-type="home"]{--pill:var(--accent-home)}
 .nurse-pill[data-type="travel"]{--pill:var(--accent-travel)}

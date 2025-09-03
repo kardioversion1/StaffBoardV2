@@ -260,6 +260,10 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       editBtn.addEventListener('click', async () => {
         const val = prompt('Rename zone', z.name)?.trim();
         if (val && val !== z.name) {
+          if (cfg.zones.some((zz) => zz.name === val)) {
+            alert('A zone with that name already exists.');
+            return;
+          }
           const idx = cfg.zones.findIndex((zz) => zz.name === z.name);
           cfg.zones[idx].name = val;
           if (cfg.zoneColors && cfg.zoneColors[z.name]) {

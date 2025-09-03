@@ -25,17 +25,42 @@ export interface Board {
 
 type SlotTarget = "charge" | "triage" | "admin" | { zone: string; index?: number };
 
-export function ensureUniqueAssignment(board: Board, nurseId: string): void {
-  if (board.charge?.nurseId === nurseId) board.charge = undefined;
-  if (board.triage?.nurseId === nurseId) board.triage = undefined;
-  if (board.admin?.nurseId === nurseId) board.admin = undefined;
-  for (const zone of Object.keys(board.zones)) {
-    board.zones[zone] = board.zones[zone].filter((s) => s.nurseId !== nurseId);
+/**
+ * Remove any other assignments for the given nurse. Returns `true` if a
+ * previously occupied slot was cleared.
+ */
+export function ensureUniqueAssignment(board: Board, nurseId: string): boolean {
+  let removed = false;
+  if (board.charge?.nurseId === nurseId) {
+    board.charge = undefined;
+    removed = true;
   }
+  if (board.triage?.nurseId === nurseId) {
+    board.triage = undefined;
+    removed = true;
+  }
+  if (board.admin?.nurseId === nurseId) {
+    board.admin = undefined;
+    removed = true;
+  }
+  for (const zone of Object.keys(board.zones)) {
+    const before = board.zones[zone].length;
+    board.zones[zone] = board.zones[zone].filter((s) => s.nurseId !== nurseId);
+    if (board.zones[zone].length !== before) removed = true;
+  }
+  return removed;
 }
 
-export function upsertSlot(board: Board, target: SlotTarget, slot: Slot): void {
-  ensureUniqueAssignment(board, slot.nurseId);
+/**
+ * Insert or move a slot, clearing any existing assignments for the nurse.
+ * Returns `true` if the nurse was moved from another slot.
+ */
+export function upsertSlot(
+  board: Board,
+  target: SlotTarget,
+  slot: Slot
+): boolean {
+  const removed = ensureUniqueAssignment(board, slot.nurseId);
   if (target === "charge") {
     board.charge = slot;
   } else if (target === "triage") {
@@ -50,26 +75,36 @@ export function upsertSlot(board: Board, target: SlotTarget, slot: Slot): void {
       arr.splice(target.index, 0, slot);
     }
   }
+  return removed;
 }
 
+/** Remove a slot and return whether anything was removed. */
 export function removeSlot(
   board: Board,
   target: "charge" | "triage" | "admin" | { zone: string; index: number }
-): void {
-  if (target === "charge") board.charge = undefined;
-  else if (target === "triage") board.triage = undefined;
-  else if (target === "admin") board.admin = undefined;
-  else {
+): boolean {
+  let removed = false;
+  if (target === "charge" && board.charge) {
+    board.charge = undefined;
+    removed = true;
+  } else if (target === "triage" && board.triage) {
+    board.triage = undefined;
+    removed = true;
+  } else if (target === "admin" && board.admin) {
+    board.admin = undefined;
+    removed = true;
+  } else {
     const arr = board.zones[target.zone];
-    if (arr) arr.splice(target.index, 1);
+    if (arr && arr.splice(target.index, 1).length) removed = true;
   }
+  return removed;
 }
 
 export function moveSlot(
   board: Board,
   from: "charge" | "triage" | "admin" | { zone: string; index: number },
   to: SlotTarget
-): void {
+): boolean {
   let slot: Slot | undefined;
   if (from === "charge") {
     slot = board.charge;
@@ -83,7 +118,7 @@ export function moveSlot(
   } else {
     slot = board.zones[from.zone]?.splice(from.index, 1)[0];
   }
-  if (slot) upsertSlot(board, to, slot);
+  return slot ? upsertSlot(board, to, slot) : false;
 }
 
 export function startBreak(

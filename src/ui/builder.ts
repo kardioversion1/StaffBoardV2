@@ -2,6 +2,7 @@ import { STATE, KS, DB, type DraftShift, CURRENT_SCHEMA_VERSION, applyDraftToAct
 import { getConfig, saveConfig } from '@/state/config';
 import { loadStaff, type Staff } from '@/state/staff';
 import { upsertSlot, removeSlot, type Slot } from '@/slots';
+import { showBanner } from '@/ui/banner';
 import { nurseTile } from './nurseTile';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
@@ -214,9 +215,10 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
     overlay.querySelector('#lead-save')!.addEventListener('click', () => {
       const id = sel.value;
       if (id) {
-        upsertSlot(board, role, { nurseId: id });
+        const moved = upsertSlot(board, role, { nurseId: id });
+        if (moved) showBanner('Previous assignment cleared');
       } else {
-        removeSlot(board, role);
+        if (removeSlot(board, role)) showBanner('Assignment cleared');
       }
       save();
       overlay.remove();
@@ -337,7 +339,8 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
         const id = e.dataTransfer?.getData('text/plain');
         if (id) {
           const start = cfg.anchors[STATE.shift];
-          upsertSlot(board, { zone: z.name }, { nurseId: id, startHHMM: start });
+          const moved = upsertSlot(board, { zone: z.name }, { nurseId: id, startHHMM: start });
+          if (moved) showBanner('Previous assignment cleared');
           await save();
           renderZones();
         }

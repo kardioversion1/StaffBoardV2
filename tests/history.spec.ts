@@ -51,6 +51,15 @@ describe('history persistence', () => {
     expect(loaded?.publishedBy).toBe('tester');
   });
 
+  it('updates audit when snapshot mutated', async () => {
+    await savePublishedShift(base, 'tester');
+    const updated = { ...base, comments: 'x' };
+    await savePublishedShift(updated, 'tester', 'fix');
+    const loaded = await getShiftByDate('2024-01-01', 'day');
+    expect(loaded?.audit.mutatedBy).toBe('tester');
+    expect(loaded?.audit.reason).toBe('fix');
+  });
+
   it('indexes staff assignments', async () => {
     const snap: PublishedShiftSnapshot = {
       ...base,
@@ -105,6 +114,25 @@ describe('history persistence', () => {
     expect(rows.length).toBe(2);
     expect(rows[0].zone).toBe('B');
     expect(rows[0].previousZone).toBe('A');
+  });
+
+  it('omits previous zone when unchanged', async () => {
+    const snap: PublishedShiftSnapshot = {
+      ...base,
+      zoneAssignments: [
+        {
+          staffId: '1',
+          displayName: 'Alice',
+          role: 'nurse',
+          zone: 'A',
+          startISO: '2024-01-01T07:00:00.000Z',
+          endISO: '2024-01-01T19:00:00.000Z',
+        },
+      ],
+    };
+    await indexStaffAssignments(snap);
+    const rows = await findShiftsByStaff('1');
+    expect(rows[0].previousZone).toBeUndefined();
   });
 
   it('saves and fetches huddles', async () => {

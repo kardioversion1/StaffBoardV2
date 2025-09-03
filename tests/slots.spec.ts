@@ -3,6 +3,8 @@ import {
   ensureUniqueAssignment,
   startBreak,
   endBreak,
+  upsertSlot,
+  removeSlot,
   type Slot,
   type Board,
 } from "../src/slots";
@@ -23,6 +25,32 @@ describe("ensureUniqueAssignment", () => {
     ensureUniqueAssignment(board, "2");
     expect(board.triage).toBeUndefined();
     expect(board.zones.B).toEqual([]);
+  });
+});
+
+describe("assignment lifecycle", () => {
+  it("reassigning nurse clears prior slots", () => {
+    const board: Board = {
+      charge: { nurseId: "1" },
+      zones: { A: [{ nurseId: "1" }], B: [] },
+    };
+    const moved = upsertSlot(board, { zone: "B" }, { nurseId: "1" });
+    expect(moved).toBe(true);
+    expect(board.charge).toBeUndefined();
+    expect(board.zones.A).toEqual([]);
+    expect(board.zones.B[0].nurseId).toBe("1");
+  });
+
+  it("clears nurse from board", () => {
+    const board: Board = {
+      charge: { nurseId: "1" },
+      zones: { A: [{ nurseId: "1" }] },
+    };
+    removeSlot(board, { zone: "A", index: 0 });
+    const removed = ensureUniqueAssignment(board, "1");
+    expect(removed).toBe(true);
+    expect(board.charge).toBeUndefined();
+    expect(board.zones.A).toEqual([]);
   });
 });
 

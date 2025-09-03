@@ -140,8 +140,9 @@ export async function savePublishedShift(
   );
   const now = new Date().toISOString();
   if (existing) {
+    const baseAudit = existing.audit || { createdAtISO: now, createdBy: user };
     snapshot.audit = {
-      ...existing.audit,
+      ...baseAudit,
       mutatedAtISO: now,
       mutatedBy: user,
       reason,

@@ -60,6 +60,18 @@ describe('history persistence', () => {
     expect(loaded?.audit.reason).toBe('fix');
   });
 
+  it('defaults audit when existing snapshot lacks audit', async () => {
+    const key = 'history:shift:2024-01-01:day';
+    const legacy = { ...base } as any;
+    delete legacy.audit;
+    store[key] = legacy;
+    const updated = { ...legacy, comments: 'y' };
+    await savePublishedShift(updated, 'tester', 'legacy');
+    const loaded = await getShiftByDate('2024-01-01', 'day');
+    expect(loaded?.audit.mutatedBy).toBe('tester');
+    expect(loaded?.audit.createdAtISO).toBeDefined();
+  });
+
   it('indexes staff assignments', async () => {
     const snap: PublishedShiftSnapshot = {
       ...base,

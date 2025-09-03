@@ -94,6 +94,36 @@ export function migrateActiveBoard(raw: any): ActiveBoard {
   };
 }
 
+/**
+ * Normalize possibly older draft board structures.
+ * @param raw Unknown draft data.
+ * @returns DraftShift in the current schema.
+ */
+export function migrateDraft(raw: any): DraftShift {
+  const zones = raw?.zones && typeof raw.zones === 'object' ? raw.zones : {};
+  return {
+    dateISO: raw?.dateISO ?? toDateISO(new Date()),
+    shift: raw?.shift === 'night' ? 'night' : 'day',
+    charge: raw?.charge ?? undefined,
+    triage: raw?.triage ?? undefined,
+    admin: raw?.admin ?? undefined,
+    zones: Object.fromEntries(
+      Object.entries(zones).map(([k, v]) => [k, Array.isArray(v) ? v : []])
+    ),
+    incoming: Array.isArray(raw?.incoming)
+      ? raw.incoming.filter((i: any) => typeof i?.nurseId === 'string')
+      : [],
+    offgoing: Array.isArray(raw?.offgoing)
+      ? raw.offgoing.filter(
+          (o: any) => typeof o?.nurseId === 'string' && typeof o?.ts === 'number'
+        )
+      : [],
+    huddle: typeof raw?.huddle === 'string' ? raw.huddle : '',
+    handoff: typeof raw?.handoff === 'string' ? raw.handoff : '',
+    version: CURRENT_SCHEMA_VERSION,
+  };
+}
+
 /** Import published shift history from a JSON string */
 export async function importHistoryFromJSON(json: string): Promise<DraftShift[]> {
   const data = JSON.parse(json) as DraftShift[];

@@ -17,6 +17,7 @@ import {
   saveConfig,
   type Config,
 } from '@/state';
+import { notifyUpdate, onUpdate } from '@/state/sync';
 
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { renderWeather } from './widgets';
@@ -142,6 +143,7 @@ export async function renderBoard(
       saveTimer = setTimeout(() => {
         DB.set(saveKey, active);
         Server.save('active', active).catch(() => {});
+        notifyUpdate(saveKey);
       }, 300);
     };
 
@@ -163,6 +165,19 @@ export async function renderBoard(
     const btn = document.getElementById('phys-next7');
     btn?.addEventListener('click', () => {
       renderPhysicianPopup(ctx.dateISO, 7);
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) queueSave();
+    });
+
+    onUpdate(saveKey, async () => {
+      const updated = await DB.get<ActiveBoard>(saveKey);
+      if (!updated) return;
+      active = migrateActiveBoard(updated);
+      normalizeActiveZones(active, cfg.zones);
+      setActiveBoardCache(active);
+      refresh();
     });
 
     // Re-render on config changes (e.g., zone list or colors)

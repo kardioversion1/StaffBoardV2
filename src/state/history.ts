@@ -116,16 +116,39 @@ const VERSION_KEY = 'history:schemaVersion';
 
 export const HISTORY_SCHEMA_VERSION = 1;
 
+async function migrateHistorySchema(_from?: number): Promise<void> {
+  // Placeholder for future migrations
+}
+
 async function ensureVersion(): Promise<void> {
   const v = await kvGet<number>(VERSION_KEY);
   if (v !== HISTORY_SCHEMA_VERSION) {
+    await migrateHistorySchema(v);
     await kvSet(VERSION_KEY, HISTORY_SCHEMA_VERSION);
   }
 }
 
 /** Persist a published shift snapshot. */
-export async function savePublishedShift(snapshot: PublishedShiftSnapshot): Promise<void> {
+export async function savePublishedShift(
+  snapshot: PublishedShiftSnapshot,
+  user = 'system',
+  reason = 'update'
+): Promise<void> {
   await ensureVersion();
+  const existing = await kvGet<PublishedShiftSnapshot>(
+    SHIFT_KEY(snapshot.dateISO, snapshot.shift)
+  );
+  const now = new Date().toISOString();
+  if (existing) {
+    snapshot.audit = {
+      ...existing.audit,
+      mutatedAtISO: now,
+      mutatedBy: user,
+      reason,
+    };
+  } else if (!snapshot.audit) {
+    snapshot.audit = { createdAtISO: now, createdBy: user };
+  }
   await kvSet(SHIFT_KEY(snapshot.dateISO, snapshot.shift), snapshot);
 }
 
@@ -149,6 +172,7 @@ export async function indexStaffAssignments(
     const prev = list.find(
       (e) => e.dateISO === snapshot.dateISO && e.shift === snapshot.shift
     );
+    const prevZone = prev?.zone !== a.zone ? prev?.zone : undefined;
     const entry: NurseShiftIndexEntry = {
       staffId: a.staffId,
       displayName: a.displayName,
@@ -156,7 +180,7 @@ export async function indexStaffAssignments(
       dateISO: snapshot.dateISO,
       shift: snapshot.shift,
       zone: a.zone,
-      previousZone: prev?.zone,
+      previousZone: prevZone,
       startISO: a.startISO,
       endISO: a.endISO,
       dto: !!a.dto,
@@ -245,5 +269,35 @@ export async function listHuddles(): Promise<HuddleRecord[]> {
     if (rec) out.push(rec);
   }
   return out.sort((a, b) => a.recordedAtISO.localeCompare(b.recordedAtISO));
+}
+
+/** Remove shift snapshots older than the specified number of days. */
+export async function purgeOldShifts(maxAgeDays: number): Promise<void> {
+  await ensureVersion();
+  const cutoff = Date.now() - maxAgeDays * 86400000;
+  const keys = await DB.keys('history:shift:');
+  for (const k of keys) {
+    const snap = await kvGet<PublishedShiftSnapshot>(k);
+    if (snap && new Date(snap.audit.createdAtISO).getTime() < cutoff) {
+      await kvDel(k);
+    }
+  }
+}
+
+/** Retrieve shift snapshots within a date range inclusive. */
+export async function listShiftsInRange(
+  startISO: string,
+  endISO: string
+): Promise<PublishedShiftSnapshot[]> {
+  await ensureVersion();
+  const keys = await DB.keys('history:shift:');
+  const out: PublishedShiftSnapshot[] = [];
+  for (const k of keys) {
+    const snap = await kvGet<PublishedShiftSnapshot>(k);
+    if (snap && snap.dateISO >= startISO && snap.dateISO <= endISO) {
+      out.push(snap);
+    }
+  }
+  return out.sort((a, b) => a.dateISO.localeCompare(b.dateISO));
 }
 

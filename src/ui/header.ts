@@ -51,6 +51,7 @@ export function renderHeader() {
       ${actionBtn}
       <button id="publish-btn" class="btn">Sync</button>
       <button id="refresh-btn" class="btn">Refresh</button>
+      <button id="reset-board" class="btn">Reset Board</button>
       <button id="reset-cache" class="btn">Reset</button>
     </div>
   `;
@@ -116,6 +117,13 @@ export function renderHeader() {
     } catch {
       showBanner('Refresh failed');
     }
+  });
+
+  document.getElementById('reset-board')?.addEventListener('click', async () => {
+    const { dateISO, shift } = STATE;
+    await DB.del(KS.ACTIVE(dateISO, shift));
+    await renderAll();
+    showBanner('Board reset');
   });
 
   document.getElementById('reset-cache')?.addEventListener('click', () => {

@@ -24,9 +24,17 @@ import { renderPhysicians, renderPhysicianPopup } from './physicians';
 import { nurseTile } from './nurseTile';
 import { createDebouncer } from '@/utils/debouncedSave';
 import './mainBoard/boardLayout.css';
-import { startBreak, endBreak, moveSlot, upsertSlot, removeSlot, type Slot } from '@/slots';
+import {
+  startBreak,
+  endBreak,
+  moveSlot,
+  upsertSlot,
+  removeSlot,
+  type Slot,
+} from '@/slots';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
+import { showBanner } from '@/ui/banner';
 
 // --- helpers ---------------------------------------------------------------
 
@@ -137,8 +145,12 @@ export async function renderBoard(
       }, 300);
     };
 
-    renderLeadership(active, staff, queueSave);
-    renderZones(active, cfg, staff, queueSave);
+    const refresh = () => {
+      renderLeadership(active, staff, queueSave, root, refresh);
+      renderZones(active, cfg, staff, queueSave);
+    };
+
+    refresh();
     wireComments(active, queueSave);
     await renderIncoming(active, queueSave);
     renderOffgoing(active, queueSave);
@@ -158,7 +170,7 @@ export async function renderBoard(
       const c = getConfig();
       normalizeActiveZones(active, c.zones);
       queueSave();
-      renderLeadership(active, staff, queueSave);
+      renderLeadership(active, staff, queueSave, root, refresh);
       renderZones(active, c, staff, queueSave);
     });
   } catch (err) {
@@ -178,15 +190,21 @@ export async function renderBoard(
 
 // --- leadership ------------------------------------------------------------
 
-function renderLeadership(
+export function renderLeadership(
   active: ActiveBoard,
   staff: Staff[],
-  save: () => void
-) {
+  save: () => void,
+  root: ParentNode,
+  rerender: () => void
+): void {
   const cfg = getConfig();
-  const chargeEl = document.getElementById('slot-charge') as HTMLElement;
-  const triageEl = document.getElementById('slot-triage') as HTMLElement;
-  const secEl = document.getElementById('slot-secretary') as HTMLElement;
+  const chargeEl = root.querySelector('#slot-charge') as HTMLElement | null;
+  const triageEl = root.querySelector('#slot-triage') as HTMLElement | null;
+  const secEl = root.querySelector('#slot-secretary') as HTMLElement | null;
+  if (!chargeEl || !triageEl || !secEl) {
+    console.warn('Missing leadership slot element');
+    return;
+  }
 
   chargeEl.textContent = labelFromId(active.charge?.nurseId);
   triageEl.textContent = labelFromId(active.triage?.nurseId);
@@ -199,17 +217,11 @@ function renderLeadership(
   secEl.style.display = active.admin?.nurseId ? '' : 'none';
 
   chargeEl.onclick = () =>
-    assignLeadDialog(active, staff, save, 'charge', () =>
-      renderLeadership(active, staff, save)
-    );
+    assignLeadDialog(active, staff, save, 'charge', rerender);
   triageEl.onclick = () =>
-    assignLeadDialog(active, staff, save, 'triage', () =>
-      renderLeadership(active, staff, save)
-    );
+    assignLeadDialog(active, staff, save, 'triage', rerender);
   secEl.onclick = () =>
-    assignLeadDialog(active, staff, save, 'admin', () =>
-      renderLeadership(active, staff, save)
-    );
+    assignLeadDialog(active, staff, save, 'admin', rerender);
 }
 
 function assignLeadDialog(
@@ -254,9 +266,10 @@ function assignLeadDialog(
   overlay.querySelector('#lead-save')!.addEventListener('click', () => {
     const id = sel.value;
     if (id) {
-      upsertSlot(board, role, { nurseId: id });
+      const moved = upsertSlot(board, role, { nurseId: id });
+      if (moved) showBanner('Previous assignment cleared');
     } else {
-      removeSlot(board, role);
+      if (removeSlot(board, role)) showBanner('Assignment cleared');
     }
     save();
     overlay.remove();
@@ -638,7 +651,7 @@ function manageSlot(
 
   overlay.querySelector('#mg-dto')!.addEventListener('click', async () => {
     // End shift early: move to offgoing (kept for 60 min by renderOffgoing)
-    board.zones[zone].splice(index, 1);
+    if (removeSlot(board, { zone, index })) showBanner('Assignment cleared');
     board.offgoing.push({ nurseId: st.id, ts: Date.now() });
 
     // Append to history
@@ -698,7 +711,8 @@ function manageSlot(
     // Zone move
     const zoneSel = overlay.querySelector('#mg-zone') as HTMLSelectElement;
     if (zoneSel.value !== zone) {
-      moveSlot(board, { zone, index }, { zone: zoneSel.value });
+      const moved = moveSlot(board, { zone, index }, { zone: zoneSel.value });
+      if (moved) showBanner('Previous assignment cleared');
     }
 
     // Persist
@@ -737,7 +751,8 @@ function addSlotDialog(
   overlay.querySelector('#add-confirm')!.addEventListener('click', () => {
     const sel = overlay.querySelector('#add-nurse') as HTMLSelectElement;
     const id = sel.value;
-    upsertSlot(board, { zone }, { nurseId: id });
+    const moved = upsertSlot(board, { zone }, { nurseId: id });
+    if (moved) showBanner('Previous assignment cleared');
     save();
     overlay.remove();
     rerender();

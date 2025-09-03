@@ -1,7 +1,17 @@
-import { STATE, KS, DB, type DraftShift, CURRENT_SCHEMA_VERSION, applyDraftToActive } from '@/state/board';
+import {
+  STATE,
+  KS,
+  DB,
+  type DraftShift,
+  CURRENT_SCHEMA_VERSION,
+  applyDraftToActive,
+  migrateDraft,
+} from '@/state/board';
+import * as Server from '@/server';
 import { getConfig, saveConfig } from '@/state/config';
 import { loadStaff, type Staff } from '@/state/staff';
 import { upsertSlot, removeSlot, type Slot } from '@/slots';
+import { notifyUpdate, onUpdate } from '@/state/sync';
 import { showBanner } from '@/ui/banner';
 import { nurseTile } from './nurseTile';
 import { setNurseCache, labelFromId } from '@/utils/names';
@@ -30,13 +40,26 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
   const staff = await loadStaff();
   setNurseCache(staff);
   const key = KS.DRAFT(STATE.dateISO, STATE.shift);
-  const board: DraftShift =
-    (await DB.get<DraftShift>(key)) ??
-    buildEmptyDraft(STATE.dateISO, STATE.shift, cfg.zones);
+  let board: DraftShift;
+  try {
+    const remote = (await Server.load('draft', {
+      date: STATE.dateISO,
+      shift: STATE.shift,
+    })) as DraftShift;
+    board = migrateDraft(remote);
+    await DB.set(key, board);
+  } catch {
+    const local = await DB.get<DraftShift>(key);
+    board = local ? migrateDraft(local) : buildEmptyDraft(STATE.dateISO, STATE.shift, cfg.zones);
+  }
   normalizeActiveZones(board, cfg.zones);
 
   async function save() {
     await DB.set(key, board);
+    try {
+      await Server.save('draft', { date: board.dateISO, shift: board.shift, board });
+    } catch {}
+    notifyUpdate(key);
   }
 
   root.innerHTML = `
@@ -73,6 +96,20 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
   renderRoster();
   renderZones();
   renderLeads();
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) void save();
+  });
+
+  onUpdate(key, async () => {
+    const updated = await DB.get<DraftShift>(key);
+    if (!updated) return;
+    Object.assign(board, migrateDraft(updated));
+    normalizeActiveZones(board, cfg.zones);
+    renderRoster();
+    renderZones();
+    renderLeads();
+  });
 
   document.addEventListener('config-changed', () => {
     if (!document.getElementById('builder-zones')) return;

@@ -324,6 +324,51 @@ function renderZones(
     title.textContent = zName;
     section.appendChild(title);
 
+    const actions = document.createElement('div');
+    actions.className = 'zone-card__actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'Edit';
+    editBtn.className = 'btn';
+    editBtn.addEventListener('click', async () => {
+      const val = prompt('Rename zone', z.name)?.trim();
+      if (val && val !== z.name) {
+        const idx = cfg.zones.findIndex((zz) => zz.name === z.name);
+        cfg.zones[idx].name = val;
+        if (cfg.zoneColors && cfg.zoneColors[z.name]) {
+          cfg.zoneColors[val] = cfg.zoneColors[z.name];
+          delete cfg.zoneColors[z.name];
+        }
+        active.zones[val] = active.zones[z.name] || [];
+        delete active.zones[z.name];
+        await saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
+        document.dispatchEvent(new Event('config-changed'));
+        await save();
+        renderZones(active, cfg, staff, save);
+      }
+    });
+    actions.appendChild(editBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'Delete';
+    delBtn.className = 'btn';
+    delBtn.addEventListener('click', async () => {
+      if (!confirm(`Delete zone ${z.name}?`)) return;
+      const idx = cfg.zones.findIndex((zz) => zz.name === z.name);
+      const removed = cfg.zones.splice(idx, 1)[0];
+      if (removed) {
+        delete active.zones[removed.name];
+        if (cfg.zoneColors) delete cfg.zoneColors[removed.name];
+      }
+      await saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
+      document.dispatchEvent(new Event('config-changed'));
+      await save();
+      renderZones(active, cfg, staff, save);
+    });
+    actions.appendChild(delBtn);
+
+    section.appendChild(actions);
+
     const body = document.createElement('div');
     body.className = 'zone-card__body';
 

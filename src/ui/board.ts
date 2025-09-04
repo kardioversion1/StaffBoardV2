@@ -156,7 +156,8 @@ export async function renderBoard(
     wireComments(active, queueSave);
     await renderIncoming(active, queueSave);
     renderOffgoing(active, queueSave);
-    await renderWeather(document.getElementById('weather-body')!);
+    const weatherBody = document.getElementById('weather-body');
+    if (weatherBody) await renderWeather(weatherBody);
     await renderPhysicians(
       document.getElementById('phys') as HTMLElement,
       ctx.dateISO

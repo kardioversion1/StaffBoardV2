@@ -7,7 +7,6 @@ import {
   applyDraftToActive,
   migrateDraft,
 } from '@/state/board';
-import * as Server from '@/server';
 import { getConfig, saveConfig } from '@/state/config';
 import { loadStaff, type Staff } from '@/state/staff';
 import { upsertSlot, removeSlot, type Slot } from '@/slots';
@@ -40,25 +39,14 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
   const staff = await loadStaff();
   setNurseCache(staff);
   const key = KS.DRAFT(STATE.dateISO, STATE.shift);
-  let board: DraftShift;
-  try {
-    const remote = (await Server.load('draft', {
-      date: STATE.dateISO,
-      shift: STATE.shift,
-    })) as DraftShift;
-    board = migrateDraft(remote);
-    await DB.set(key, board);
-  } catch {
-    const local = await DB.get<DraftShift>(key);
-    board = local ? migrateDraft(local) : buildEmptyDraft(STATE.dateISO, STATE.shift, cfg.zones);
-  }
+  const local = await DB.get<DraftShift>(key);
+  const board: DraftShift = local
+    ? migrateDraft(local)
+    : buildEmptyDraft(STATE.dateISO, STATE.shift, cfg.zones);
   normalizeActiveZones(board, cfg.zones);
 
   async function save() {
     await DB.set(key, board);
-    try {
-      await Server.save('draft', { date: board.dateISO, shift: board.shift, board });
-    } catch {}
     notifyUpdate(key);
   }
 

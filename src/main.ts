@@ -23,8 +23,12 @@ import { renderSettings } from '@/ui/settings';
 import { renderBuilder } from '@/ui/builder';
 import { renderHistoryTab } from '@/ui/historyTab';
 import { outlineBlockers } from '@/utils/debug';
-import { showBanner } from '@/ui/banner';
+import { showBanner, showToast } from '@/ui/banner';
 import * as Server from '@/server';
+
+document.addEventListener('history-saved', () =>
+  showToast('assignments saved to history')
+);
 
 export async function renderAll() {
   applyTheme();

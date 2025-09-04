@@ -353,12 +353,9 @@ function renderZones(
     title.textContent = zName;
     section.appendChild(title);
 
-    const actions = document.createElement('div');
-    actions.className = 'zone-card__actions';
-
     const editBtn = document.createElement('button');
-    editBtn.textContent = 'Edit';
-    editBtn.className = 'btn';
+    editBtn.textContent = '⚙';
+    editBtn.className = 'zone-card__edit';
     editBtn.addEventListener('click', async () => {
       const val = prompt('Rename zone', z.name)?.trim();
       if (val && val !== z.name) {
@@ -380,9 +377,7 @@ function renderZones(
         renderZones(active, cfg, staff, save);
       }
     });
-    actions.appendChild(editBtn);
-
-    section.appendChild(actions);
+    section.appendChild(editBtn);
 
     const body = document.createElement('div');
     body.className = 'zone-card__body';

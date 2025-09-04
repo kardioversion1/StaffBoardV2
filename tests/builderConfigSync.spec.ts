@@ -63,7 +63,7 @@ describe('builder config sync', () => {
     const handler = vi.fn();
     document.addEventListener('config-changed', handler);
     vi.stubGlobal('prompt', vi.fn().mockReturnValue('Zone B'));
-    const editBtn = root.querySelector('.zone-card__actions .btn') as HTMLButtonElement;
+    const editBtn = root.querySelector('.zone-card__edit') as HTMLButtonElement;
     editBtn.click();
     await new Promise((r) => setTimeout(r, 0));
     expect(handler).toHaveBeenCalled();

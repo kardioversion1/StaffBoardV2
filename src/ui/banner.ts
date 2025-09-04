@@ -15,3 +15,20 @@ export function showBanner(msg: string): void {
     el?.remove();
   }, 10_000);
 }
+
+let toastTimer: number | undefined;
+
+export function showToast(msg: string): void {
+  let el = document.getElementById('app-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'app-toast';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    el?.remove();
+  }, 4_000);
+}

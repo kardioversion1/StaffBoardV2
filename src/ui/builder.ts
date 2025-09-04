@@ -263,6 +263,13 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       section.className = 'zone-card';
       section.draggable = true;
       section.dataset.index = String(i);
+      const explicit = z.color || cfg.zoneColors?.[z.name];
+      if (explicit) {
+        section.style.setProperty('--zone-color', explicit);
+      } else {
+        const zi = (i % 8) + 1;
+        section.style.setProperty('--zone-color', `var(--zone-bg-${zi})`);
+      }
       section.addEventListener('dragstart', (e) => {
         if ((e.target as HTMLElement).closest('.nurse-row')) return;
         const ev = e as DragEvent;
@@ -278,12 +285,9 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       title.textContent = z.name;
       section.appendChild(title);
 
-      const actions = document.createElement('div');
-      actions.className = 'zone-card__actions';
-
       const editBtn = document.createElement('button');
-      editBtn.textContent = 'Edit';
-      editBtn.className = 'btn';
+      editBtn.textContent = '⚙';
+      editBtn.className = 'zone-card__edit';
       editBtn.addEventListener('click', async () => {
         const val = prompt('Rename zone', z.name)?.trim();
         if (val && val !== z.name) {
@@ -305,9 +309,7 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
           renderZones();
         }
       });
-      actions.appendChild(editBtn);
-
-      section.appendChild(actions);
+      section.appendChild(editBtn);
 
       const body = document.createElement('div');
       body.className = 'zone-card__body';

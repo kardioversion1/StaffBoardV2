@@ -60,12 +60,12 @@ export function buildSeedBoard(
   settings: SeedSettings = DEFAULT_SEED_SETTINGS
 ): Board {
   const cfg = getConfig();
-    const board: Board = {
-      charge: undefined,
-      triage: undefined,
-      admin: undefined,
-      zones: Object.fromEntries((cfg.zones || []).map((z) => [z.name, [] as Slot[]])),
-    };
+  const board: Board = {
+    charge: undefined,
+    triage: undefined,
+    admin: undefined,
+    zones: Object.fromEntries((cfg.zones || []).map((z) => [z.name, [] as Slot[]])),
+  };
 
   if (settings.assignChargeTriage) {
     const chargeCand = roster.find((n) => n.eligibleRoles?.includes('charge'));
@@ -80,7 +80,11 @@ export function buildSeedBoard(
     if (adminCand) board.admin = { nurseId: adminCand.id };
   }
 
-  const defaultZone = cfg.zones.find((z) => !z.pct)?.name;
+  let defaultZone = cfg.zones.find((z) => !z.pct)?.name;
+  if (!defaultZone) {
+    defaultZone = 'Unassigned';
+    board.zones[defaultZone] = [];
+  }
   for (const n of roster) {
     if (board.charge?.nurseId === n.id || board.triage?.nurseId === n.id) continue;
     if (
@@ -89,7 +93,7 @@ export function buildSeedBoard(
       cfg.zones.some((z) => z.name === n.defaultZone)
     ) {
       board.zones[n.defaultZone].push({ nurseId: n.id });
-    } else if (defaultZone) {
+    } else {
       board.zones[defaultZone].push({ nurseId: n.id });
     }
   }

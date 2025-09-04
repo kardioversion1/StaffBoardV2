@@ -221,7 +221,6 @@ function renderGeneralSettings() {
         `<div class="form-row zone-row">
           <input class="zone-name" data-index="${i}" value="${z.name}">
           ${zoneOptions(z.name, z.color)}
-          <button class="zone-del btn" data-index="${i}">Remove</button>
         </div>`
     )
     .join('');
@@ -230,7 +229,6 @@ function renderGeneralSettings() {
       <h3>General</h3>
       <div class="form-row"><button id="welcome-btn" class="btn">Welcome / How To</button></div>
       ${zonesHTML}
-      <div class="form-row"><button id="zone-add" class="btn">Add Zone</button></div>
       <div class="form-row"><label>Day hours <input id="gs-day" type="number" value="${cfg.shiftDurations?.day}"></label></div>
       <div class="form-row"><label>Night hours <input id="gs-night" type="number" value="${cfg.shiftDurations?.night}"></label></div>
       <div class="form-row"><label>DTO minutes <input id="gs-dto" type="number" value="${cfg.dtoMinutes}"></label></div>
@@ -286,22 +284,6 @@ function renderGeneralSettings() {
         renderGeneralSettings();
       }
     });
-  });
-  el.querySelectorAll('.zone-del').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const idx = Number((btn as HTMLElement).getAttribute('data-index'));
-      const removed = cfg.zones.splice(idx, 1)[0];
-      if (removed && cfg.zoneColors) delete cfg.zoneColors[removed.name];
-      await saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
-      document.dispatchEvent(new Event('config-changed'));
-      renderGeneralSettings();
-    });
-  });
-  (document.getElementById('zone-add') as HTMLButtonElement).addEventListener('click', async () => {
-    cfg.zones.push({ id: `zone_${Date.now()}`, name: `Zone ${cfg.zones.length + 1}`, color: 'var(--panel)' });
-    await saveConfig({ zones: cfg.zones });
-    document.dispatchEvent(new Event('config-changed'));
-    renderGeneralSettings();
   });
   (document.getElementById('gs-day') as HTMLInputElement).addEventListener('change', async (e) => {
     cfg.shiftDurations!.day = parseInt((e.target as HTMLInputElement).value) || 12;

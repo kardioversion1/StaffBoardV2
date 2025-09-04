@@ -19,28 +19,31 @@ export const DEFAULT_SEED_SETTINGS: SeedSettings = {
 };
 
 export function buildEDDefaultZones(): ZoneDef[] {
-  const list = [
-    'Unassigned',
-    ...Array.from({ length: 12 }, (_, i) => `A-${i + 1}`),
-    ...Array.from({ length: 6 }, (_, i) => `HW-${i + 1}`),
-    'WR',
-    'T1',
-    'T2',
-    '2',
+  const list: Array<string | Partial<ZoneDef>> = [
+    { name: 'Charge Nurse', pct: true },
+    { name: 'Triage Nurse', pct: true },
+    { name: 'Unit Secretary', pct: true },
+    'Room 1, 3-7',
+    'Rooms 8-12',
+    'Rooms 13-16',
+    'Rooms 17-20',
+    'Rooms 21-24',
+    'Faster',
+    'Cardiac Obs',
+    'Tech 1',
+    'Tech 2',
+    'Aux 1',
+    'Aux 2',
   ];
   return normalizeZones(list);
 }
 
 export async function seedZonesIfNeeded(): Promise<void> {
-    const cfg = getConfig();
-    if (!cfg.zones || cfg.zones.length === 0) {
-      const zones = buildEDDefaultZones();
-      await saveConfig({ zones });
-      return;
-    }
-    if (!cfg.zones.some((z) => z.name === 'Unassigned')) {
-      await saveConfig({ zones: [normalizeZones(['Unassigned'])[0], ...cfg.zones] });
-    }
+  const cfg = getConfig();
+  if (!cfg.zones || cfg.zones.length === 0) {
+    const zones = buildEDDefaultZones();
+    await saveConfig({ zones });
+  }
 }
 
 export function getDefaultRosterForLabel(
@@ -77,18 +80,18 @@ export function buildSeedBoard(
     if (adminCand) board.admin = { nurseId: adminCand.id };
   }
 
-  const unassigned = 'Unassigned';
+  const defaultZone = cfg.zones.find((z) => !z.pct)?.name;
   for (const n of roster) {
     if (board.charge?.nurseId === n.id || board.triage?.nurseId === n.id) continue;
-      if (
-        settings.strategy === 'preassign' &&
-        n.defaultZone &&
-        cfg.zones.some((z) => z.name === n.defaultZone)
-      ) {
-        board.zones[n.defaultZone].push({ nurseId: n.id });
-      } else {
-        board.zones[unassigned].push({ nurseId: n.id });
-      }
+    if (
+      settings.strategy === 'preassign' &&
+      n.defaultZone &&
+      cfg.zones.some((z) => z.name === n.defaultZone)
+    ) {
+      board.zones[n.defaultZone].push({ nurseId: n.id });
+    } else if (defaultZone) {
+      board.zones[defaultZone].push({ nurseId: n.id });
+    }
   }
 
   return board;

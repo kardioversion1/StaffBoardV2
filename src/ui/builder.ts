@@ -307,24 +307,6 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
       });
       actions.appendChild(editBtn);
 
-      const delBtn = document.createElement('button');
-      delBtn.textContent = 'Delete';
-      delBtn.className = 'btn';
-      delBtn.addEventListener('click', async () => {
-        if (!confirm(`Delete zone ${z.name}?`)) return;
-        const idx = cfg.zones.findIndex((zz) => zz.name === z.name);
-        const removed = cfg.zones.splice(idx, 1)[0];
-        if (removed) {
-          delete board.zones[removed.name];
-          if (cfg.zoneColors) delete cfg.zoneColors[removed.name];
-        }
-        await saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
-        document.dispatchEvent(new Event('config-changed'));
-        await save();
-        renderZones();
-      });
-      actions.appendChild(delBtn);
-
       section.appendChild(actions);
 
       const body = document.createElement('div');

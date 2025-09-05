@@ -384,10 +384,15 @@ function renderZones(
     body.className = 'zone-card__body';
 
     (active.zones[zName] || []).forEach((s: Slot, idx: number) => {
-      const st = staff.find((n) => n.id === s.nurseId);
+      let st = staff.find((n) => n.id === s.nurseId);
       if (!st) {
         console.warn('Unknown staffId', s.nurseId);
-        return;
+        st = {
+          id: s.nurseId,
+          name: s.nurseId,
+          role: 'nurse',
+          type: 'other',
+        } as Staff;
       }
 
       const row = document.createElement('div');

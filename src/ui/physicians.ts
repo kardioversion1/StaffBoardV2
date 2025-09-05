@@ -31,17 +31,25 @@ function unfoldICSLines(text: string): string[] {
   return lines;
 }
 
-/** Extract YYYY-MM-DD from DTSTART variants (DATE, DATE-TIME, TZID, etc.) */
+/** Extract YYYY-MM-DD from DTSTART variants (DATE, DATE-TIME, TZID, etc.).
+ *  Handles UTC timestamps (ending with `Z`) by converting them to the
+ *  client's local date so events that begin late in the evening in UTC don't
+ *  appear on the following day.
+ */
 function extractDateISO(dtstart: string): string | null {
   const val = dtstart.includes(':') ? dtstart.split(':', 2)[1] : dtstart;
-  const digits = (val || '').replace(/[^0-9]/g, '');
-  if (digits.length >= 8) {
-    const y = digits.slice(0, 4);
-    const m = digits.slice(4, 6);
-    const d = digits.slice(6, 8);
-    return `${y}-${m}-${d}`;
-  }
-  return null;
+  const m = /^(\d{4})(\d{2})(\d{2})(T(\d{2})(\d{2})(\d{2})(Z)?)?/i.exec(
+    val.trim()
+  );
+  if (!m) return null;
+  const [, y, mo, da, , hh = '00', mm = '00', ss = '00', z] = m;
+  const date = z
+    ? new Date(Date.UTC(+y, +mo - 1, +da, +hh, +mm, +ss))
+    : new Date(+y, +mo - 1, +da, +hh, +mm, +ss);
+  const yyyy = String(date.getFullYear()).padStart(4, '0');
+  const mon = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mon}-${day}`;
 }
 
 function parseICS(text: string): Event[] {

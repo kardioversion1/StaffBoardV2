@@ -155,7 +155,7 @@ export async function renderBoard(
 
     refresh();
     wireComments(active, queueSave);
-    await renderIncoming(active, queueSave);
+    await renderIncoming(active, staff, queueSave);
     renderOffgoing(active, queueSave);
     const weatherBody = document.getElementById('weather-body');
     if (weatherBody) await renderWeather(weatherBody);
@@ -496,7 +496,11 @@ function wireComments(active: ActiveBoard, save: () => void) {
 
 // --- incoming & offgoing ---------------------------------------------------
 
-async function renderIncoming(active: ActiveBoard, save: () => void) {
+async function renderIncoming(
+  active: ActiveBoard,
+  staffList: Staff[],
+  save: () => void
+) {
   const cont = document.getElementById('incoming')!;
   cont.innerHTML = '';
 
@@ -538,7 +542,7 @@ async function renderIncoming(active: ActiveBoard, save: () => void) {
         if (STATE.locked) return;
         inc.arrived = !inc.arrived;
         save();
-        renderIncoming(active, save);
+        renderIncoming(active, staffList, save);
       });
       cont.appendChild(div);
     });
@@ -549,30 +553,33 @@ async function renderIncoming(active: ActiveBoard, save: () => void) {
     btn.disabled = STATE.locked;
     btn.onclick = () => {
       if (STATE.locked) return;
-      const overlay = document.createElement('div');
-      overlay.className = 'manage-overlay';
-      overlay.innerHTML = `
-        <div class="manage-dialog">
-          <h3>Add Incoming</h3>
-          <label>Nurse ID <input id="inc-id"></label>
-          <label>ETA <input id="inc-eta" placeholder="HH:MM"></label>
-          <div class="dialog-actions">
-            <button id="inc-save" class="btn">Save</button>
-            <button id="inc-cancel" class="btn">Cancel</button>
-          </div>
-        </div>`;
-      document.body.appendChild(overlay);
-      const idEl = overlay.querySelector('#inc-id') as HTMLInputElement;
-      const etaEl = overlay.querySelector('#inc-eta') as HTMLInputElement;
-      overlay.querySelector('#inc-save')?.addEventListener('click', () => {
-        const nurse = idEl.value.trim();
-        if (!nurse) return;
-        active.incoming.push({ nurseId: nurse, eta: etaEl.value.trim() });
-        save();
-        renderIncoming(active, save);
-        overlay.remove();
+      openAssignDialog(staffList, (id) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'manage-overlay';
+        overlay.innerHTML = `
+          <div class="manage-dialog">
+            <h3>Add Incoming</h3>
+            <p>${labelFromId(id)}</p>
+            <label>ETA <input id="inc-eta" placeholder="HH:MM"></label>
+            <div class="dialog-actions">
+              <button id="inc-save" class="btn">Save</button>
+              <button id="inc-cancel" class="btn">Cancel</button>
+            </div>
+          </div>`;
+        document.body.appendChild(overlay);
+        const etaEl = overlay.querySelector('#inc-eta') as HTMLInputElement;
+        overlay
+          .querySelector('#inc-save')
+          ?.addEventListener('click', () => {
+            active.incoming.push({ nurseId: id, eta: etaEl.value.trim() });
+            save();
+            renderIncoming(active, staffList, save);
+            overlay.remove();
+          });
+        overlay
+          .querySelector('#inc-cancel')
+          ?.addEventListener('click', () => overlay.remove());
       });
-      overlay.querySelector('#inc-cancel')?.addEventListener('click', () => overlay.remove());
     };
   }
 }

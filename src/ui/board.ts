@@ -677,7 +677,7 @@ function manageSlot(
     rerender();
   });
 
-  overlay.querySelector('#mg-save')!.addEventListener('click', () => {
+  overlay.querySelector('#mg-save')!.addEventListener('click', async () => {
     // Basic fields
     st.name = (overlay.querySelector('#mg-name') as HTMLInputElement).value.trim() || undefined;
 
@@ -718,8 +718,8 @@ function manageSlot(
     }
 
     // Persist
-    saveStaff(staffList); // best-effort staff write
-    save();               // board tuple
+    await saveStaff(staffList); // best-effort staff write
+    save();
     overlay.remove();
     rerender();
   });

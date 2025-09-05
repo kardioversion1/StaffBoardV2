@@ -16,6 +16,7 @@ import { nurseTile } from './nurseTile';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 import './mainBoard/boardLayout.css';
+import { openAssignDialog } from '@/ui/assignDialog';
 
 function buildEmptyDraft(dateISO: string, shift: 'day' | 'night', zones: ZoneDef[]): DraftShift {
   return {
@@ -36,6 +37,7 @@ function buildEmptyDraft(dateISO: string, shift: 'day' | 'night', zones: ZoneDef
 /** Render the pending shift builder allowing drag-and-drop assignments. */
 export async function renderBuilder(root: HTMLElement): Promise<void> {
   let cfg = getConfig();
+  if (!cfg.zones) cfg.zones = [];
   const staff = await loadStaff();
   setNurseCache(staff);
   const key = KS.DRAFT(STATE.dateISO, STATE.shift);
@@ -309,10 +311,29 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
           renderZones();
         }
       });
-      section.appendChild(editBtn);
-
       const body = document.createElement('div');
       body.className = 'zone-card__body';
+      const hasSlots = (board.zones[z.name] || []).length > 0;
+      const addBtn = document.createElement('button');
+      addBtn.textContent = '+';
+      addBtn.className = hasSlots
+        ? 'zone-card__add zone-card__add--small'
+        : 'zone-card__add zone-card__add--large';
+      addBtn.addEventListener('click', () => {
+        openAssignDialog(staff, (id) => {
+          const moved = upsertSlot(board, { zone: z.name }, { nurseId: id });
+          if (moved) showBanner('Previous assignment cleared');
+          save();
+          renderZones();
+        });
+      });
+      section.appendChild(editBtn);
+      if (hasSlots) {
+        section.appendChild(addBtn);
+      } else {
+        body.appendChild(addBtn);
+      }
+
       body.addEventListener('dragover', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -422,6 +443,25 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
 
     enableDrop(pctCont, true);
     enableDrop(cont, false);
+
+    document.getElementById('builder-add-zone')?.remove();
+    const addZoneBtn = document.createElement('button');
+    addZoneBtn.id = 'builder-add-zone';
+    addZoneBtn.className = 'btn';
+    addZoneBtn.textContent = 'Add Zone';
+    addZoneBtn.addEventListener('click', async () => {
+      const name = prompt('New zone name')?.trim();
+      if (!name) return;
+      if (cfg.zones.some((zz) => zz.name === name)) {
+        alert('A zone with that name already exists.');
+        return;
+      }
+      cfg = await saveConfig({ zones: [...cfg.zones, { name }] });
+      normalizeActiveZones(board, cfg.zones);
+      await save();
+      renderZones();
+    });
+    cont.parentElement?.appendChild(addZoneBtn);
   }
 
   document.getElementById('builder-save')!.addEventListener('click', save);

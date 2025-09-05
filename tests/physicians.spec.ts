@@ -53,6 +53,16 @@ describe('physician schedule parsing', () => {
     });
   });
 
+  it('converts UTC timestamps to the local date', () => {
+    const expected = (() => {
+      const base = new Date(Date.UTC(2024, 0, 1, 0, 0, 0));
+      const offset = base.getTimezoneOffset();
+      const local = new Date(base.getTime() - offset * 60000);
+      return local.toISOString().slice(0, 10);
+    })();
+    expect(__test.extractDateISO('20240101T000000Z')).toBe(expected);
+  });
+
   it('groups upcoming physicians by date (range, location-filtered)', async () => {
     const sample = [
       'BEGIN:VCALENDAR',

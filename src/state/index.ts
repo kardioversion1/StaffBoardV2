@@ -146,10 +146,20 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
   merged.huddle = remote.huddle || local.huddle;
   merged.handoff = remote.handoff || local.handoff;
 
-  const mergeArr = <T>(a: T[], b: T[], key: (item: T) => string): T[] => {
+  const mergeArr = <T extends Record<string, unknown>>(
+    a: T[],
+    b: T[],
+    key: (item: T) => string
+  ): T[] => {
     const map = new Map<string, T>();
-    for (const item of a) map.set(key(item), item);
-    for (const item of b) map.set(key(item), item);
+    for (const item of b) {
+      map.set(key(item), item);
+    }
+    for (const item of a) {
+      const k = key(item);
+      const existing = map.get(k);
+      map.set(k, existing ? { ...existing, ...item } : item);
+    }
     return Array.from(map.values());
   };
 

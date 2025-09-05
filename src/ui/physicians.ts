@@ -72,12 +72,20 @@ function parseICS(text: string): Event[] {
             for (const name of attendees) {
               events.push({ date: dateISO, summary: name, location });
             }
+          } else if (current.DESCRIPTION) {
+            const desc = icsUnescape(String(current.DESCRIPTION));
+            const names = desc
+              .split(/\r?\n|,|;/)
+              .map((s) => s.trim())
+              .filter((s) => s && !/er\s*main\s*schedule/i.test(s));
+            for (const name of names) {
+              events.push({ date: dateISO, summary: name, location });
+            }
           } else if (current.SUMMARY) {
-            events.push({
-              date: dateISO,
-              summary: icsUnescape(String(current.SUMMARY)).trim(),
-              location,
-            });
+            const sum = icsUnescape(String(current.SUMMARY)).trim();
+            if (!/er\s*main\s*schedule/i.test(sum)) {
+              events.push({ date: dateISO, summary: sum, location });
+            }
           }
         }
       }

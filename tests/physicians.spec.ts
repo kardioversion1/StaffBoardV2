@@ -53,6 +53,31 @@ describe('physician schedule parsing', () => {
     });
   });
 
+  it('falls back to DESCRIPTION when attendees missing', () => {
+    const sample = [
+      'BEGIN:VCALENDAR',
+      'BEGIN:VEVENT',
+      'DTSTART:20240102T070000',
+      'SUMMARY:ER Main Schedule',
+      'LOCATION:Jewish Downtown',
+      'DESCRIPTION:Dr A\\nDr B',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\n');
+    const events = __test.parseICS(sample);
+    expect(events).toHaveLength(2);
+    expect(events[0]).toEqual({
+      date: '2024-01-02',
+      summary: 'Dr A',
+      location: 'Jewish Downtown',
+    });
+    expect(events[1]).toEqual({
+      date: '2024-01-02',
+      summary: 'Dr B',
+      location: 'Jewish Downtown',
+    });
+  });
+
   it('converts UTC timestamps to the local date', () => {
     const expected = (() => {
       const base = new Date(Date.UTC(2024, 0, 1, 0, 0, 0));

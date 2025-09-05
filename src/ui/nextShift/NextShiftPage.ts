@@ -128,7 +128,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
       draft = gatherDraft();
       await saveNextDraft(draft);
       try {
-        await publishNextDraft({ appendHistory: true });
+        await publishNextDraft();
       } catch (err) {
         console.error(err);
       }

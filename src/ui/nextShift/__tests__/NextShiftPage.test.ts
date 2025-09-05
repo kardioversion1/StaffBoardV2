@@ -45,4 +45,13 @@ describe('renderNextShiftPage', () => {
     const { saveNextDraft } = await import('@/state/nextShift');
     expect((saveNextDraft as any).mock.calls[0][0].zones['A'][0].nurseId).toBe('n1');
   });
+
+  it('publishes draft without appending history', async () => {
+    const root = document.getElementById('root') as HTMLElement;
+    await renderNextShiftPage(root);
+    (root.querySelector('#next-publish') as HTMLButtonElement).click();
+    await Promise.resolve();
+    const { publishNextDraft } = await import('@/state/nextShift');
+    expect(publishNextDraft).toHaveBeenCalledWith();
+  });
 });

@@ -14,7 +14,6 @@ for the UI.
 ## Utilities
 
 - Install dependencies: `npm ci`
-- Reset local data: visit `/reset.html`
 - Diagnostics: visit `/diag.html`
 
 ## Roster management

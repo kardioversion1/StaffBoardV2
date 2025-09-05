@@ -1,7 +1,7 @@
 # StaffBoard Visual Interface Guide
 
 ## Header
-The top header shows the current shift and date, a large clock, and action buttons to change the theme, open shift huddles or sign out, sync data, refresh, and reset the cache【F:src/ui/header.ts†L40-L55】. The Shift Huddle includes a "Completed By" field that lets you select a nurse or enter a name manually.
+The top header shows the current shift and date, a large clock, and action buttons to change the theme, open shift huddles or sign out, sync data, and refresh【F:src/ui/header.ts†L41-L55】. The Shift Huddle includes a "Completed By" field that lets you select a nurse or enter a name manually.
 
 ## Navigation Tabs
 Below the header, tabs switch between major views: **Board**, **Builder**, **Settings**, and **History**. The Builder tab appears only when enabled by a feature flag【F:src/ui/tabs.ts†L19-L24】

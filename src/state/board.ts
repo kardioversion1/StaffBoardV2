@@ -3,7 +3,6 @@ import * as DB from '@/db';
 import { savePublishedShift, indexStaffAssignments, getHuddle, type ShiftKind, type PublishedShiftSnapshot, type Assignment } from '@/state/history';
 import { loadStaff, type Staff } from './staff';
 import { KS } from './keys';
-import { showToast } from '@/ui/banner';
 
 import type { Slot } from '@/slots';
 export type { Slot } from '@/slots';
@@ -224,7 +223,6 @@ export async function applyDraftToActive(
   await indexStaffAssignments(snapshot);
   if (typeof document !== 'undefined') {
     document.dispatchEvent(new Event('history-saved'));
-    showToast('assignments saved to history');
   }
 }
 

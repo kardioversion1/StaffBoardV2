@@ -542,6 +542,10 @@ export async function applyDraftToActive(
   };
   await savePublishedShift(snapshot);
   await indexStaffAssignments(snapshot);
+
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new Event('history-saved'));
+  }
 }
 
 export { DB };

@@ -75,12 +75,19 @@ export function openAssignDialog(
     confirm.disabled = false;
     const history = await findShiftsByStaff(id);
     const recent = history.slice(0, 5);
-    details.innerHTML = recent
-      .map(
-        (h) =>
-          `${h.dateISO} ${h.shift} - ${h.zone}${h.dto ? ' (DTO)' : ''}`
-      )
-      .join('<br>') || 'No recent shifts';
+    details.innerHTML = `
+      <div class="history-box">
+        ${
+          recent.length
+            ? `<ul>${recent
+                .map(
+                  (h) =>
+                    `<li>${h.dateISO} ${h.shift} - ${h.zone}${h.dto ? ' (DTO)' : ''}</li>`
+                )
+                .join('')}</ul>`
+            : 'No recent shifts'
+        }
+      </div>`;
   };
 
   searchInput.addEventListener('input', () => render(searchInput.value));

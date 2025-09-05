@@ -31,8 +31,13 @@ export function buildEmptyDraft(
 
 /** Load the current next-shift draft from the server. */
 export async function loadNextDraft(): Promise<DraftShift | null> {
-  const raw = await Server.load('next');
-  return raw && Object.keys(raw).length ? (raw as DraftShift) : null;
+  try {
+    const raw = await Server.load('next');
+    return raw && Object.keys(raw).length ? (raw as DraftShift) : null;
+  } catch (err) {
+    console.warn('loadNextDraft failed', err);
+    return null;
+  }
 }
 
 /** Persist a next-shift draft to the server. */

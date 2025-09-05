@@ -19,11 +19,6 @@
   flex-direction: column;
   gap: var(--gap);
 }
-.next-shift .fields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gap);
-}
 .next-shift .actions {
   display: flex;
   gap: var(--gap);

@@ -9,7 +9,7 @@ import {
 } from '@/state/nextShift';
 import { loadStaff, type Staff } from '@/state/staff';
 import { type Slot } from '@/slots';
-import { toDateISO } from '@/utils/time';
+import { toDateISO, deriveShift } from '@/utils/time';
 
 function staffOptions(staff: Staff[], selected?: string): string {
   return (
@@ -67,15 +67,6 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
           </div>
         </div>
         <div class="assign-panel">
-          <div class="fields">
-            <label>Date <input type="date" id="next-date" value="${
-              draft.dateISO
-            }"></label>
-            <label>Shift <select id="next-shift-select">
-              <option value="day" ${draft.shift === 'day' ? 'selected' : ''}>Day</option>
-              <option value="night" ${draft.shift === 'night' ? 'selected' : ''}>Night</option>
-            </select></label>
-          </div>
           <table class="assignments">
             <thead><tr><th>Zone</th><th>Nurse</th></tr></thead>
             <tbody>
@@ -116,12 +107,18 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
     );
     nurseCol.innerHTML = nurses
       .map(
-        (s) => `<div class="assign-item" data-id="${s.id}">${s.name || s.id}</div>`
+        (s) =>
+          `<div class="assign-item" draggable="true" data-id="${s.id}">${
+            s.name || s.id
+          }</div>`
       )
       .join('');
     techCol.innerHTML = techs
       .map(
-        (s) => `<div class="assign-item" data-id="${s.id}">${s.name || s.id}</div>`
+        (s) =>
+          `<div class="assign-item" draggable="true" data-id="${s.id}">${
+            s.name || s.id
+          }</div>`
       )
       .join('');
     document.querySelectorAll('.assign-item').forEach((el) => {
@@ -130,6 +127,9 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
         if (activeSelect) {
           activeSelect.value = id;
         }
+      });
+      el.addEventListener('dragstart', (ev) => {
+        ev.dataTransfer?.setData('text/plain', id);
       });
     });
   }
@@ -141,14 +141,19 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
     sel.addEventListener('focus', () => {
       activeSelect = sel as HTMLSelectElement;
     });
+    sel.addEventListener('dragover', (e) => e.preventDefault());
+    sel.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const id = e.dataTransfer?.getData('text/plain');
+      if (id) (sel as HTMLSelectElement).value = id;
+    });
   });
 
   function gatherDraft(): DraftShift {
-    const dateISO = (document.getElementById('next-date') as HTMLInputElement)
-      .value;
-    const shift = (document.getElementById(
-      'next-shift-select'
-    ) as HTMLSelectElement).value as 'day' | 'night';
+    const publishAt = goLiveInput.value || '';
+    const dateISO = publishAt ? publishAt.slice(0, 10) : draft!.dateISO;
+    const hhmm = publishAt ? publishAt.slice(11, 16) : '07:00';
+    const shift = publishAt ? deriveShift(hhmm) : draft!.shift;
     const zones: Record<string, Slot[]> = {};
     for (const z of cfg.zones || []) {
       const slot = readSlot(`zone-${z.id}`);
@@ -162,7 +167,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
       triage: undefined,
       admin: undefined,
       zones,
-      publishAtISO: goLiveInput.value || undefined,
+      publishAtISO: publishAt || undefined,
     };
   }
 

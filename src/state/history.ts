@@ -1,34 +1,111 @@
 import * as DB from '@/db';
 
-/** Attempt IndexedDB first, fallback to localStorage. */
-async function kvGet<T>(key: string): Promise<T | undefined> {
+/** API key for authenticated server requests. */
+const API_KEY = import.meta.env.VITE_API_KEY || '';
+
+const withAuth = (headers: HeadersInit = {}): HeadersInit =>
+  API_KEY ? { 'X-API-Key': API_KEY, ...headers } : headers;
+
+async function serverGet<T>(key: string): Promise<T | undefined> {
+  const qs = new URLSearchParams({ action: 'historyKv', mode: 'get', key });
   try {
-    return await DB.get<T>(key);
+    const res = await fetch(`/api.php?${qs.toString()}`, {
+      cache: 'no-store',
+      headers: withAuth(),
+    });
+    if (!res.ok) return undefined;
+    const data = await res.json();
+    return data === null ? undefined : (data as T);
   } catch {
-    if (typeof localStorage === 'undefined') return undefined;
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : undefined;
+    return undefined;
   }
+}
+
+async function serverSet<T>(key: string, val: T): Promise<void> {
+  const qs = new URLSearchParams({ action: 'historyKv', mode: 'set', key });
+  try {
+    await fetch(`/api.php?${qs.toString()}`, {
+      method: 'POST',
+      headers: withAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(val),
+    });
+  } catch {
+    /* ignore network errors */
+  }
+}
+
+async function serverDel(key: string): Promise<void> {
+  const qs = new URLSearchParams({ action: 'historyKv', mode: 'del', key });
+  try {
+    await fetch(`/api.php?${qs.toString()}`, {
+      method: 'POST',
+      headers: withAuth(),
+    });
+  } catch {
+    /* ignore network errors */
+  }
+}
+
+/** IndexedDB-backed key-value helpers with server sync. */
+async function kvGet<T>(key: string): Promise<T | undefined> {
+  const local = await DB.get<T>(key);
+  if (local !== undefined) return local;
+  const remote = await serverGet<T>(key);
+  if (remote !== undefined) await DB.set(key, remote);
+  return remote;
 }
 
 async function kvSet<T>(key: string, val: T): Promise<void> {
-  try {
-    await DB.set(key, val);
-  } catch {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(key, JSON.stringify(val));
-    }
-  }
+  await DB.set(key, val);
+  await serverSet(key, val);
 }
 
 async function kvDel(key: string): Promise<void> {
-  try {
-    await DB.del(key);
-  } catch {
-    if (typeof localStorage !== 'undefined') {
+  await DB.del(key);
+  await serverDel(key);
+}
+
+const MIGRATION_KEY = 'history:migratedToServer';
+
+/** Upload any existing client-stored history to the server. */
+async function migrateHistory(): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  const migrated = await DB.get<boolean>(MIGRATION_KEY);
+  if (migrated) return;
+
+  // Upload existing IndexedDB history entries.
+  const keys = await DB.keys('history:');
+  for (const key of keys) {
+    if (key === MIGRATION_KEY) continue;
+    const val = await DB.get(key);
+    if (val !== undefined) await serverSet(key, val);
+  }
+
+  // Migrate legacy localStorage entries if present.
+  if (typeof localStorage !== 'undefined') {
+    const lsKeys = Object.keys(localStorage).filter((k) => k.startsWith('history:'));
+    for (const key of lsKeys) {
+      if (key === MIGRATION_KEY) continue;
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      try {
+        const val = JSON.parse(raw);
+        await kvSet(key, val);
+      } catch {
+        /* ignore parse errors */
+      }
       localStorage.removeItem(key);
     }
   }
+
+  await DB.set(MIGRATION_KEY, true);
+}
+
+// Kick off migration after current tick in browser environments.
+if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
+  void queueMicrotask(() => {
+    void migrateHistory();
+  });
 }
 
 export type ShiftKind = 'day' | 'night';

@@ -10,7 +10,7 @@ Below the header, tabs switch between major views: **Board**, **Next Shift**, **
 The Board presents the live staffing picture. The left column contains panels for the patient care team, nurse assignments, and a comments box【F:src/ui/board.ts†L82-L101】. The right column offers weather information, incoming patients with an add button, recently offgoing staff, and a read‑only physician schedule【F:src/ui/board.ts†L104-L124】
 
 ## Next Shift Tab
-The Next Shift tab is used to prepare upcoming shifts. It currently provides placeholder controls for saving a draft and publishing it to the main board【F:src/ui/nextShift/NextShiftPage.ts†L1-L36】
+The Next Shift tab is used to prepare upcoming shifts. It offers fields to choose the date and shift, assign nurses to leadership roles and zones, and buttons to save the draft or publish it to the main board【F:src/ui/nextShift/NextShiftPage.ts†L1-L121】
 
 ## Settings Tab
 Settings combines roster management and display options. It includes a roster pane, areas for editing nurse details, general settings, display settings, and separate sections for widgets and a nurse type legend【F:src/ui/settings.ts†L31-L41】

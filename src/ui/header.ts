@@ -7,6 +7,7 @@ import {
   DB,
   KS,
   getActiveBoardCache,
+  setActiveBoardCache,
   type ActiveBoard,
   type Staff,
 } from '@/state';
@@ -49,10 +50,8 @@ export function renderHeader() {
     <div class="actions">
       <button id="theme-toggle" class="btn">🌓</button>
       ${actionBtn}
-      <button id="publish-btn" class="btn">Sync</button>
+      <button id="sync-btn" class="btn">Sync</button>
       <button id="refresh-btn" class="btn">Refresh</button>
-      <button id="reset-board" class="btn">Reset Board</button>
-      <button id="reset-cache" class="btn">Reset</button>
     </div>
   `;
 
@@ -71,16 +70,24 @@ export function renderHeader() {
     applyTheme();
   });
 
-  document.getElementById('publish-btn')?.addEventListener('click', async () => {
+  document.getElementById('sync-btn')?.addEventListener('click', async () => {
     try {
       const tasks: Promise<any>[] = [];
 
-      const board =
+      const local =
         getActiveBoardCache() ??
         (await DB.get<ActiveBoard>(KS.ACTIVE(STATE.dateISO, shift)));
-      if (board) {
-        await DB.set(KS.ACTIVE(STATE.dateISO, shift), board);
-        tasks.push(Server.save('active', board));
+      if (local) {
+        const remote = await Server.load('active', {
+          date: STATE.dateISO,
+          shift,
+        });
+        const merged: ActiveBoard = remote
+          ? { ...remote, ...local, zones: { ...(remote.zones || {}), ...(local.zones || {}) } }
+          : local;
+        await DB.set(KS.ACTIVE(STATE.dateISO, shift), merged);
+        setActiveBoardCache(merged);
+        tasks.push(Server.save('active', merged));
       }
 
       tasks.push(Server.save('config', getConfig()));
@@ -91,27 +98,20 @@ export function renderHeader() {
       }
 
       await Promise.all(tasks);
-      showBanner('Published');
+      showBanner('Synced');
     } catch {
-      showBanner('Publish failed');
+      showBanner('Sync failed');
     }
   });
 
   document.getElementById('refresh-btn')?.addEventListener('click', async () => {
     try {
       const { dateISO, shift } = STATE;
-
-      const local = getActiveBoardCache();
-      if (local) {
-        await DB.set(KS.ACTIVE(dateISO, shift), local);
-        try {
-          await Server.save('active', local);
-        } catch {}
-      }
-
       const board = await Server.load('active', { date: dateISO, shift });
-      if (board) await DB.set(KS.ACTIVE(dateISO, shift), board);
-
+      if (board) {
+        await DB.set(KS.ACTIVE(dateISO, shift), board);
+        setActiveBoardCache(board);
+      }
       await renderAll();
       showBanner('Refreshed');
     } catch {
@@ -119,17 +119,4 @@ export function renderHeader() {
     }
   });
 
-  document.getElementById('reset-board')?.addEventListener('click', async () => {
-    const { dateISO, shift } = STATE;
-    await DB.del(KS.ACTIVE(dateISO, shift));
-    await renderAll();
-    showBanner('Board reset');
-  });
-
-  document.getElementById('reset-cache')?.addEventListener('click', () => {
-    ['config', 'roster', 'active'].forEach((k) =>
-      localStorage.removeItem(`staffboard:${k}`)
-    );
-    location.reload();
-  });
 }

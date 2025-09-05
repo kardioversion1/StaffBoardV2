@@ -22,12 +22,15 @@ import { THEME_PRESETS } from '@/state/theme';
 export type WidgetsConfig = {
   show?: boolean;
   weather: {
-    mode: 'manual' | 'openweather';
+    mode: 'manual' | 'meteomatics';
     units: 'F' | 'C';
-    city?: string;
     lat?: number;
     lon?: number;
-    apiKey?: string;
+    params?: string;
+    step?: string;
+    hoursBack?: number;
+    hoursFwd?: number;
+    model?: string;
     current?: {
       temp: number;
       condition: string;
@@ -147,6 +150,11 @@ export const WIDGETS_DEFAULTS: WidgetsConfig = {
     units: 'F',
     lat: DEFAULT_WEATHER_COORDS.lat,
     lon: DEFAULT_WEATHER_COORDS.lon,
+    params: 't_2m:C,relative_humidity_2m:p,t_wet_bulb_globe:F,prob_precip_1h:p',
+    step: 'PT1H',
+    hoursBack: 0,
+    hoursFwd: 24,
+    model: 'mix',
   },
 };
 

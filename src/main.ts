@@ -6,7 +6,6 @@ import {
   initState,
   applyDraftToActive,
   loadConfig,
-  getConfig,
   zonesInvalid,
   DB,
   KS,
@@ -15,7 +14,6 @@ import { applyTheme } from '@/state/theme';
 import { applyUI } from '@/state/uiConfig';
 import { seedDefaults } from '@/seedDefaults';
 import { seedDemoHistory } from '@/history/seed';
-import { fetchWeather, renderWeather } from '@/ui/widgets';
 import { hhmmNowLocal, deriveShift } from '@/utils/time';
 import { renderHeader } from '@/ui/header';
 import { renderTabs, activeTab } from '@/ui/tabs';
@@ -97,15 +95,6 @@ initState();
     }
   }, 1000);
 
-  const weatherTimer = setInterval(async () => {
-    const body = document.getElementById('weather-body');
-    const cfg = getConfig();
-    if (body && cfg.widgets.weather.mode === 'openweather' && cfg.widgets.weather.apiKey) {
-      await fetchWeather();
-      await renderWeather(body);
-    }
-  }, 10 * 60 * 1000);
-
   const activeTimer = setInterval(async () => {
     const { dateISO, shift } = STATE;
     try {
@@ -121,7 +110,6 @@ initState();
     if (import.meta.hot) {
       import.meta.hot.dispose(() => {
         clearInterval(clockTimer);
-        clearInterval(weatherTimer);
         clearInterval(activeTimer);
       });
     }

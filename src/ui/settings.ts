@@ -1,7 +1,7 @@
 import { getConfig, saveConfig, mergeConfigDefaults } from '@/state/config';
 import { loadStaff, saveStaff, Staff } from '@/state/staff';
 import { createStaffId, ensureStaffId } from '@/utils/id';
-import { fetchWeather, renderWeather } from './widgets';
+import { renderWeather } from './widgets';
 import { getUIConfig, saveUIConfig, applyUI } from '@/state/uiConfig';
 import { renderHeader } from '@/ui/header';
 import {
@@ -491,20 +491,33 @@ function renderWidgetsPanel() {
     <h4>Weather</h4>
     <div class="form-row">
       <label><input type="radio" name="w-mode" value="manual"> Manual</label>
-      <label><input type="radio" name="w-mode" value="openweather"> Location</label>
+      <label><input type="radio" name="w-mode" value="meteomatics"> Meteomatics</label>
       <label>Units
         <select id="w-units">
           <option>F</option><option>C</option>
         </select>
       </label>
     </div>
-    <div id="w-location" class="form-grid">
-      <label>City <input id="w-city" placeholder="Louisville, KY"></label>
+    <div id="w-meteo" class="form-grid">
       <label>Lat <input id="w-lat" type="number"></label>
       <label>Lon <input id="w-lon" type="number"></label>
-      <label>API Key <input id="w-key" type="password"></label>
+      <label>Params <input id="w-params"></label>
+      <label>Step
+        <select id="w-step">
+          <option value="PT1H">PT1H</option>
+          <option value="PT30M">PT30M</option>
+          <option value="P1D">P1D</option>
+        </select>
+      </label>
+      <label>Hours Back <input id="w-hoursBack" type="number"></label>
+      <label>Hours Fwd <input id="w-hoursFwd" type="number"></label>
+      <label>Model <input id="w-model"></label>
+      <div class="btn-row">
+        <button id="w-preset-louisville" class="btn" type="button">Louisville Hourly</button>
+        <button id="w-preset-heat" class="btn" type="button">Heat Safety</button>
+      </div>
     </div>
-    <div class="btn-row"><button id="w-save" class="btn">Save Weather</button><button id="w-fetch" class="btn">Fetch Now</button></div>
+    <div class="btn-row"><button id="w-save" class="btn">Save Weather</button></div>
 
     <div id="w-manual" class="form-grid">
       <label>Temperature <input id="w-temp" type="number"></label>
@@ -520,15 +533,18 @@ function renderWidgetsPanel() {
 
   (document.getElementById('w-show') as HTMLInputElement).checked = w.show !== false;
   (document.getElementById('w-units') as HTMLSelectElement).value = w.weather.units;
-  (document.getElementById('w-city') as HTMLInputElement).value = w.weather.city || '';
   (document.getElementById('w-lat') as HTMLInputElement).value = w.weather.lat?.toString() || '';
   (document.getElementById('w-lon') as HTMLInputElement).value = w.weather.lon?.toString() || '';
-  (document.getElementById('w-key') as HTMLInputElement).value = w.weather.apiKey || '';
+  (document.getElementById('w-params') as HTMLInputElement).value = w.weather.params || '';
+  (document.getElementById('w-step') as HTMLSelectElement).value = w.weather.step || 'PT1H';
+  (document.getElementById('w-hoursBack') as HTMLInputElement).value = (w.weather.hoursBack ?? 0).toString();
+  (document.getElementById('w-hoursFwd') as HTMLInputElement).value = (w.weather.hoursFwd ?? 24).toString();
+  (document.getElementById('w-model') as HTMLInputElement).value = w.weather.model || 'mix';
   (document.getElementById('w-temp') as HTMLInputElement).value = w.weather.current?.temp?.toString() || '';
   (document.getElementById('w-cond') as HTMLInputElement).value = w.weather.current?.condition || '';
   (document.getElementById('w-loc') as HTMLInputElement).value = w.weather.current?.location || '';
   const manual = document.getElementById('w-manual')!;
-  const locDiv = document.getElementById('w-location')!;
+  const meteoDiv = document.getElementById('w-meteo')!;
   const modeInput = document.querySelector(
     `input[name="w-mode"][value="${w.weather.mode}"]`
   ) as HTMLInputElement;
@@ -537,7 +553,7 @@ function renderWidgetsPanel() {
     const sel = document.querySelector('input[name="w-mode"]:checked') as HTMLInputElement;
     const mode = sel ? sel.value : 'manual';
     manual.style.display = mode === 'manual' ? 'grid' : 'none';
-    locDiv.style.display = mode === 'openweather' ? 'grid' : 'none';
+    meteoDiv.style.display = mode === 'meteomatics' ? 'grid' : 'none';
   };
   setMode();
   document.querySelectorAll('input[name="w-mode"]').forEach((el) =>
@@ -550,15 +566,25 @@ function renderWidgetsPanel() {
     w.show = (document.getElementById('w-show') as HTMLInputElement).checked;
     w.weather.mode = (
       document.querySelector('input[name="w-mode"]:checked') as HTMLInputElement
-    ).value as 'manual' | 'openweather';
+    ).value as 'manual' | 'meteomatics';
     const prevUnits = w.weather.units;
     w.weather.units = (document.getElementById('w-units') as HTMLSelectElement).value as 'F' | 'C';
-    w.weather.city = (document.getElementById('w-city') as HTMLInputElement).value || undefined;
     const lat = parseFloat((document.getElementById('w-lat') as HTMLInputElement).value);
     w.weather.lat = isNaN(lat) ? undefined : lat;
     const lon = parseFloat((document.getElementById('w-lon') as HTMLInputElement).value);
     w.weather.lon = isNaN(lon) ? undefined : lon;
-    w.weather.apiKey = (document.getElementById('w-key') as HTMLInputElement).value || undefined;
+    const params = (document.getElementById('w-params') as HTMLInputElement).value.trim();
+    if (!params || /\s/.test(params)) {
+      alert('Params must be comma-separated with no spaces');
+      return;
+    }
+    w.weather.params = params;
+    w.weather.step = (document.getElementById('w-step') as HTMLSelectElement).value;
+    const hb = parseInt((document.getElementById('w-hoursBack') as HTMLInputElement).value, 10);
+    const hf = parseInt((document.getElementById('w-hoursFwd') as HTMLInputElement).value, 10);
+    w.weather.hoursBack = isNaN(hb) ? 0 : hb;
+    w.weather.hoursFwd = isNaN(hf) ? 24 : hf;
+    w.weather.model = (document.getElementById('w-model') as HTMLInputElement).value || 'mix';
     if (w.weather.current && prevUnits !== w.weather.units) {
       w.weather.current.temp =
         w.weather.units === 'C'
@@ -566,21 +592,6 @@ function renderWidgetsPanel() {
           : (w.weather.current.temp * 9) / 5 + 32;
     }
     await saveConfig({ widgets: w });
-    if (
-      w.weather.mode === 'openweather' &&
-      w.weather.apiKey &&
-      w.weather.lat != null &&
-      w.weather.lon != null
-    ) {
-      await fetchWeather();
-    }
-    const body = document.getElementById('weather-body');
-    if (body) await renderWeather(body);
-    renderWidgetsPanel();
-  });
-
-  document.getElementById('w-fetch')!.addEventListener('click', async () => {
-    await fetchWeather();
     const body = document.getElementById('weather-body');
     if (body) await renderWeather(body);
     renderWidgetsPanel();
@@ -603,6 +614,19 @@ function renderWidgetsPanel() {
     const body = document.getElementById('weather-body');
     if (body) await renderWeather(body);
     renderWidgetsPanel();
+  });
+
+  document.getElementById('w-preset-louisville')!.addEventListener('click', () => {
+    (document.getElementById('w-lat') as HTMLInputElement).value = '38.2542376';
+    (document.getElementById('w-lon') as HTMLInputElement).value = '-85.759407';
+    (document.getElementById('w-params') as HTMLInputElement).value = 't_2m:C,relative_humidity_2m:p,t_wet_bulb_globe:F,prob_precip_1h:p';
+    (document.getElementById('w-step') as HTMLSelectElement).value = 'PT1H';
+    (document.getElementById('w-hoursBack') as HTMLInputElement).value = '0';
+    (document.getElementById('w-hoursFwd') as HTMLInputElement).value = '24';
+    (document.getElementById('w-model') as HTMLInputElement).value = 'mix';
+  });
+  document.getElementById('w-preset-heat')!.addEventListener('click', () => {
+    (document.getElementById('w-params') as HTMLInputElement).value = 't_wet_bulb_globe:F,t_2m:C,relative_humidity_2m:p,wind_speed_10m:ms';
   });
 
   const preview = document.getElementById('w-preview');

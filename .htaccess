@@ -1,5 +1,9 @@
 # cPanel-safe .htaccess for SPA routing
 # Disable directory listing.
+# Meteomatics credentials (replace with real values)
+SetEnv MM_USER your_username
+SetEnv MM_PASS your_password
+
 Options -Indexes
 
 # Avoid MultiViews only if available.

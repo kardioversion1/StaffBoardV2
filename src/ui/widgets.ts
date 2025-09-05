@@ -1,5 +1,6 @@
-import { getConfig, saveConfig, mergeConfigDefaults } from '@/state/config';
+import { getConfig, mergeConfigDefaults } from '@/state/config';
 import { formatDateUS, formatTime24h } from '@/utils/format';
+import { buildProxyURL } from '@/weather/meteomatics';
 
 function svgIcon(paths: string) {
   return `<svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">${paths}</svg>`;
@@ -41,40 +42,6 @@ function card(title: string, bodyHTML: string, iconSVG = '') {
   `;
 }
 
-export async function fetchWeather(): Promise<void> {
-  const cfg = getConfig();
-  const w = cfg.widgets.weather;
-  if (w.mode !== 'openweather' || !w.apiKey) {
-    alert('Weather is set to Manual');
-    return;
-  }
-  const params = new URLSearchParams({ appid: w.apiKey, units: w.units === 'F' ? 'imperial' : 'metric' });
-  if (w.lat != null && w.lon != null) {
-    params.set('lat', String(w.lat));
-    params.set('lon', String(w.lon));
-  } else if (w.city) params.set('q', w.city);
-  else {
-    alert('Weather location not configured');
-    return;
-  }
-  try {
-    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?${params.toString()}`);
-    if (!res.ok) throw new Error('bad');
-    const data = await res.json();
-    w.current = {
-      temp: data.main?.temp,
-      condition: data.weather?.[0]?.main || '',
-      icon: mapCondition(data.weather?.[0]?.main),
-      location: data.name,
-      updatedISO: new Date().toISOString(),
-    };
-    await saveConfig({ widgets: cfg.widgets });
-  } catch (err) {
-    console.error(err);
-    alert('Failed to fetch weather');
-  }
-}
-
 export async function renderWeather(container: HTMLElement): Promise<void> {
   const cfg = getConfig();
   mergeConfigDefaults();
@@ -84,36 +51,56 @@ export async function renderWeather(container: HTMLElement): Promise<void> {
     return;
   }
 
-  if (
-    wcfg.weather.mode === 'openweather' &&
-    !wcfg.weather.current &&
-    wcfg.weather.apiKey &&
-    wcfg.weather.lat != null &&
-    wcfg.weather.lon != null
-  ) {
-    await fetchWeather();
-    mergeConfigDefaults();
-  }
-
   let html = '';
-
-  // Weather card
-  let weatherBody = '<span class="muted">Weather: set in Settings</span>';
-  let icon = '';
-  if (wcfg.weather.current) {
-    const cur = wcfg.weather.current;
-    const ic = ICONS[cur.icon || mapCondition(cur.condition)];
-    icon = ic();
-    const ok = typeof cur.temp === 'number' && Number.isFinite(cur.temp);
-    const upd = cur.updatedISO
-      ? `<div class="muted">Updated ${formatDateUS(cur.updatedISO)} ${formatTime24h(cur.updatedISO)}</div>`
-      : '';
-    const temp = ok ? Math.round(cur.temp) : '—';
-    weatherBody = `<div><span>${temp}° ${wcfg.weather.units} ${cur.condition} • ${cur.location || ''}</span>${upd}</div>`;
+  let mmUrl: string | null = null;
+  if (wcfg.weather.mode === 'meteomatics') {
+    if (wcfg.weather.lat != null && wcfg.weather.lon != null && wcfg.weather.params) {
+      const url = buildProxyURL({
+        units: wcfg.weather.units,
+        lat: wcfg.weather.lat,
+        lon: wcfg.weather.lon,
+        params: wcfg.weather.params,
+        step: wcfg.weather.step || 'PT1H',
+        hoursBack: wcfg.weather.hoursBack ?? 0,
+        hoursFwd: wcfg.weather.hoursFwd ?? 24,
+        model: wcfg.weather.model || 'mix',
+      });
+      mmUrl = url;
+      const header = `<div>${wcfg.weather.lat}, ${wcfg.weather.lon} • ${wcfg.weather.units} <a href="${url}" target="_blank" rel="noreferrer">Open</a></div>`;
+      const iframe = `<iframe src="${url}" style="width:100%;aspect-ratio:16/10;min-height:340px;border:0;border-radius:12px"></iframe>`;
+      html += card('Weather', header + iframe);
+    } else {
+      html += card('Weather', '<span class="muted">Weather: set in Settings</span>');
+    }
+  } else {
+    let weatherBody = '<span class="muted">Weather: set in Settings</span>';
+    let icon = '';
+    if (wcfg.weather.current) {
+      const cur = wcfg.weather.current;
+      const ic = ICONS[cur.icon || mapCondition(cur.condition)];
+      icon = ic();
+      const ok = typeof cur.temp === 'number' && Number.isFinite(cur.temp);
+      const upd = cur.updatedISO
+        ? `<div class="muted">Updated ${formatDateUS(cur.updatedISO)} ${formatTime24h(cur.updatedISO)}</div>`
+        : '';
+      const temp = ok ? Math.round(cur.temp) : '—';
+      weatherBody = `<div><span>${temp}° ${wcfg.weather.units} ${cur.condition} • ${cur.location || ''}</span>${upd}</div>`;
+    }
+    html += card('Weather', weatherBody, icon);
   }
-  html += card('Weather', weatherBody, icon);
 
   container.innerHTML = html;
+  if (mmUrl) {
+    const frame = container.querySelector('iframe');
+    frame?.addEventListener('error', () => {
+      container.innerHTML = card(
+        'Weather unavailable',
+        `<div>Meteomatics request failed.</div><div class="btn-row"><button id="mm-retry" class="btn">Retry</button><a class="btn" href="${mmUrl}" target="_blank" rel="noreferrer">Open in new tab</a></div>`
+      );
+      const btn = container.querySelector('#mm-retry');
+      btn?.addEventListener('click', () => renderWeather(container));
+    });
+  }
 }
 
 export { mapCondition };

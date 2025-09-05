@@ -129,7 +129,7 @@ export async function renderBoard(
           </section>
 
           <section class="panel">
-            <h3>Physicians (read-only)</h3>
+            <h3>Physicians</h3>
             <div id="phys"></div>
             <button id="phys-next7" class="btn">Next 7 days</button>
           </section>

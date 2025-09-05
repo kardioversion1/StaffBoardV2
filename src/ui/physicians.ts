@@ -8,13 +8,23 @@ type Event = {
 
 const DEFAULT_CAL_URL = 'https://www.bytebloc.com/sk/?76b6a156';
 
-/** Physician shift metadata (display order). */
-const SHIFT_DETAILS = [
-  { label: 'Day', time: '6a – 2p' },
-  { label: 'Mid', time: 'noon – 10p' },
-  { label: 'Evening', time: '2p – 11:59p' },
-  { label: 'Overnight', time: '10p – 6a' },
-];
+/**
+ * Extract a physician's last name from a raw summary line and format it as
+ * "Dr. <Last>". Returns `null` for lines that do not appear to contain a
+ * physician's name (e.g., hospital headers).
+ */
+function extractDoctor(summary: string): string | null {
+  if (/Jewish\s+Hospital/i.test(summary)) return null;
+  const parts = summary
+    .split('|')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const namePart = parts.length > 1 ? parts[1] : parts[0];
+  if (!namePart || /^-+$/.test(namePart)) return null;
+  const clean = namePart.replace(/^Dr\.?\s+/i, '').trim();
+  const last = clean.split(/\s+/).pop();
+  return last ? `Dr. ${last}` : null;
+}
 
 /** Unescape ICS text per RFC 5545 (\, \; \, \n, \N) */
 function icsUnescape(text: string): string {
@@ -174,8 +184,8 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
             e.date === dateISO &&
             (e.location ? isJewishDowntown(e.location) : true)
         )
-        .map((e) => e.summary)
-        .filter(Boolean)
+        .map((e) => extractDoctor(e.summary))
+        .filter((n): n is string => Boolean(n))
     );
     const docs = Array.from(docsSet);
 
@@ -183,14 +193,11 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
       el.textContent = 'No physicians scheduled';
       return;
     }
-    const rows = docs
+    const items = docs
       .slice(0, 3)
-      .map((d, i) => {
-        const shift = SHIFT_DETAILS[i];
-        return `<tr><td>${shift.label}</td><td>${d}</td><td>${shift.time}</td></tr>`;
-      })
+      .map((d) => `<li>${d}</li>`)
       .join('');
-    el.innerHTML = `<table class="phys-table"><tbody>${rows}</tbody></table>`;
+    el.innerHTML = `<ul class="phys-list">${items}</ul>`;
   } catch {
     el.textContent = 'Physician schedule unavailable';
   }
@@ -214,7 +221,8 @@ export async function getUpcomingDoctors(
   for (const e of events) {
     const t = new Date(e.date + 'T00:00:00').getTime();
     if (t >= start && t < end && (e.location ? isJewishDowntown(e.location) : true)) {
-      (map[e.date] ||= []).push(e.summary.trim());
+      const name = extractDoctor(e.summary.trim());
+      if (name) (map[e.date] ||= []).push(name);
     }
   }
   // De-dupe per date
@@ -243,15 +251,10 @@ export async function renderPhysicianPopup(
         ? '<p>No physicians scheduled</p>'
         : dates
             .map((d) => {
-              const rows = data[d]
-                .map((n, i) => {
-                  const shift = SHIFT_DETAILS[i] || { label: '', time: '' };
-                  return `<tr><td>${shift.label}</td><td>${n}</td><td>${shift.time}</td></tr>`;
-                })
-                .join('');
+              const items = data[d].map((n) => `<li>${n}</li>`).join('');
               return `<div class="phys-day">
                 <strong class="phys-date">${d}</strong>
-                <table class="phys-table"><tbody>${rows}</tbody></table>
+                <ul class="phys-list">${items}</ul>
               </div>`;
             })
             .join('');

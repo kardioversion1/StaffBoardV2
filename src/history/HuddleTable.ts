@@ -14,7 +14,7 @@ export function renderHuddleTable(root: HTMLElement): void {
         <button id="huddle-export" class="btn">Export CSV</button>
       </div>
       <table class="history-table">
-        <thead><tr><th>Date</th><th>Shift</th><th>By</th><th>NEDOCS</th><th>Checklist</th><th>Notes</th></tr></thead>
+        <thead><tr><th>Date</th><th>Shift</th><th>By</th><th>NEDOCS</th><th>Irregular</th><th>Notes</th></tr></thead>
         <tbody id="huddle-body"></tbody>
       </table>
     </div>
@@ -28,6 +28,7 @@ export function renderHuddleTable(root: HTMLElement): void {
     body.innerHTML = records
       .map((r) => {
         const items = r.checklist
+          .filter((i) => i.state !== 'ok')
           .map(
             (i) =>
               `${i.label}: ${i.state}${i.note ? ` (${i.note})` : ''}`

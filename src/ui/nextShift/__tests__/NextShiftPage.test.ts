@@ -19,6 +19,7 @@ vi.mock('@/state/nextShift', () => ({
     huddle: '',
     handoff: '',
     version: 2,
+    publishAtISO: undefined,
   }),
   loadNextDraft: vi.fn().mockResolvedValue(null),
   saveNextDraft: vi.fn(),
@@ -41,12 +42,16 @@ describe('renderNextShiftPage', () => {
     const zoneSel = root.querySelector('select#zone-a') as HTMLSelectElement;
     expect(zoneSel).toBeTruthy();
 
+    const goLive = root.querySelector('#next-go-live') as HTMLInputElement;
+    goLive.value = '2024-01-01T07:00';
+
     zoneSel.value = 'n1';
     (root.querySelector('#next-save') as HTMLButtonElement).click();
     await Promise.resolve();
 
     const { saveNextDraft } = await import('@/state/nextShift');
     expect((saveNextDraft as any).mock.calls[0][0].zones['A'][0].nurseId).toBe('n1');
+    expect((saveNextDraft as any).mock.calls[0][0].publishAtISO).toBe('2024-01-01T07:00');
   });
 
   it('publishes draft (no history append expected here)', async () => {

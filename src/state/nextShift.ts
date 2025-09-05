@@ -3,10 +3,14 @@ import {
   applyDraftToActive,
   KS,
   DB,
-  type DraftShift,
+  type DraftShift as BaseDraftShift,
 } from '@/state';
 import * as Server from '@/server';
 import { type ZoneDef } from '@/utils/zones';
+
+export interface DraftShift extends BaseDraftShift {
+  publishAtISO?: string;
+}
 
 /** Build an empty draft with zones populated but no assignments. */
 export function buildEmptyDraft(
@@ -26,6 +30,7 @@ export function buildEmptyDraft(
     huddle: '',
     handoff: '',
     version: CURRENT_SCHEMA_VERSION,
+    publishAtISO: undefined,
   };
 }
 

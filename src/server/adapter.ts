@@ -1,6 +1,8 @@
 /**
  * Adapter for server-side persistence backed by api.php.
  */
+import { get as idbGet, set as idbSet } from '@/db';
+
 export interface ServerAPI {
   /** Load data from the server with optional caching. */
   load<T = any>(key: string, params?: Record<string, any>): Promise<T>;
@@ -28,35 +30,89 @@ const withAuth = (headers: HeadersInit = {}): HeadersInit => (
 export const load: ServerAPI['load'] = async (key, params = {}) => {
   const keyName = cacheKey(key, params);
   const qs = new URLSearchParams({ action: 'load', key, ...params });
-  try {
+
+  const attemptFetch = async () => {
     const res = await fetch(`/api.php?${qs.toString()}`, {
       cache: 'no-store',
       headers: withAuth(),
     });
     if (!res.ok) throw new Error('Network');
-    const data = await res.json();
-    localStorage.setItem(keyName, JSON.stringify(data));
+    return res.json();
+  };
+
+  try {
+    const data = await attemptFetch();
+    try {
+      await idbSet(keyName, data);
+    } catch {
+      /* ignore persistence errors */
+    }
     return data;
   } catch (err) {
-    const cached = localStorage.getItem(keyName);
-    if (cached) return JSON.parse(cached);
-    throw err;
+    let cached: unknown;
+    try {
+      cached = await idbGet(keyName);
+    } catch {
+      cached = undefined;
+    }
+    if (cached !== undefined) return cached as any;
+    try {
+      const retry = await attemptFetch();
+      try {
+        await idbSet(keyName, retry);
+      } catch {
+        /* ignore persistence errors */
+      }
+      return retry;
+    } catch (err2) {
+      if (typeof alert === 'function') {
+        alert('Unable to load data and no cached copy is available.');
+      }
+      throw err2;
+    }
   }
 };
 
 export const save: ServerAPI['save'] = async (key, payload, params = {}) => {
   const keyName = cacheKey(key, {});
   const qs = new URLSearchParams({ action: 'save', key, ...params });
-  const res = await fetch(`/api.php?${qs.toString()}`, {
-    method: 'POST',
-    headers: withAuth({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error('Network');
-  const j = await res.json();
-  if (!j.ok) throw new Error(j.error || 'save failed');
-  localStorage.setItem(keyName, JSON.stringify(payload));
-  return j;
+
+  const attemptFetch = async () => {
+    const res = await fetch(`/api.php?${qs.toString()}`, {
+      method: 'POST',
+      headers: withAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Network');
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || 'save failed');
+    return j;
+  };
+
+  try {
+    const j = await attemptFetch();
+    try {
+      await idbSet(keyName, payload);
+    } catch {
+      /* ignore persistence errors */
+    }
+    return j;
+  } catch (err) {
+    try {
+      const retry = await attemptFetch();
+      try {
+        await idbSet(keyName, payload);
+      } catch {
+        /* ignore persistence errors */
+      }
+      return retry;
+    } catch (err2) {
+      if (typeof alert === 'function') {
+        alert('Unable to save data.');
+      }
+      throw err2;
+    }
+  }
 };
 
 export const softDeleteStaff: ServerAPI['softDeleteStaff'] = async (id) => {

@@ -36,6 +36,7 @@ import {
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 import { showBanner } from '@/ui/banner';
+import { openAssignDialog } from '@/ui/assignDialog';
 
 // --- helpers ---------------------------------------------------------------
 
@@ -422,17 +423,25 @@ function renderZones(
       body.appendChild(row);
     });
 
-    const addRow = document.createElement('div');
+    const hasSlots = (active.zones[zName] || []).length > 0;
     const addBtn = document.createElement('button');
-    addBtn.textContent = '+ Add';
-    addBtn.className = 'btn';
-    addBtn.addEventListener('click', () =>
-      addSlotDialog(active, staff, save, z.name, () =>
-        renderZones(active, cfg, staff, save)
-      )
-    );
-    addRow.appendChild(addBtn);
-    body.appendChild(addRow);
+    addBtn.textContent = '+';
+    addBtn.className = hasSlots
+      ? 'zone-card__add zone-card__add--small'
+      : 'zone-card__add zone-card__add--large';
+    addBtn.addEventListener('click', () => {
+      openAssignDialog(staff, (id) => {
+        const moved = upsertSlot(active, { zone: z.name }, { nurseId: id });
+        if (moved) showBanner('Previous assignment cleared');
+        save();
+        renderZones(active, cfg, staff, save);
+      });
+    });
+    if (hasSlots) {
+      section.appendChild(addBtn);
+    } else {
+      body.appendChild(addBtn);
+    }
 
     section.appendChild(body);
     (z.pct ? pctCont : cont).appendChild(section);
@@ -716,38 +725,3 @@ function manageSlot(
   });
 }
 
-function addSlotDialog(
-  board: ActiveBoard,
-  staffList: Staff[],
-  save: () => void,
-  zone: string,
-  rerender: () => void
-): void {
-  const overlay = document.createElement('div');
-  overlay.className = 'manage-overlay';
-  overlay.innerHTML = `
-    <div class="manage-dialog">
-      <h3>Add to ${zone}</h3>
-      <select id="add-nurse">
-        ${staffList
-          .map((s) => `<option value="${s.id}">${s.name || s.id}</option>`)
-          .join('')}
-      </select>
-      <div class="dialog-actions">
-        <button id="add-confirm" class="btn">Add</button>
-        <button id="add-cancel" class="btn">Cancel</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-
-  overlay.querySelector('#add-cancel')!.addEventListener('click', () => overlay.remove());
-  overlay.querySelector('#add-confirm')!.addEventListener('click', () => {
-    const sel = overlay.querySelector('#add-nurse') as HTMLSelectElement;
-    const id = sel.value;
-    const moved = upsertSlot(board, { zone }, { nurseId: id });
-    if (moved) showBanner('Previous assignment cleared');
-    save();
-    overlay.remove();
-    rerender();
-  });
-}

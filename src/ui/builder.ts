@@ -16,6 +16,7 @@ import { nurseTile } from './nurseTile';
 import { setNurseCache, labelFromId } from '@/utils/names';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 import './mainBoard/boardLayout.css';
+import { openAssignDialog } from '@/ui/assignDialog';
 
 function buildEmptyDraft(dateISO: string, shift: 'day' | 'night', zones: ZoneDef[]): DraftShift {
   return {
@@ -309,10 +310,29 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
           renderZones();
         }
       });
-      section.appendChild(editBtn);
-
       const body = document.createElement('div');
       body.className = 'zone-card__body';
+      const hasSlots = (board.zones[z.name] || []).length > 0;
+      const addBtn = document.createElement('button');
+      addBtn.textContent = '+';
+      addBtn.className = hasSlots
+        ? 'zone-card__add zone-card__add--small'
+        : 'zone-card__add zone-card__add--large';
+      addBtn.addEventListener('click', () => {
+        openAssignDialog(staff, (id) => {
+          const moved = upsertSlot(board, { zone: z.name }, { nurseId: id });
+          if (moved) showBanner('Previous assignment cleared');
+          save();
+          renderZones();
+        });
+      });
+      section.appendChild(editBtn);
+      if (hasSlots) {
+        section.appendChild(addBtn);
+      } else {
+        body.appendChild(addBtn);
+      }
+
       body.addEventListener('dragover', (e) => {
         e.preventDefault();
         e.stopPropagation();

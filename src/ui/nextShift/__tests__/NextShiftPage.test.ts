@@ -26,7 +26,7 @@ vi.mock('@/state/nextShift', () => ({
 }));
 
 vi.mock('@/state/staff', () => ({
-  loadStaff: vi.fn().mockResolvedValue([{ id: 'n1', name: 'Alice' }]),
+  loadStaff: vi.fn().mockResolvedValue([{ id: 'n1', name: 'Alice', role: 'nurse' }]),
 }));
 
 describe('renderNextShiftPage', () => {
@@ -44,5 +44,18 @@ describe('renderNextShiftPage', () => {
     await Promise.resolve();
     const { saveNextDraft } = await import('@/state/nextShift');
     expect((saveNextDraft as any).mock.calls[0][0].zones['A'][0].nurseId).toBe('n1');
+  });
+
+  it('filters staff and assigns to focused select', async () => {
+    const root = document.getElementById('root') as HTMLElement;
+    await renderNextShiftPage(root);
+    const search = root.querySelector('#next-search') as HTMLInputElement;
+    search.value = 'ali';
+    search.dispatchEvent(new Event('input'));
+    const zoneSel = root.querySelector('select#zone-a') as HTMLSelectElement;
+    zoneSel.focus();
+    const item = root.querySelector('.assign-item[data-id="n1"]') as HTMLElement;
+    item.click();
+    expect(zoneSel.value).toBe('n1');
   });
 });

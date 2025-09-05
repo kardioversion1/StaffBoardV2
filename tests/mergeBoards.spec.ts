@@ -49,4 +49,30 @@ describe('mergeBoards', () => {
     const merged = mergeBoards(remote, local);
     expect(merged.incoming).toHaveLength(2);
   });
+
+  it('keeps remote metadata when incoming entries collide', () => {
+    const remote = {
+      ...base(),
+      incoming: [{ nurseId: 'n1', eta: '1', arrived: true }],
+    };
+    const local = {
+      ...base(),
+      incoming: [{ nurseId: 'n1', eta: '1', arrived: false }],
+    };
+    const merged = mergeBoards(remote, local);
+    expect(merged.incoming[0].arrived).toBe(true);
+  });
+
+  it('keeps remote metadata when offgoing entries collide', () => {
+    const remote = {
+      ...base(),
+      offgoing: [{ nurseId: 'n1', ts: 1, note: 'server' } as any],
+    };
+    const local = {
+      ...base(),
+      offgoing: [{ nurseId: 'n1', ts: 1, note: 'client' } as any],
+    };
+    const merged = mergeBoards(remote, local);
+    expect((merged.offgoing[0] as any).note).toBe('server');
+  });
 });

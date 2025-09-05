@@ -8,6 +8,7 @@ import {
   KS,
   getActiveBoardCache,
   setActiveBoardCache,
+  mergeBoards,
   type ActiveBoard,
   type Staff,
 } from '@/state';
@@ -81,9 +82,7 @@ export function renderHeader() {
           date: STATE.dateISO,
           shift,
         });
-        const merged: ActiveBoard = remote
-          ? { ...remote, ...local, zones: { ...(remote.zones || {}), ...(local.zones || {}) } }
-          : local;
+        const merged: ActiveBoard = remote ? mergeBoards(remote, local) : local;
         await DB.set(KS.ACTIVE(STATE.dateISO, shift), merged);
         setActiveBoardCache(merged);
         tasks.push(Server.save('active', merged));

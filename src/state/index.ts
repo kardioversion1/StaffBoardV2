@@ -78,7 +78,7 @@ export type Staff = {
   dtoEligible?: boolean;
 };
 
-import type { Slot } from '@/slots';
+import { ensureUniqueAssignment, type Slot } from '@/slots';
 export type { Slot } from '@/slots';
 
 export interface ZoneAssignment {
@@ -136,6 +136,56 @@ export function setActiveBoardCache(board: ActiveBoard): void {
 }
 export function getActiveBoardCache(): ActiveBoard | undefined {
   return ACTIVE_BOARD_CACHE;
+}
+
+/** Merge a local board into the remote one without overwriting remote edits. */
+export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoard {
+  const merged: ActiveBoard = { ...remote, zones: { ...remote.zones } };
+
+  merged.comments = remote.comments || local.comments;
+  merged.huddle = remote.huddle || local.huddle;
+  merged.handoff = remote.handoff || local.handoff;
+
+  const mergeArr = <T>(a: T[], b: T[], key: (item: T) => string): T[] => {
+    const map = new Map<string, T>();
+    for (const item of a) map.set(key(item), item);
+    for (const item of b) map.set(key(item), item);
+    return Array.from(map.values());
+  };
+
+  merged.incoming = mergeArr(
+    remote.incoming,
+    local.incoming,
+    (i) => `${i.nurseId}|${i.eta}`
+  );
+  merged.offgoing = mergeArr(
+    remote.offgoing,
+    local.offgoing,
+    (o) => `${o.nurseId}|${o.ts}`
+  );
+
+  if (local.charge) {
+    ensureUniqueAssignment(merged, local.charge.nurseId);
+    merged.charge = local.charge;
+  }
+  if (local.triage) {
+    ensureUniqueAssignment(merged, local.triage.nurseId);
+    merged.triage = local.triage;
+  }
+  if (local.admin) {
+    ensureUniqueAssignment(merged, local.admin.nurseId);
+    merged.admin = local.admin;
+  }
+
+  for (const [zone, slots] of Object.entries(local.zones)) {
+    for (const slot of slots) {
+      ensureUniqueAssignment(merged, slot.nurseId);
+      const arr = merged.zones[zone] || (merged.zones[zone] = []);
+      arr.push(slot);
+    }
+  }
+
+  return merged;
 }
 
 // ------- Config defaults / loaders (single-source implementation) -------

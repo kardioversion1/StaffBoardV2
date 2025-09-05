@@ -147,6 +147,25 @@ describe('history persistence', () => {
     expect(rows[0].previousZone).toBeUndefined();
   });
 
+  it('skips assignments shorter than 20 minutes', async () => {
+    const snap: PublishedShiftSnapshot = {
+      ...base,
+      zoneAssignments: [
+        {
+          staffId: '1',
+          displayName: 'Alice',
+          role: 'nurse',
+          zone: 'A',
+          startISO: '2024-01-01T07:00:00.000Z',
+          endISO: '2024-01-01T07:10:00.000Z',
+        },
+      ],
+    };
+    await indexStaffAssignments(snap);
+    const rows = await findShiftsByStaff('1');
+    expect(rows.length).toBe(0);
+  });
+
   it('saves and fetches huddles', async () => {
     const rec: HuddleRecord = {
       dateISO: '2024-01-01',

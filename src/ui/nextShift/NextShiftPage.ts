@@ -77,27 +77,15 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
             </select></label>
           </div>
           <table class="assignments">
-            <thead><tr><th>Role/Zone</th><th>Nurse</th></tr></thead>
+            <thead><tr><th>Zone</th><th>Nurse</th></tr></thead>
             <tbody>
-              <tr><td>Charge</td><td>${buildSelect(
-                'charge',
-                staff,
-                draft.charge?.nurseId
-              )}</td></tr>
-              <tr><td>Triage</td><td>${buildSelect(
-                'triage',
-                staff,
-                draft.triage?.nurseId
-              )}</td></tr>
-              <tr><td>Secretary</td><td>${buildSelect(
-                'admin',
-                staff,
-                draft.admin?.nurseId
-              )}</td></tr>
               ${zoneRows}
             </tbody>
           </table>
           <div class="actions">
+            <label>Go Live <input type="datetime-local" id="next-go-live" value="${
+              draft.publishAtISO || ''
+            }"></label>
             <button id="next-save" class="btn">Save Draft</button>
             <button id="next-publish" class="btn">Publish</button>
           </div>
@@ -109,8 +97,10 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   const nurseCol = document.getElementById('next-nurses') as HTMLElement;
   const techCol = document.getElementById('next-techs') as HTMLElement;
   const searchInput = document.getElementById('next-search') as HTMLInputElement;
+  const goLiveInput = document.getElementById('next-go-live') as HTMLInputElement;
 
   let activeSelect: HTMLSelectElement | null = null;
+  let publishTimer: number | undefined;
 
   function renderStaff(filter = ''): void {
     const norm = filter.toLowerCase();
@@ -168,16 +158,31 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
       ...draft!,
       dateISO,
       shift,
-      charge: readSlot('charge'),
-      triage: readSlot('triage'),
-      admin: readSlot('admin'),
+      charge: undefined,
+      triage: undefined,
+      admin: undefined,
       zones,
+      publishAtISO: goLiveInput.value || undefined,
     };
+  }
+
+  function schedulePublish(): void {
+    if (publishTimer) clearTimeout(publishTimer);
+    if (!draft?.publishAtISO) return;
+    const delay = new Date(draft.publishAtISO).getTime() - Date.now();
+    if (delay <= 0) {
+      void publishNextDraft();
+    } else {
+      publishTimer = window.setTimeout(() => {
+        void publishNextDraft();
+      }, delay);
+    }
   }
 
   document.getElementById('next-save')?.addEventListener('click', async () => {
     draft = gatherDraft();
     await saveNextDraft(draft);
+    schedulePublish();
   });
 
   document
@@ -185,10 +190,13 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
     ?.addEventListener('click', async () => {
       draft = gatherDraft();
       await saveNextDraft(draft);
+      if (publishTimer) clearTimeout(publishTimer);
       try {
         await publishNextDraft();
       } catch (err) {
         console.error(err);
       }
     });
+
+  schedulePublish();
 }

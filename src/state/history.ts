@@ -245,6 +245,12 @@ export async function indexStaffAssignments(
 ): Promise<void> {
   await ensureVersion();
   for (const a of snapshot.zoneAssignments) {
+    const start = new Date(a.startISO).getTime();
+    const end = new Date(a.endISO).getTime();
+    if (isFinite(start) && isFinite(end)) {
+      const minutes = (end - start) / 60000;
+      if (minutes < 20) continue;
+    }
     const key = STAFF_KEY(a.staffId);
     const list = (await kvGet<NurseShiftIndexEntry[]>(key)) || [];
     const prev = list.find(

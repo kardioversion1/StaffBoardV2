@@ -75,4 +75,23 @@ describe('mergeBoards', () => {
     const merged = mergeBoards(remote, local);
     expect((merged.offgoing[0] as any).note).toBe('server');
   });
+
+  it('preserves remote ordering when arrays collide', () => {
+    const remote = {
+      ...base(),
+      incoming: [
+        { nurseId: 'n1', eta: '1' },
+        { nurseId: 'n2', eta: '2' },
+      ],
+    };
+    const local = {
+      ...base(),
+      incoming: [
+        { nurseId: 'n2', eta: '2' },
+        { nurseId: 'n1', eta: '1' },
+      ],
+    };
+    const merged = mergeBoards(remote, local);
+    expect(merged.incoming.map((i) => i.nurseId)).toEqual(['n1', 'n2']);
+  });
 });

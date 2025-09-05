@@ -155,13 +155,14 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
     key: (item: T) => string
   ): T[] => {
     const map = new Map<string, T>();
-    for (const item of b) {
+    // Insert remote items first so their order is preserved when merging.
+    for (const item of a) {
       map.set(key(item), item);
     }
-    for (const item of a) {
+    for (const item of b) {
       const k = key(item);
       const existing = map.get(k);
-      map.set(k, existing ? { ...existing, ...item } : item);
+      map.set(k, existing ? { ...item, ...existing } : item);
     }
     return Array.from(map.values());
   };

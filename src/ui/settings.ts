@@ -15,16 +15,6 @@ import {
 import * as Server from '@/server';
 import { openWelcomeModal } from '@/ui/welcome';
 
-function mapIcon(cond: string) {
-  const c = (cond || '').toLowerCase();
-  if (c.includes('storm') || c.includes('thunder')) return 'storm';
-  if (c.includes('snow')) return 'snow';
-  if (c.includes('rain') || c.includes('drizzle')) return 'rain';
-  if (c.includes('cloud')) return 'cloud';
-  if (c.includes('mist') || c.includes('fog') || c.includes('haze')) return 'mist';
-  return 'sun';
-}
-
 /** Render the Settings tab including roster and display options. */
 /** Render the settings tab including roster and display options. */
 export async function renderSettings(root: HTMLElement): Promise<void> {
@@ -489,144 +479,50 @@ function renderWidgetsPanel() {
     </div>
 
     <h4>Weather</h4>
-    <div class="form-row">
-      <label><input type="radio" name="w-mode" value="manual"> Manual</label>
-      <label><input type="radio" name="w-mode" value="meteomatics"> Meteomatics</label>
+    <div class="form-grid">
+      <label>Lat <input id="w-lat" type="number"></label>
+      <label>Lon <input id="w-lon" type="number"></label>
       <label>Units
         <select id="w-units">
           <option>F</option><option>C</option>
         </select>
       </label>
     </div>
-    <div id="w-meteo" class="form-grid">
-      <label>Lat <input id="w-lat" type="number"></label>
-      <label>Lon <input id="w-lon" type="number"></label>
-      <label>Params <input id="w-params"></label>
-      <label>Step
-        <select id="w-step">
-          <option value="PT1H">PT1H</option>
-          <option value="PT30M">PT30M</option>
-          <option value="P1D">P1D</option>
-        </select>
-      </label>
-      <label>Hours Back <input id="w-hoursBack" type="number"></label>
-      <label>Hours Fwd <input id="w-hoursFwd" type="number"></label>
-      <label>Model <input id="w-model"></label>
-      <div class="btn-row">
-        <button id="w-preset-louisville" class="btn" type="button">Louisville Hourly</button>
-        <button id="w-preset-heat" class="btn" type="button">Heat Safety</button>
-      </div>
-    </div>
     <div class="btn-row"><button id="w-save" class="btn">Save Weather</button></div>
-
-    <div id="w-manual" class="form-grid">
-      <label>Temperature <input id="w-temp" type="number"></label>
-      <label>Condition <input id="w-cond"></label>
-      <label>Location <input id="w-loc"></label>
-      <button id="w-apply" class="btn">Apply Manual</button>
-    </div>
 
     <div id="w-preview"></div>
 
   </section>
 `;
 
-  (document.getElementById('w-show') as HTMLInputElement).checked = w.show !== false;
-  (document.getElementById('w-units') as HTMLSelectElement).value = w.weather.units;
-  (document.getElementById('w-lat') as HTMLInputElement).value = w.weather.lat?.toString() || '';
-  (document.getElementById('w-lon') as HTMLInputElement).value = w.weather.lon?.toString() || '';
-  (document.getElementById('w-params') as HTMLInputElement).value = w.weather.params || '';
-  (document.getElementById('w-step') as HTMLSelectElement).value = w.weather.step || 'PT1H';
-  (document.getElementById('w-hoursBack') as HTMLInputElement).value = (w.weather.hoursBack ?? 0).toString();
-  (document.getElementById('w-hoursFwd') as HTMLInputElement).value = (w.weather.hoursFwd ?? 24).toString();
-  (document.getElementById('w-model') as HTMLInputElement).value = w.weather.model || 'mix';
-  (document.getElementById('w-temp') as HTMLInputElement).value = w.weather.current?.temp?.toString() || '';
-  (document.getElementById('w-cond') as HTMLInputElement).value = w.weather.current?.condition || '';
-  (document.getElementById('w-loc') as HTMLInputElement).value = w.weather.current?.location || '';
-  const manual = document.getElementById('w-manual')!;
-  const meteoDiv = document.getElementById('w-meteo')!;
-  const modeInput = document.querySelector(
-    `input[name="w-mode"][value="${w.weather.mode}"]`
-  ) as HTMLInputElement;
-  if (modeInput) modeInput.checked = true;
-  const setMode = () => {
-    const sel = document.querySelector('input[name="w-mode"]:checked') as HTMLInputElement;
-    const mode = sel ? sel.value : 'manual';
-    manual.style.display = mode === 'manual' ? 'grid' : 'none';
-    meteoDiv.style.display = mode === 'meteomatics' ? 'grid' : 'none';
-  };
-  setMode();
-  document.querySelectorAll('input[name="w-mode"]').forEach((el) =>
-    el.addEventListener('change', setMode)
-  );
+  (document.getElementById('w-show') as HTMLInputElement).checked =
+    w.show !== false;
+  (document.getElementById('w-lat') as HTMLInputElement).value =
+    w.weather.lat?.toString() || '';
+  (document.getElementById('w-lon') as HTMLInputElement).value =
+    w.weather.lon?.toString() || '';
+  (document.getElementById('w-units') as HTMLSelectElement).value =
+    w.weather.units;
 
   document.getElementById('w-save')!.addEventListener('click', async () => {
     const cfg = getConfig();
     const w = cfg.widgets;
     w.show = (document.getElementById('w-show') as HTMLInputElement).checked;
-    w.weather.mode = (
-      document.querySelector('input[name="w-mode"]:checked') as HTMLInputElement
-    ).value as 'manual' | 'meteomatics';
-    const prevUnits = w.weather.units;
-    w.weather.units = (document.getElementById('w-units') as HTMLSelectElement).value as 'F' | 'C';
-    const lat = parseFloat((document.getElementById('w-lat') as HTMLInputElement).value);
+    const lat = parseFloat(
+      (document.getElementById('w-lat') as HTMLInputElement).value
+    );
     w.weather.lat = isNaN(lat) ? undefined : lat;
-    const lon = parseFloat((document.getElementById('w-lon') as HTMLInputElement).value);
+    const lon = parseFloat(
+      (document.getElementById('w-lon') as HTMLInputElement).value
+    );
     w.weather.lon = isNaN(lon) ? undefined : lon;
-    const params = (document.getElementById('w-params') as HTMLInputElement).value.trim();
-    if (!params || /\s/.test(params)) {
-      alert('Params must be comma-separated with no spaces');
-      return;
-    }
-    w.weather.params = params;
-    w.weather.step = (document.getElementById('w-step') as HTMLSelectElement).value;
-    const hb = parseInt((document.getElementById('w-hoursBack') as HTMLInputElement).value, 10);
-    const hf = parseInt((document.getElementById('w-hoursFwd') as HTMLInputElement).value, 10);
-    w.weather.hoursBack = isNaN(hb) ? 0 : hb;
-    w.weather.hoursFwd = isNaN(hf) ? 24 : hf;
-    w.weather.model = (document.getElementById('w-model') as HTMLInputElement).value || 'mix';
-    if (w.weather.current && prevUnits !== w.weather.units) {
-      w.weather.current.temp =
-        w.weather.units === 'C'
-          ? ((w.weather.current.temp - 32) * 5) / 9
-          : (w.weather.current.temp * 9) / 5 + 32;
-    }
+    w.weather.units = (
+      document.getElementById('w-units') as HTMLSelectElement
+    ).value as 'F' | 'C';
     await saveConfig({ widgets: w });
     const body = document.getElementById('weather-body');
     if (body) await renderWeather(body);
     renderWidgetsPanel();
-  });
-
-  document.getElementById('w-apply')!.addEventListener('click', async () => {
-    const cfg = getConfig();
-    const w = cfg.widgets;
-    const temp = parseFloat((document.getElementById('w-temp') as HTMLInputElement).value);
-    const cond = (document.getElementById('w-cond') as HTMLInputElement).value;
-    const loc = (document.getElementById('w-loc') as HTMLInputElement).value;
-    w.weather.current = {
-      temp: temp,
-      condition: cond,
-      location: loc,
-      icon: mapIcon(cond),
-      updatedISO: new Date().toISOString(),
-    };
-    await saveConfig({ widgets: w });
-    const body = document.getElementById('weather-body');
-    if (body) await renderWeather(body);
-    renderWidgetsPanel();
-  });
-
-  document.getElementById('w-preset-louisville')!.addEventListener('click', () => {
-    (document.getElementById('w-lat') as HTMLInputElement).value = '38.2542376';
-    (document.getElementById('w-lon') as HTMLInputElement).value = '-85.759407';
-    (document.getElementById('w-params') as HTMLInputElement).value = 't_2m:C,relative_humidity_2m:p,t_wet_bulb_globe:F,prob_precip_1h:p';
-    (document.getElementById('w-step') as HTMLSelectElement).value = 'PT1H';
-    (document.getElementById('w-hoursBack') as HTMLInputElement).value = '0';
-    (document.getElementById('w-hoursFwd') as HTMLInputElement).value = '24';
-    (document.getElementById('w-model') as HTMLInputElement).value = 'mix';
-  });
-  document.getElementById('w-preset-heat')!.addEventListener('click', () => {
-    (document.getElementById('w-params') as HTMLInputElement).value = 't_wet_bulb_globe:F,t_2m:C,relative_humidity_2m:p,wind_speed_10m:ms';
   });
 
   const preview = document.getElementById('w-preview');

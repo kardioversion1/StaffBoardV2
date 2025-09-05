@@ -8,6 +8,14 @@ type Event = {
 
 const DEFAULT_CAL_URL = 'https://www.bytebloc.com/sk/?76b6a156';
 
+/** Physician shift metadata (display order). */
+const SHIFT_DETAILS = [
+  { label: 'Day', time: '6a – 2p' },
+  { label: 'Mid', time: 'noon – 10p' },
+  { label: 'Evening', time: '2p – 11:59p' },
+  { label: 'Overnight', time: '10p – 6a' },
+];
+
 /** Unescape ICS text per RFC 5545 (\, \; \, \n, \N) */
 function icsUnescape(text: string): string {
   return text
@@ -148,7 +156,11 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
 
     const docsSet = new Set(
       events
-        .filter((e) => e.date === dateISO && (e.location ? isJewishDowntown(e.location) : true))
+        .filter(
+          (e) =>
+            e.date === dateISO &&
+            (e.location ? isJewishDowntown(e.location) : true)
+        )
         .map((e) => e.summary)
         .filter(Boolean)
     );
@@ -158,7 +170,14 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
       el.textContent = 'No physicians scheduled';
       return;
     }
-    el.innerHTML = `<ul>${docs.map((d) => `<li>${d}</li>`).join('')}</ul>`;
+    const rows = docs
+      .slice(0, 3)
+      .map((d, i) => {
+        const shift = SHIFT_DETAILS[i];
+        return `<tr><td>${shift.label}</td><td>${d}</td><td>${shift.time}</td></tr>`;
+      })
+      .join('');
+    el.innerHTML = `<table class="phys-table"><tbody>${rows}</tbody></table>`;
   } catch {
     el.textContent = 'Physician schedule unavailable';
   }
@@ -210,13 +229,18 @@ export async function renderPhysicianPopup(
       dates.length === 0
         ? '<p>No physicians scheduled</p>'
         : dates
-            .map(
-              (d) =>
-                `<div class="phys-day">
-                  <strong class="phys-date">${d}</strong>
-                  <ul class="phys-list">${data[d].map((n) => `<li>${n}</li>`).join('')}</ul>
-                </div>`
-            )
+            .map((d) => {
+              const rows = data[d]
+                .map((n, i) => {
+                  const shift = SHIFT_DETAILS[i] || { label: '', time: '' };
+                  return `<tr><td>${shift.label}</td><td>${n}</td><td>${shift.time}</td></tr>`;
+                })
+                .join('');
+              return `<div class="phys-day">
+                <strong class="phys-date">${d}</strong>
+                <table class="phys-table"><tbody>${rows}</tbody></table>
+              </div>`;
+            })
             .join('');
 
     overlay.innerHTML = `

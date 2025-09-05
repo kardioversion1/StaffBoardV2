@@ -1,20 +1,32 @@
 /** @vitest-environment happy-dom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildEmptyDraft, loadNextDraft, saveNextDraft, publishNextDraft } from '../nextShift';
 
 vi.mock('@/server', () => ({
   load: vi.fn(),
   save: vi.fn(),
 }));
 
+vi.mock('@/state', () => ({
+  CURRENT_SCHEMA_VERSION: 2,
+  KS: { DRAFT: (d: string, s: string) => `DRAFT:${d}:${s}` },
+  DB: { set: vi.fn() },
+  applyDraftToActive: vi.fn(),
+}));
+
+import { buildEmptyDraft, loadNextDraft, saveNextDraft, publishNextDraft } from '../nextShift';
 import * as Server from '@/server';
+import * as State from '@/state';
 
 const mockLoad = Server.load as unknown as ReturnType<typeof vi.fn>;
 const mockSave = Server.save as unknown as ReturnType<typeof vi.fn>;
+const mockSet = State.DB.set as unknown as ReturnType<typeof vi.fn>;
+const mockApply = State.applyDraftToActive as unknown as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   mockLoad.mockReset();
   mockSave.mockReset();
+  mockSet.mockReset();
+  mockApply.mockReset();
 });
 
 describe('nextShift state', () => {
@@ -44,11 +56,13 @@ describe('nextShift state', () => {
     await expect(publishNextDraft()).rejects.toThrow(/duplicate/);
   });
 
-  it('publishes draft to active and clears draft', async () => {
+  it('publishes draft to active, clears draft, and updates history', async () => {
     const draft = buildEmptyDraft('2024-01-01', 'day', []);
     mockLoad.mockResolvedValueOnce(draft);
     await publishNextDraft();
     expect(mockSave).toHaveBeenNthCalledWith(1, 'active', draft, { appendHistory: 'false' });
     expect(mockSave).toHaveBeenNthCalledWith(2, 'next', {});
+    expect(mockSet).toHaveBeenCalledWith(State.KS.DRAFT(draft.dateISO, draft.shift), draft);
+    expect(mockApply).toHaveBeenCalledWith(draft.dateISO, draft.shift);
   });
 });

@@ -1,4 +1,10 @@
-import { CURRENT_SCHEMA_VERSION, type DraftShift } from '@/state';
+import {
+  CURRENT_SCHEMA_VERSION,
+  applyDraftToActive,
+  KS,
+  DB,
+  type DraftShift,
+} from '@/state';
 import * as Server from '@/server';
 import { type ZoneDef } from '@/utils/zones';
 
@@ -63,6 +69,8 @@ export async function publishNextDraft(opts?: { appendHistory?: boolean }): Prom
   if (hasDuplicateAssignments(draft)) throw new Error('duplicate nurse assignment');
   await Server.save('active', draft, { appendHistory: opts?.appendHistory ? 'true' : 'false' });
   await Server.save('next', {});
+  await DB.set(KS.DRAFT(draft.dateISO, draft.shift), draft);
+  await applyDraftToActive(draft.dateISO, draft.shift);
 }
 
 export type { DraftShift };

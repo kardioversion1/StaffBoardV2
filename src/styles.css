@@ -227,6 +227,7 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .assign-item{padding:4px 8px;cursor:pointer;}
 .assign-item:hover{background:var(--control);}
 .assign-details{font-size:.9em;margin-top:8px;min-height:1.2em;}
+.history-box{border:1px solid var(--card-border);padding:8px;border-radius:4px;margin-top:8px}
 .banner{background:var(--danger);color:var(--text);padding:8px;text-align:center}
 .toast{position:fixed;top:16px;right:16px;background:rgba(0,0,0,.6);color:var(--text);padding:8px 12px;border-radius:8px;z-index:var(--z-modal)}
 

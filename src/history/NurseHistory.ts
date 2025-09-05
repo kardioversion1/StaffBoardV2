@@ -16,10 +16,12 @@ export function renderNurseHistory(root: HTMLElement): void {
         <button id="hist-nurse-load" class="btn">Load</button>
         <button id="hist-nurse-export" class="btn">Export CSV</button>
       </div>
-      <table class="history-table">
-        <thead><tr><th>Date</th><th>Shift</th><th>Zone</th><th>Prev Zone</th></tr></thead>
-        <tbody id="hist-nurse-body"><tr><td colspan="4">Select a nurse</td></tr></tbody>
-      </table>
+      <div class="history-box">
+        <table class="history-table">
+          <thead><tr><th>Date</th><th>Shift</th><th>Zone</th><th>Prev Zone</th></tr></thead>
+          <tbody id="hist-nurse-body"><tr><td colspan="4">Select a nurse</td></tr></tbody>
+        </table>
+      </div>
     </div>
   `;
 

@@ -17,6 +17,7 @@ import { setNurseCache, labelFromId } from '@/utils/names';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 import './mainBoard/boardLayout.css';
 import { openAssignDialog } from '@/ui/assignDialog';
+import { seedZonesIfNeeded } from '@/seed';
 
 function buildEmptyDraft(dateISO: string, shift: 'day' | 'night', zones: ZoneDef[]): DraftShift {
   return {
@@ -36,6 +37,7 @@ function buildEmptyDraft(dateISO: string, shift: 'day' | 'night', zones: ZoneDef
 
 /** Render the pending shift builder allowing drag-and-drop assignments. */
 export async function renderBuilder(root: HTMLElement): Promise<void> {
+  await seedZonesIfNeeded();
   let cfg = getConfig();
   if (!cfg.zones) cfg.zones = [];
   const staff = await loadStaff();
@@ -444,24 +446,6 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
     enableDrop(pctCont, true);
     enableDrop(cont, false);
 
-    document.getElementById('builder-add-zone')?.remove();
-    const addZoneBtn = document.createElement('button');
-    addZoneBtn.id = 'builder-add-zone';
-    addZoneBtn.className = 'btn';
-    addZoneBtn.textContent = 'Add Zone';
-    addZoneBtn.addEventListener('click', async () => {
-      const name = prompt('New zone name')?.trim();
-      if (!name) return;
-      if (cfg.zones.some((zz) => zz.name === name)) {
-        alert('A zone with that name already exists.');
-        return;
-      }
-      cfg = await saveConfig({ zones: [...cfg.zones, { name }] });
-      normalizeActiveZones(board, cfg.zones);
-      await save();
-      renderZones();
-    });
-    cont.parentElement?.appendChild(addZoneBtn);
   }
 
   document.getElementById('builder-save')!.addEventListener('click', save);

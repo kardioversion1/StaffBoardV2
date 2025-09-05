@@ -11,7 +11,7 @@ describe('physician schedule parsing', () => {
     const sample = [
       'BEGIN:VCALENDAR',
       'BEGIN:VEVENT',
-      'DTSTART:20240101T070000',
+      'DTSTART:20240101T0700',
       'SUMMARY:ER Main Schedule',
       'LOCATION:Jewish Downtown',
       'ATTENDEE;CN=Dr A:mailto:a@example.com',
@@ -86,6 +86,11 @@ describe('physician schedule parsing', () => {
       return local.toISOString().slice(0, 10);
     })();
     expect(__test.extractDateISO('20240101T000000Z')).toBe(expected);
+    expect(__test.extractDateISO('20240101T0000Z')).toBe(expected);
+  });
+
+  it('handles DATE-TIME values without seconds', () => {
+    expect(__test.extractDateISO('20240101T0700')).toBe('2024-01-01');
   });
 
   it('groups upcoming physicians by date (range, location-filtered)', async () => {

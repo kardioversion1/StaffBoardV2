@@ -38,7 +38,7 @@ function unfoldICSLines(text: string): string[] {
  */
 function extractDateISO(dtstart: string): string | null {
   const val = dtstart.includes(':') ? dtstart.split(':', 2)[1] : dtstart;
-  const m = /^(\d{4})(\d{2})(\d{2})(T(\d{2})(\d{2})(\d{2})(Z)?)?/i.exec(
+  const m = /^(\d{4})(\d{2})(\d{2})(T(\d{2})(\d{2})(\d{2})?(Z)?)?/i.exec(
     val.trim()
   );
   if (!m) return null;

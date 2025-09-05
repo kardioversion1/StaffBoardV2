@@ -1,13 +1,20 @@
-import { Handoff, Shift, loadActiveHandoff, saveActiveHandoff, loadShifts, saveShifts } from '@/types/shifts';
+import {
+  Handoff,
+  Shift,
+  loadActiveHandoff,
+  saveActiveHandoff,
+  loadShifts,
+  saveShifts,
+} from '@/types/shifts';
 import { generateShiftCode, nextShiftWindow, ShiftSchedule } from '@/utils/shiftCodes';
 
 export type HandoffState = {
   active?: Handoff;
-  begin(): void;
-  saveUpdates(patch: Partial<Handoff['updates']>): void;
-  startInPerson(seconds: number): void;
-  createNextShift(overlapMinutes?: number): Shift;
-  endOverlap(): void;
+  begin(): Promise<void>;
+  saveUpdates(patch: Partial<Handoff['updates']>): Promise<void>;
+  startInPerson(seconds: number): Promise<void>;
+  createNextShift(overlapMinutes?: number): Promise<Shift>;
+  endOverlap(): Promise<void>;
 };
 
 const defaultSched: ShiftSchedule = { dayStart: '07:00', nightStart: '19:00' };
@@ -27,24 +34,24 @@ function createEmptyHandoff(): Handoff {
 
 const store: { state: HandoffState } = {
   state: {
-    active: loadActiveHandoff(),
-    begin() {
+    active: undefined,
+    async begin() {
       const h = createEmptyHandoff();
       this.active = h;
-      saveActiveHandoff(h);
+      await saveActiveHandoff(h);
     },
-    saveUpdates(patch) {
+    async saveUpdates(patch) {
       if (!this.active) return;
       this.active.updates = { ...this.active.updates, ...patch };
-      saveActiveHandoff(this.active);
+      await saveActiveHandoff(this.active);
     },
-    startInPerson(seconds) {
+    async startInPerson(seconds) {
       if (!this.active) return;
       this.active.inPersonSeconds = seconds;
       this.active.status = 'inPerson';
-      saveActiveHandoff(this.active);
+      await saveActiveHandoff(this.active);
     },
-    createNextShift(overlapMinutes = 30) {
+    async createNextShift(overlapMinutes = 30) {
       const h = this.active || createEmptyHandoff();
       const { startAt, endAt } = nextShiftWindow(new Date(), defaultSched);
       const code = generateShiftCode(new Date(startAt), defaultSched);
@@ -57,27 +64,34 @@ const store: { state: HandoffState } = {
         assignments: [],
         status: 'draft',
       };
-      const list = loadShifts();
+      const list = await loadShifts();
       list.push(shift);
-      saveShifts(list);
+      await saveShifts(list);
       h.toShiftId = shift.id;
       h.overlapMinutes = overlapMinutes;
       h.overlapEndsAt = new Date(Date.now() + overlapMinutes * 60 * 1000).toISOString();
       h.status = 'overlap';
       this.active = h;
-      saveActiveHandoff(h);
+      await saveActiveHandoff(h);
       return shift;
     },
-    endOverlap() {
+    async endOverlap() {
       if (!this.active) return;
       this.active.status = 'done';
-      saveActiveHandoff(this.active);
+      await saveActiveHandoff(this.active);
       this.active = undefined;
-      saveActiveHandoff(undefined);
+      await saveActiveHandoff(undefined);
     },
   },
 };
+let initialized = false;
 
 export function useHandoff(): HandoffState {
+  if (!initialized) {
+    initialized = true;
+    loadActiveHandoff().then((h) => {
+      if (h) store.state.active = h;
+    });
+  }
   return store.state;
 }

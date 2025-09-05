@@ -47,7 +47,7 @@ function ok($payload = null): void {
 }
 function normalizeKey(string $key): string {
   $key = basename($key);
-  $allowed = ['roster','config','active'];
+  $allowed = ['roster','config','active','shifts','handoff'];
   if (!in_array($key, $allowed, true)) bad('invalid key');
   return $key;
 }
@@ -100,6 +100,8 @@ try {
         $defaults = [
           'roster' => [],
           'config' => new stdClass(),
+          'shifts' => [],
+          'handoff' => new stdClass(),
         ];
         $data = kvGet($key, $defaults[$key] ?? new stdClass());
       }

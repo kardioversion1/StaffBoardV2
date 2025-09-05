@@ -1,3 +1,5 @@
+import * as Server from '@/server';
+
 export type ShiftId = string;
 
 export type ShiftStatus = 'draft' | 'onbat' | 'live' | 'overlap' | 'archived';
@@ -31,39 +33,38 @@ export type Handoff = {
   status: 'draft' | 'inPerson' | 'readyToCreate' | 'overlap' | 'done';
 };
 
-const SHIFTS_KEY = 'sb_shifts_v1';
-const HANDOFF_KEY = 'sb_handoff_v1';
-
-export function loadShifts(): Shift[] {
+/** Load all draft shifts from the server. */
+export async function loadShifts(): Promise<Shift[]> {
   try {
-    const raw = localStorage.getItem(SHIFTS_KEY);
-    return raw ? (JSON.parse(raw) as Shift[]) : [];
+    return (await Server.load('shifts')) as Shift[];
   } catch {
     return [];
   }
 }
 
-export function saveShifts(list: Shift[]): void {
+/** Persist draft shifts to the server. */
+export async function saveShifts(list: Shift[]): Promise<void> {
   try {
-    localStorage.setItem(SHIFTS_KEY, JSON.stringify(list));
+    await Server.save('shifts', list);
   } catch {
     /* ignore */
   }
 }
 
-export function loadActiveHandoff(): Handoff | undefined {
+/** Load the active handoff record from the server. */
+export async function loadActiveHandoff(): Promise<Handoff | undefined> {
   try {
-    const raw = localStorage.getItem(HANDOFF_KEY);
-    return raw ? (JSON.parse(raw) as Handoff) : undefined;
+    const data = await Server.load('handoff');
+    return data && Object.keys(data).length ? (data as Handoff) : undefined;
   } catch {
     return undefined;
   }
 }
 
-export function saveActiveHandoff(h: Handoff | undefined): void {
+/** Save the active handoff record to the server. */
+export async function saveActiveHandoff(h: Handoff | undefined): Promise<void> {
   try {
-    if (h) localStorage.setItem(HANDOFF_KEY, JSON.stringify(h));
-    else localStorage.removeItem(HANDOFF_KEY);
+    await Server.save('handoff', h || {});
   } catch {
     /* ignore */
   }

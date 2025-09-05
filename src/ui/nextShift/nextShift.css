@@ -3,6 +3,22 @@
   flex-direction: column;
   gap: var(--gap);
 }
+.next-shift-body {
+  display: flex;
+  gap: var(--gap);
+}
+.next-shift .staff-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+.next-shift .assign-panel {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
 .next-shift .fields {
   display: flex;
   flex-wrap: wrap;

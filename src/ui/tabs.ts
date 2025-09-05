@@ -1,6 +1,5 @@
 import { renderAll } from '@/main';
 import { t } from '@/i18n/en';
-import { flags } from '@/flags';
 
 let active: string = 'Board';
 
@@ -17,7 +16,7 @@ export function renderTabs(): void {
   }
   nav.innerHTML = `
     <button data-tab="Board">Board</button>
-    ${flags.enableShiftBuilderV2 ? `<button data-tab="Builder">${t('nav.builder')}</button>` : ''}
+    <button data-tab="NextShift">${t('nav.nextShift')}</button>
     <button data-tab="Settings">Settings</button>
     <button data-tab="History">${t('nav.history')}</button>
   `;

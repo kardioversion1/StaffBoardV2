@@ -5,11 +5,13 @@ export interface ServerAPI {
   /** Load data from the server with optional caching. */
   load<T = any>(key: string, params?: Record<string, any>): Promise<T>;
   /** Save data to the server and cache locally. */
-  save(key: string, payload: unknown): Promise<any>;
+  save(key: string, payload: unknown, params?: Record<string, any>): Promise<any>;
   /** Soft delete a staff member by id. */
   softDeleteStaff(id: string): Promise<any>;
   /** Export history data as CSV by opening a download. */
   exportHistoryCSV(filters?: Record<string, any>): void;
+  /** Publish the next shift draft to the active board. */
+  publishNextToActive(opts?: { appendHistory?: boolean }): Promise<void>;
 }
 
 const cacheKey = (key: string, params?: Record<string, any>): string => {
@@ -42,9 +44,9 @@ export const load: ServerAPI['load'] = async (key, params = {}) => {
   }
 };
 
-export const save: ServerAPI['save'] = async (key, payload) => {
+export const save: ServerAPI['save'] = async (key, payload, params = {}) => {
   const keyName = cacheKey(key, {});
-  const qs = new URLSearchParams({ action: 'save', key });
+  const qs = new URLSearchParams({ action: 'save', key, ...params });
   const res = await fetch(`/api.php?${qs.toString()}`, {
     method: 'POST',
     headers: withAuth({ 'Content-Type': 'application/json' }),
@@ -82,5 +84,24 @@ export const exportHistoryCSV: ServerAPI['exportHistoryCSV'] = async (filters = 
   URL.revokeObjectURL(url);
 };
 
-const Server: ServerAPI = { load, save, softDeleteStaff, exportHistoryCSV };
+export const publishNextToActive: ServerAPI['publishNextToActive'] = async (
+  opts = {}
+) => {
+  const draft = await load('next');
+  if (!draft || !draft.dateISO || !draft.shift || !draft.zones) {
+    throw new Error('Draft incomplete');
+  }
+  await save('active', draft, {
+    appendHistory: String(!!opts.appendHistory),
+  });
+  await save('next', {});
+};
+
+const Server: ServerAPI = {
+  load,
+  save,
+  softDeleteStaff,
+  exportHistoryCSV,
+  publishNextToActive,
+};
 export default Server;

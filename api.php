@@ -42,7 +42,7 @@ function bad(string $msg, int $code = 400): void {
 /** Allow only known keys to map to files in /data */
 function normalizeKey(string $key): string {
   $key = basename($key);
-  $allowed = ['roster', 'config', 'active'];
+  $allowed = ['roster', 'config', 'active', 'next'];
   if (!in_array($key, $allowed, true)) bad('invalid key');
   return $key;
 }
@@ -80,6 +80,7 @@ switch ($action) {
       'roster' => [],
       'config' => new stdClass(),
       'active' => new stdClass(),
+      'next' => new stdClass(),
     ];
     echo json_encode(safeReadJson($path, $defaults[$key] ?? new stdClass()), JSON_UNESCAPED_UNICODE);
     exit;

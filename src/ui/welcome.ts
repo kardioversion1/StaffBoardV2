@@ -13,7 +13,7 @@ export function openWelcomeModal(): void {
       <p>Use the tabs to navigate:</p>
       <ul>
         <li><strong>Board</strong> – monitor the live staffing board.</li>
-        <li><strong>Builder</strong> – prepare upcoming shifts.</li>
+        <li><strong>Next Shift</strong> – plan the upcoming shift.</li>
         <li><strong>Settings</strong> – manage roster and customize display.</li>
         <li><strong>History</strong> – review past shifts and huddles.</li>
       </ul>

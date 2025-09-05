@@ -1,0 +1,9 @@
+.next-shift {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+.next-shift .actions {
+  display: flex;
+  gap: var(--gap);
+}

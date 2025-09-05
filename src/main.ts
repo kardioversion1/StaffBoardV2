@@ -21,8 +21,8 @@ import { renderHeader } from '@/ui/header';
 import { renderTabs, activeTab } from '@/ui/tabs';
 import { renderBoard } from '@/ui/board';
 import { renderSettings } from '@/ui/settings';
-import { renderBuilder } from '@/ui/builder';
 import { renderHistoryTab } from '@/ui/historyTab';
+import { renderNextShiftPage } from '@/ui/nextShift/NextShiftPage';
 import { outlineBlockers } from '@/utils/debug';
 import { showBanner, showToast } from '@/ui/banner';
 import * as Server from '@/server';
@@ -41,8 +41,8 @@ export async function renderAll() {
     case 'Board':
       await renderBoard(root, { dateISO, shift });
       break;
-    case 'Builder':
-      await renderBuilder(root);
+    case 'NextShift':
+      await renderNextShiftPage(root);
       break;
     case 'History':
       renderHistoryTab(root);

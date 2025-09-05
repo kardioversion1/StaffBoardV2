@@ -329,7 +329,22 @@ function renderZones(
     section.addEventListener('drop', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const zoneIdxStr = (e as DragEvent).dataTransfer?.getData('zone-index');
+      const dt = (e as DragEvent).dataTransfer;
+      const nurseId = dt?.getData('incoming-id');
+      if (nurseId) {
+        const end = prompt('Shift end time (HH:MM)?')?.trim();
+        const slot: Slot = { nurseId, startHHMM: STATE.clockHHMM };
+        if (end) slot.endTimeOverrideHHMM = end;
+        const moved = upsertSlot(active, { zone: z.name }, slot);
+        if (moved) showBanner('Previous assignment cleared');
+        active.incoming = active.incoming.filter((i) => i.nurseId !== nurseId);
+        save();
+        renderIncoming(active, staff, save);
+        renderZones(active, cfg, staff, save);
+        return;
+      }
+
+      const zoneIdxStr = dt?.getData('zone-index');
       if (!zoneIdxStr) return;
       const fromIdx = Number(zoneIdxStr);
       if (isNaN(fromIdx) || fromIdx === i) return;
@@ -535,16 +550,39 @@ async function renderIncoming(
     cont.innerHTML = '<div class="incoming-placeholder"></div>';
   } else {
     active.incoming.forEach((inc) => {
-      const div = document.createElement('div');
-      const name = labelFromId(inc.nurseId);
-      div.textContent = `${name} ${inc.eta}${inc.arrived ? ' ✓' : ''}`;
-      div.addEventListener('click', () => {
+      const st =
+        staffList.find((s) => s.id === inc.nurseId) ||
+        ({ id: inc.nurseId, name: inc.nurseId, role: 'nurse', type: 'other' } as Staff);
+
+      const row = document.createElement('div');
+      row.className = 'nurse-row';
+
+      const tileWrapper = document.createElement('div');
+      tileWrapper.innerHTML = nurseTile({ nurseId: inc.nurseId }, st);
+      const card = tileWrapper.firstElementChild as HTMLElement;
+      card.draggable = true;
+      card.addEventListener('dragstart', (e) => {
+        (e as DragEvent).dataTransfer?.setData('incoming-id', inc.nurseId);
+      });
+      card.addEventListener('click', () => {
         if (STATE.locked) return;
         inc.arrived = !inc.arrived;
         save();
         renderIncoming(active, staffList, save);
       });
-      cont.appendChild(div);
+      row.appendChild(card);
+
+      const eta = document.createElement('div');
+      eta.textContent = `${inc.eta}${inc.arrived ? ' ✓' : ''}`;
+      eta.addEventListener('click', () => {
+        if (STATE.locked) return;
+        inc.arrived = !inc.arrived;
+        save();
+        renderIncoming(active, staffList, save);
+      });
+      row.appendChild(eta);
+
+      cont.appendChild(row);
     });
   }
 

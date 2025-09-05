@@ -1,5 +1,5 @@
 export const en = {
-  nav: { builder: 'Builder', history: 'History' },
+  nav: { nextShift: 'Next Shift', history: 'History' },
   actions: {
     addNurse: 'Add nurse', editNurse: 'Edit nurse',
     createZone: 'Create zone', resetDefaults: 'Reset to ED defaults',

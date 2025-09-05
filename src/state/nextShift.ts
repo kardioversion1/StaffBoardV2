@@ -66,13 +66,28 @@ function hasDuplicateAssignments(draft: DraftShift): boolean {
   return false;
 }
 
-/** Publish the draft to the active board and clear it from storage. */
+/**
+ * Publish the draft to the active board and clear it from storage.
+ * The previous active board is stored in history before publishing the new draft.
+ */
 export async function publishNextDraft(opts?: { appendHistory?: boolean }): Promise<void> {
   const draft = await loadNextDraft();
   if (!draft) throw new Error('No draft to publish');
   if (!draft.dateISO || !draft.shift || !draft.zones) throw new Error('Draft incomplete');
   if (hasDuplicateAssignments(draft)) throw new Error('duplicate nurse assignment');
-  await Server.save('active', draft, { appendHistory: opts?.appendHistory ? 'true' : 'false' });
+
+  if (opts?.appendHistory !== false) {
+    try {
+      const current = await Server.load('active');
+      if (current && Object.keys(current).length) {
+        await Server.save('active', current, { appendHistory: 'true' });
+      }
+    } catch (err) {
+      console.warn('append history failed', err);
+    }
+  }
+
+  await Server.save('active', draft, { appendHistory: 'false' });
   await Server.save('next', {});
   await DB.set(KS.DRAFT(draft.dateISO, draft.shift), draft);
   await applyDraftToActive(draft.dateISO, draft.shift);

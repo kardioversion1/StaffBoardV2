@@ -124,7 +124,7 @@ describe('physician schedule parsing', () => {
       'END:VCALENDAR',
     ].join('\n');
 
-    // Mock first fetch attempt (direct URL) to succeed and return sample ICS
+    // Mock proxy fetch to return sample ICS
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       text: () => Promise.resolve(sample),
@@ -138,8 +138,11 @@ describe('physician schedule parsing', () => {
       '2024-01-05': ['Dr C'],
     });
 
-    // Ensure we used the direct fetch at least once
-    expect(fetchMock).toHaveBeenCalled();
+    // Ensure we hit the proxy endpoint
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api.php?action=physicians',
+      { credentials: 'same-origin' }
+    );
   });
 });
 

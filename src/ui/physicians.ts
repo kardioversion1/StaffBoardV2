@@ -128,21 +128,34 @@ const JEWISH_DOWNTOWN_PATTERNS = [
   /\bUofL\b.*(JH|Jewish)/i,
 ];
 
-/** Fetches ICS text from configured URL, with a safe fallback to your PHP proxy. */
+/** Fetch physician calendar text.
+ *
+ * ByteBloc does not send CORS headers, so direct browser requests fail. Instead
+ * we proxy through our PHP endpoint unless the configured calendar URL shares
+ * the current origin (e.g. custom self-hosted calendars).
+ */
 async function fetchPhysicianICS(): Promise<string> {
   const cfg = getConfig?.();
   const cfgUrl: unknown = cfg?.physicians?.calendarUrl;
-  const url = (typeof cfgUrl === 'string' && cfgUrl.trim()) ? cfgUrl.trim() : DEFAULT_CAL_URL;
+  const rawUrl =
+    typeof cfgUrl === 'string' && cfgUrl.trim() ? cfgUrl.trim() : DEFAULT_CAL_URL;
 
   try {
-    const res = await fetch(url, { credentials: 'omit', mode: 'cors' });
-    if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
-    return await res.text();
+    const target = new URL(rawUrl, globalThis.location?.href ?? 'http://localhost');
+    if (globalThis.location && target.origin === globalThis.location.origin) {
+      const res = await fetch(target.toString(), { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+      return await res.text();
+    }
   } catch {
-    const proxied = await fetch('/api.php?action=physicians', { credentials: 'same-origin' });
-    if (!proxied.ok) throw new Error('proxy fetch failed');
-    return await proxied.text();
+    /* ignore and fall back to proxy */
   }
+
+  const proxied = await fetch('/api.php?action=physicians', {
+    credentials: 'same-origin',
+  });
+  if (!proxied.ok) throw new Error('proxy fetch failed');
+  return await proxied.text();
 }
 
 /** Fetch and render physicians for the given day. */

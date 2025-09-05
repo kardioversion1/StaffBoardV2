@@ -50,8 +50,11 @@ describe('renderNextShiftPage', () => {
     await Promise.resolve();
 
     const { saveNextDraft } = await import('@/state/nextShift');
-    expect((saveNextDraft as any).mock.calls[0][0].zones['A'][0].nurseId).toBe('n1');
-    expect((saveNextDraft as any).mock.calls[0][0].publishAtISO).toBe('2024-01-01T07:00');
+    const saved = (saveNextDraft as any).mock.calls[0][0];
+    expect(saved.zones['A'][0].nurseId).toBe('n1');
+    expect(saved.publishAtISO).toBe('2024-01-01T07:00');
+    expect(saved.dateISO).toBe('2024-01-01');
+    expect(saved.shift).toBe('day');
   });
 
   it('publishes draft (no history append expected here)', async () => {

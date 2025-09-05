@@ -37,25 +37,47 @@ describe('renderNextShiftPage', () => {
   it('renders zone select and saves draft', async () => {
     const root = document.getElementById('root') as HTMLElement;
     await renderNextShiftPage(root);
+
     const zoneSel = root.querySelector('select#zone-a') as HTMLSelectElement;
     expect(zoneSel).toBeTruthy();
+
     zoneSel.value = 'n1';
     (root.querySelector('#next-save') as HTMLButtonElement).click();
     await Promise.resolve();
+
     const { saveNextDraft } = await import('@/state/nextShift');
     expect((saveNextDraft as any).mock.calls[0][0].zones['A'][0].nurseId).toBe('n1');
   });
 
-  it('filters staff and assigns to focused select', async () => {
+  it('publishes draft (no history append expected here)', async () => {
     const root = document.getElementById('root') as HTMLElement;
     await renderNextShiftPage(root);
+
+    (root.querySelector('#next-publish') as HTMLButtonElement).click();
+    await Promise.resolve();
+
+    const { publishNextDraft } = await import('@/state/nextShift');
+    expect(publishNextDraft).toHaveBeenCalled();
+  });
+
+  it('filters staff and assigns to the focused select', async () => {
+    const root = document.getElementById('root') as HTMLElement;
+    await renderNextShiftPage(root);
+
     const search = root.querySelector('#next-search') as HTMLInputElement;
+    expect(search).toBeTruthy();
+
     search.value = 'ali';
     search.dispatchEvent(new Event('input'));
+
     const zoneSel = root.querySelector('select#zone-a') as HTMLSelectElement;
     zoneSel.focus();
+
     const item = root.querySelector('.assign-item[data-id="n1"]') as HTMLElement;
+    expect(item).toBeTruthy();
+
     item.click();
     expect(zoneSel.value).toBe('n1');
   });
 });
+

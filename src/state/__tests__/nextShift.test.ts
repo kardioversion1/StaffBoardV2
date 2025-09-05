@@ -58,10 +58,13 @@ describe('nextShift state', () => {
 
   it('publishes draft to active, clears draft, and updates history', async () => {
     const draft = buildEmptyDraft('2024-01-01', 'day', []);
+    const prev = { dateISO: '2023-12-31', shift: 'night' } as any;
     mockLoad.mockResolvedValueOnce(draft);
+    mockLoad.mockResolvedValueOnce(prev);
     await publishNextDraft();
-    expect(mockSave).toHaveBeenNthCalledWith(1, 'active', draft, { appendHistory: 'false' });
-    expect(mockSave).toHaveBeenNthCalledWith(2, 'next', {});
+    expect(mockSave).toHaveBeenNthCalledWith(1, 'active', prev, { appendHistory: 'true' });
+    expect(mockSave).toHaveBeenNthCalledWith(2, 'active', draft, { appendHistory: 'false' });
+    expect(mockSave).toHaveBeenNthCalledWith(3, 'next', {});
     expect(mockSet).toHaveBeenCalledWith(State.KS.DRAFT(draft.dateISO, draft.shift), draft);
     expect(mockApply).toHaveBeenCalledWith(draft.dateISO, draft.shift);
   });

@@ -15,7 +15,8 @@ function toLocalISO(dt: Date) {
   const sign = tzOffMin >= 0 ? '+' : '-';
   const hh = pad2(Math.floor(Math.abs(tzOffMin) / 60));
   const mm = pad2(Math.abs(tzOffMin) % 60);
-  return dt.toISOString().slice(0,19) + `${sign}${hh}:${mm}`;
+  const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 19) + `${sign}${hh}:${mm}`;
 }
 
 export function buildTimeWindow(hoursBack: number, hoursFwd: number) {

@@ -113,7 +113,7 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 /* merged resolution */
 .col>.panel{flex:0 0 auto}
 #incoming-panel,#offgoing-panel{flex:1}
-.zones-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:clamp(8px,1.5vw,12px);max-width:1520px;margin:0 auto;flex:1;grid-auto-rows:auto}
+.zones-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(6px,1vw,10px);max-width:1400px;margin:0 auto;flex:1;grid-auto-rows:auto}
 
 @media (max-width:900px){
   .layout{grid-template-columns:1fr}

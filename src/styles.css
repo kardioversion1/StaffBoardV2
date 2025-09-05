@@ -66,15 +66,15 @@
   --elev-2: 0 6px 20px rgba(0,0,0,.12);
 
   --zone-fg: #0a0a0a;
-  /* light palette */
-  --zone-bg-1:#93c5fd; --zone-bg-2:#60a5fa; --zone-bg-3:#3b82f6;
-  --zone-bg-4:#fca5a5; --zone-bg-5:#f87171;
-  --zone-bg-6:#86efac; --zone-bg-7:#34d399; --zone-bg-8:#c4b5fd;
+  /* light palette (colorblind-friendly) */
+  --zone-bg-1:#B3E5FC; --zone-bg-2:#FFE0B2; --zone-bg-3:#B2DFDB;
+  --zone-bg-4:#FFCCBC; --zone-bg-5:#F8E1EF;
+  --zone-bg-6:#BBDEFB; --zone-bg-7:#FFF9C4; --zone-bg-8:#E0E0E0;
 
   /* nurse tones for light theme */
-  --nurse-bg-1:#60a5fa; --nurse-bg-2:#3b82f6; --nurse-bg-3:#2563eb;
-  --nurse-bg-4:#f87171; --nurse-bg-5:#ef4444;
-  --nurse-bg-6:#34d399; --nurse-bg-7:#10b981; --nurse-bg-8:#a78bfa;
+  --nurse-bg-1:#56B4E9; --nurse-bg-2:#E69F00; --nurse-bg-3:#009E73;
+  --nurse-bg-4:#D55E00; --nurse-bg-5:#CC79A7;
+  --nurse-bg-6:#0072B2; --nurse-bg-7:#F0E442; --nurse-bg-8:#7F7F7F;
 }
 
 :root[data-contrast='high']{

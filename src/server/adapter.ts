@@ -17,12 +17,19 @@ const cacheKey = (key: string, params?: Record<string, any>): string => {
   return `staffboard:${key}${qs ? ':' + qs : ''}`;
 };
 
+const API_KEY = import.meta.env.VITE_API_KEY || '';
+
+const withAuth = (headers: HeadersInit = {}): HeadersInit => (
+  API_KEY ? { 'X-API-Key': API_KEY, ...headers } : headers
+);
+
 export const load: ServerAPI['load'] = async (key, params = {}) => {
   const keyName = cacheKey(key, params);
   const qs = new URLSearchParams({ action: 'load', key, ...params });
   try {
     const res = await fetch(`/api.php?${qs.toString()}`, {
       cache: 'no-store',
+      headers: withAuth(),
     });
     if (!res.ok) throw new Error('Network');
     const data = await res.json();
@@ -40,7 +47,7 @@ export const save: ServerAPI['save'] = async (key, payload) => {
   const qs = new URLSearchParams({ action: 'save', key });
   const res = await fetch(`/api.php?${qs.toString()}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: withAuth({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error('Network');
@@ -52,21 +59,27 @@ export const save: ServerAPI['save'] = async (key, payload) => {
 
 export const softDeleteStaff: ServerAPI['softDeleteStaff'] = async (id) => {
   const qs = new URLSearchParams({ action: 'softDeleteStaff', id });
-  const res = await fetch(`/api.php?${qs.toString()}`);
+  const res = await fetch(`/api.php?${qs.toString()}`, {
+    headers: withAuth(),
+  });
   const j = await res.json();
   if (!res.ok || !j.ok) throw new Error(j.error || 'delete failed');
   return j;
 };
 
-export const exportHistoryCSV: ServerAPI['exportHistoryCSV'] = (filters = {}) => {
+export const exportHistoryCSV: ServerAPI['exportHistoryCSV'] = async (filters = {}) => {
   const qs = new URLSearchParams({ action: 'exportHistoryCSV', ...filters });
-  const url = `/api.php?${qs.toString()}`;
+  const res = await fetch(`/api.php?${qs.toString()}`, { headers: withAuth() });
+  if (!res.ok) throw new Error('Network');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = 'history.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
 const Server: ServerAPI = { load, save, softDeleteStaff, exportHistoryCSV };

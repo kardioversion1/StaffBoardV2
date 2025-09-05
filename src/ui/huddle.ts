@@ -51,7 +51,7 @@ function renderOverlay() {
     wrap.id = 'huddle-overlay';
     wrap.className = 'overlay open';
     wrap.innerHTML = `<div class="offcanvas open" role="dialog" aria-labelledby="huddle-title">
-      <section class="panel" style="height:100%;overflow:auto;display:flex;flex-direction:column;gap:8px;">
+      <section class="panel h-full overflow-auto flex-col gap-8">
         <h2 id="huddle-title">Shift Huddle</h2>
         <div class="form-row">
           <label for="huddle-recorder">Completed By</label>
@@ -74,7 +74,7 @@ function renderOverlay() {
           <button id="huddle-timer-btn" class="btn">Start</button>
           <span id="huddle-timer-display" aria-live="polite"></span>
         </div>
-        <div class="btn-row" style="margin-top:auto;">
+        <div class="btn-row mt-auto">
           <button id="huddle-submit" class="btn">Submit</button>
           <button id="huddle-close" class="btn">Close</button>
         </div>

@@ -1,5 +1,6 @@
 import './nextShift.css';
 import { getConfig } from '@/state/config';
+import { seedZonesIfNeeded } from '@/seed';
 import {
   buildEmptyDraft,
   loadNextDraft,
@@ -36,6 +37,7 @@ function readSlot(id: string): Slot | undefined {
 
 /** Render a simple Next Shift planning page with save and publish controls. */
 export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
+  await seedZonesIfNeeded();
   const cfg = getConfig();
   const staff = await loadStaff();
   let draft: DraftShift | null = await loadNextDraft();

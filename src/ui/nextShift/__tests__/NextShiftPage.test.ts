@@ -30,6 +30,10 @@ vi.mock('@/state/staff', () => ({
   loadStaff: vi.fn().mockResolvedValue([{ id: 'n1', name: 'Alice', role: 'nurse' }]),
 }));
 
+vi.mock('@/seed', () => ({
+  seedZonesIfNeeded: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe('renderNextShiftPage', () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="root"></div>';

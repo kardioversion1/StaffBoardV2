@@ -1,6 +1,6 @@
 import { getConfig, mergeConfigDefaults } from '@/state/config';
 import { formatDateUS, formatTime24h } from '@/utils/format';
-import { buildProxyURL } from '@/weather/meteomatics';
+import { buildURL } from '@/weather/openMeteo';
 
 function svgIcon(paths: string) {
   return `<svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">${paths}</svg>`;
@@ -22,14 +22,16 @@ const ICONS: Record<string, () => string> = {
   mist: iconMist,
 };
 
-function mapCondition(cond: string | undefined) {
-  if (!cond) return 'sun';
-  const c = cond.toLowerCase();
-  if (c.includes('storm') || c.includes('thunder')) return 'storm';
-  if (c.includes('snow')) return 'snow';
-  if (c.includes('rain') || c.includes('drizzle')) return 'rain';
-  if (c.includes('cloud')) return 'cloud';
-  if (c.includes('mist') || c.includes('fog') || c.includes('haze')) return 'mist';
+function mapWeatherCode(code: number | undefined): keyof typeof ICONS {
+  if (code == null) return 'sun';
+  if ([95, 96, 99].includes(code)) return 'storm';
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return 'snow';
+  if (
+    [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)
+  )
+    return 'rain';
+  if ([45, 48].includes(code)) return 'mist';
+  if ([1, 2, 3].includes(code)) return 'cloud';
   return 'sun';
 }
 
@@ -51,56 +53,59 @@ export async function renderWeather(container: HTMLElement): Promise<void> {
     return;
   }
 
-  let html = '';
-  let mmUrl: string | null = null;
-  if (wcfg.weather.mode === 'meteomatics') {
-    if (wcfg.weather.lat != null && wcfg.weather.lon != null && wcfg.weather.params) {
-      const url = buildProxyURL({
-        units: wcfg.weather.units,
-        lat: wcfg.weather.lat,
-        lon: wcfg.weather.lon,
-        params: wcfg.weather.params,
-        step: wcfg.weather.step || 'PT1H',
-        hoursBack: wcfg.weather.hoursBack ?? 0,
-        hoursFwd: wcfg.weather.hoursFwd ?? 24,
-        model: wcfg.weather.model || 'mix',
-      });
-      mmUrl = url;
-      const header = `<div>${wcfg.weather.lat}, ${wcfg.weather.lon} • ${wcfg.weather.units} <a href="${url}" target="_blank" rel="noreferrer">Open</a></div>`;
-      const iframe = `<iframe src="${url}" style="width:100%;aspect-ratio:16/10;min-height:340px;border:0;border-radius:12px"></iframe>`;
-      html += card('Weather', header + iframe);
-    } else {
-      html += card('Weather', '<span class="muted">Weather: set in Settings</span>');
-    }
-  } else {
-    let weatherBody = '<span class="muted">Weather: set in Settings</span>';
-    let icon = '';
-    if (wcfg.weather.current) {
-      const cur = wcfg.weather.current;
-      const ic = ICONS[cur.icon || mapCondition(cur.condition)];
-      icon = ic();
-      const ok = typeof cur.temp === 'number' && Number.isFinite(cur.temp);
-      const upd = cur.updatedISO
-        ? `<div class="muted">Updated ${formatDateUS(cur.updatedISO)} ${formatTime24h(cur.updatedISO)}</div>`
-        : '';
-      const temp = ok ? Math.round(cur.temp) : '—';
-      weatherBody = `<div><span>${temp}° ${wcfg.weather.units} ${cur.condition} • ${cur.location || ''}</span>${upd}</div>`;
-    }
-    html += card('Weather', weatherBody, icon);
+  if (wcfg.weather.lat == null || wcfg.weather.lon == null) {
+    container.innerHTML = card(
+      'Weather',
+      '<span class="muted">Weather: set in Settings</span>'
+    );
+    return;
   }
 
-  container.innerHTML = html;
-  if (mmUrl) {
-    const frame = container.querySelector('iframe');
-    frame?.addEventListener('error', () => {
-      container.innerHTML = card(
-        'Weather unavailable',
-        `<div>Meteomatics request failed.</div><div class="btn-row"><button id="mm-retry" class="btn">Retry</button><a class="btn" href="${mmUrl}" target="_blank" rel="noreferrer">Open in new tab</a></div>`
-      );
-      const btn = container.querySelector('#mm-retry');
-      btn?.addEventListener('click', () => renderWeather(container));
-    });
+  const url = buildURL({
+    lat: wcfg.weather.lat,
+    lon: wcfg.weather.lon,
+    units: wcfg.weather.units,
+  });
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    const cw = data.current_weather;
+    const time: string | undefined = cw?.time;
+    const idx = time
+      ? data.hourly?.time?.indexOf(time)
+      : -1;
+    const rh =
+      idx != null && idx >= 0
+        ? data.hourly.relative_humidity_2m[idx]
+        : undefined;
+    const wb =
+      idx != null && idx >= 0
+        ? data.hourly.wet_bulb_temperature_2m[idx]
+        : undefined;
+    const icon = ICONS[mapWeatherCode(cw?.weathercode)]?.() || '';
+    const upd = time
+      ? `<div class="muted">Updated ${formatDateUS(time)} ${formatTime24h(time)}</div>`
+      : '';
+    const temp =
+      typeof cw?.temperature === 'number' && Number.isFinite(cw.temperature)
+        ? Math.round(cw.temperature)
+        : '—';
+    const rhTxt = rh != null ? ` RH ${rh}%` : '';
+    const wbTxt =
+      typeof wb === 'number' && Number.isFinite(wb)
+        ? ` WB ${Math.round(wb)}°`
+        : '';
+    const body = `<div><span>${temp}° ${wcfg.weather.units}${rhTxt}${wbTxt}</span>${upd}</div>`;
+    container.innerHTML = card('Weather', body, icon);
+  } catch {
+    container.innerHTML = card(
+      'Weather unavailable',
+      '<div>Open-Meteo request failed.</div><div class="btn-row"><button id="om-retry" class="btn">Retry</button></div>'
+    );
+    const btn = container.querySelector('#om-retry');
+    btn?.addEventListener('click', () => renderWeather(container));
   }
 }
 
-export { mapCondition };

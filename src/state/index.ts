@@ -22,22 +22,9 @@ import { THEME_PRESETS } from '@/state/theme';
 export type WidgetsConfig = {
   show?: boolean;
   weather: {
-    mode: 'manual' | 'meteomatics';
     units: 'F' | 'C';
     lat?: number;
     lon?: number;
-    params?: string;
-    step?: string;
-    hoursBack?: number;
-    hoursFwd?: number;
-    model?: string;
-    current?: {
-      temp: number;
-      condition: string;
-      icon?: 'sun' | 'cloud' | 'rain' | 'storm' | 'snow' | 'mist';
-      location?: string;
-      updatedISO?: string;
-    };
   };
 };
 
@@ -207,15 +194,9 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
 export const WIDGETS_DEFAULTS: WidgetsConfig = {
   show: true,
   weather: {
-    mode: 'manual',
     units: 'F',
     lat: DEFAULT_WEATHER_COORDS.lat,
     lon: DEFAULT_WEATHER_COORDS.lon,
-    params: 't_2m:C,relative_humidity_2m:p,t_wet_bulb_globe:F,prob_precip_1h:p',
-    step: 'PT1H',
-    hoursBack: 0,
-    hoursFwd: 24,
-    model: 'mix',
   },
 };
 
@@ -297,9 +278,6 @@ export function mergeConfigDefaults(): Config {
     cfg.widgets.weather = {
       ...WIDGETS_DEFAULTS.weather,
       ...(cfg.widgets.weather || {}),
-      current: cfg.widgets.weather?.current
-        ? { ...cfg.widgets.weather.current }
-        : undefined,
     };
   }
 

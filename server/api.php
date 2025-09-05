@@ -132,6 +132,32 @@ try {
       ok(['ok' => true]);
     }
 
+    case 'historyKv': {
+      $mode = $_GET['mode'] ?? '';
+      $k = $_GET['key'] ?? '';
+      if ($k === '' || strncmp($k, 'history:', 8) !== 0) bad('invalid key');
+
+      if ($mode === 'get') {
+        $data = kvGet($k, null);
+        ok($data);
+      }
+
+      if ($mode === 'set') {
+        $raw = file_get_contents('php://input') ?: 'null';
+        $data = json_decode($raw, true);
+        if (json_last_error() !== JSON_ERROR_NONE) bad('invalid json');
+        kvSet($k, $data);
+        ok(['ok' => true]);
+      }
+
+      if ($mode === 'del') {
+        db()->prepare('DELETE FROM kv_store WHERE key = :k')->execute([':k' => $k]);
+        ok(['ok' => true]);
+      }
+
+      bad('invalid mode');
+    }
+
     case 'history': {
       $params = validateHistoryQuery($_GET); // expects mode + (date|nurseId)
       $hist = historyAll(); // array of published shift snapshots

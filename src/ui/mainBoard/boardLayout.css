@@ -4,7 +4,7 @@
   color: var(--text-high);
   border: 1px solid var(--card-border);
   border-radius: 16px;
-  padding: 12px;
+  padding: 16px;
   box-shadow: var(--shadow);
 }
 
@@ -23,17 +23,17 @@
 .zone-card__title {
   font-weight: 700;
   font-size: clamp(1.25rem, 1.2rem + 0.4vw, 1.5rem);
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
   letter-spacing: -.2px;
 }
 
 .zone-card__body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   overflow-y: auto;
-  min-height: 50px;
-  padding: 8px;
+  min-height: 60px;
+  padding: 10px;
   position: relative;
 }
 
@@ -52,7 +52,7 @@
   background: var(--control);
   border: 1px solid var(--card-border);
   border-radius: 14px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   box-shadow: var(--shadow);
   flex: 1;
   display: flex;
@@ -92,6 +92,7 @@
   outline-offset: 2px;
 }
 
+/* New edit/add buttons */
 .zone-card__edit {
   position: absolute;
   top: 8px;
@@ -110,7 +111,7 @@
 
 .zone-card__add--small {
   top: 8px;
-  right: 36px;
+  right: 40px;
   font-size: 1.2rem;
 }
 
@@ -120,4 +121,3 @@
   transform: translate(-50%, -50%);
   font-size: 2rem;
 }
-

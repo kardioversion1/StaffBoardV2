@@ -220,6 +220,9 @@ export async function submitHuddle(record: HuddleRecord): Promise<void> {
   const base = HUDDLE_KEY(record.dateISO, record.shift);
   await kvSet(`${base}:${record.recordedAtISO}`, record);
   await kvDel(base);
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new Event('history-saved'));
+  }
 }
 
 /** Clone and replace an existing snapshot with audit trail update. */

@@ -3,7 +3,21 @@
   flex-direction: column;
   gap: var(--gap);
 }
+.next-shift .fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
 .next-shift .actions {
   display: flex;
   gap: var(--gap);
+}
+.next-shift table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.next-shift th,
+.next-shift td {
+  padding: 0.25rem;
+  text-align: left;
 }

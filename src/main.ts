@@ -33,7 +33,11 @@ export async function renderAll() {
   applyTheme();
   await renderHeader();
   await renderTabs();
-  const root = document.getElementById('panel')!;
+  const root = document.getElementById('panel');
+  if (!root) {
+    console.error('Missing #panel element');
+    return;
+  }
   const { dateISO, shift } = STATE;
   switch (activeTab()) {
     case 'Board':

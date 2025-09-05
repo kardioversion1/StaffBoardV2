@@ -1,5 +1,6 @@
 # Changelog
 
+- feat: clarify weather settings with manual/location toggle and inline preview
 - fix: stop seeding default zones so board starts empty
 - fix: normalize zone definitions and guard against invalid data
 - fix: prevent full app re-render on clock tick to stop input focus loss; throttle weather updates.

@@ -489,18 +489,16 @@ function renderWidgetsPanel() {
     </div>
 
     <h4>Weather</h4>
-    <div class="form-grid">
-      <label>Mode
-        <select id="w-mode">
-          <option>Manual</option>
-          <option>OpenWeather</option>
-        </select>
-      </label>
+    <div class="form-row">
+      <label><input type="radio" name="w-mode" value="manual"> Manual</label>
+      <label><input type="radio" name="w-mode" value="openweather"> Location</label>
       <label>Units
         <select id="w-units">
           <option>F</option><option>C</option>
         </select>
       </label>
+    </div>
+    <div id="w-location" class="form-grid">
       <label>City <input id="w-city" placeholder="Louisville, KY"></label>
       <label>Lat <input id="w-lat" type="number"></label>
       <label>Lon <input id="w-lon" type="number"></label>
@@ -515,12 +513,12 @@ function renderWidgetsPanel() {
       <button id="w-apply" class="btn">Apply Manual</button>
     </div>
 
+    <div id="w-preview"></div>
+
   </section>
 `;
 
   (document.getElementById('w-show') as HTMLInputElement).checked = w.show !== false;
-  (document.getElementById('w-mode') as HTMLSelectElement).value =
-    w.weather.mode === 'openweather' ? 'OpenWeather' : 'Manual';
   (document.getElementById('w-units') as HTMLSelectElement).value = w.weather.units;
   (document.getElementById('w-city') as HTMLInputElement).value = w.weather.city || '';
   (document.getElementById('w-lat') as HTMLInputElement).value = w.weather.lat?.toString() || '';
@@ -530,17 +528,29 @@ function renderWidgetsPanel() {
   (document.getElementById('w-cond') as HTMLInputElement).value = w.weather.current?.condition || '';
   (document.getElementById('w-loc') as HTMLInputElement).value = w.weather.current?.location || '';
   const manual = document.getElementById('w-manual')!;
-  manual.style.display = w.weather.mode === 'manual' ? 'grid' : 'none';
-  document.getElementById('w-mode')!.addEventListener('change', (e) => {
-    const mode = (e.target as HTMLSelectElement).value.toLowerCase();
+  const locDiv = document.getElementById('w-location')!;
+  const modeInput = document.querySelector(
+    `input[name="w-mode"][value="${w.weather.mode}"]`
+  ) as HTMLInputElement;
+  if (modeInput) modeInput.checked = true;
+  const setMode = () => {
+    const sel = document.querySelector('input[name="w-mode"]:checked') as HTMLInputElement;
+    const mode = sel ? sel.value : 'manual';
     manual.style.display = mode === 'manual' ? 'grid' : 'none';
-  });
+    locDiv.style.display = mode === 'openweather' ? 'grid' : 'none';
+  };
+  setMode();
+  document.querySelectorAll('input[name="w-mode"]').forEach((el) =>
+    el.addEventListener('change', setMode)
+  );
 
   document.getElementById('w-save')!.addEventListener('click', async () => {
     const cfg = getConfig();
     const w = cfg.widgets;
     w.show = (document.getElementById('w-show') as HTMLInputElement).checked;
-    w.weather.mode = (document.getElementById('w-mode') as HTMLSelectElement).value.toLowerCase() as 'manual' | 'openweather';
+    w.weather.mode = (
+      document.querySelector('input[name="w-mode"]:checked') as HTMLInputElement
+    ).value as 'manual' | 'openweather';
     const prevUnits = w.weather.units;
     w.weather.units = (document.getElementById('w-units') as HTMLSelectElement).value as 'F' | 'C';
     w.weather.city = (document.getElementById('w-city') as HTMLInputElement).value || undefined;
@@ -566,6 +576,7 @@ function renderWidgetsPanel() {
     }
     const body = document.getElementById('weather-body');
     if (body) await renderWeather(body);
+    renderWidgetsPanel();
   });
 
   document.getElementById('w-fetch')!.addEventListener('click', async () => {
@@ -593,5 +604,15 @@ function renderWidgetsPanel() {
     if (body) await renderWeather(body);
     renderWidgetsPanel();
   });
+
+  const preview = document.getElementById('w-preview');
+  if (preview) {
+    const cfg2 = getConfig();
+    const prev = cfg2.widgets.show;
+    cfg2.widgets.show = true;
+    renderWeather(preview).finally(() => {
+      cfg2.widgets.show = prev;
+    });
+  }
 }
 

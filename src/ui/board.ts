@@ -332,7 +332,10 @@ function renderZones(
       const dt = (e as DragEvent).dataTransfer;
       const nurseId = dt?.getData('incoming-id');
       if (nurseId) {
-        const end = prompt('Shift end time (HH:MM)?')?.trim();
+        const rawEnd = prompt('Shift end time (HH:MM)?')?.trim();
+        const end = rawEnd && /^\d{4}$/.test(rawEnd)
+          ? rawEnd.replace(/(\d{2})(\d{2})/, '$1:$2')
+          : rawEnd;
         const slot: Slot = { nurseId, startHHMM: STATE.clockHHMM };
         if (end) slot.endTimeOverrideHHMM = end;
         const moved = upsertSlot(active, { zone: z.name }, slot);
@@ -652,6 +655,9 @@ function manageSlot(
   if (!st) return;
 
   const currentRole = st.role;
+  const endValue = slot.endTimeOverrideHHMM && /^\d{4}$/.test(slot.endTimeOverrideHHMM)
+    ? slot.endTimeOverrideHHMM.replace(/(\d{2})(\d{2})/, '$1:$2')
+    : (slot.endTimeOverrideHHMM || '');
 
   const overlay = document.createElement('div');
   overlay.className = 'manage-overlay';
@@ -678,7 +684,7 @@ function manageSlot(
       <label>Comment <input id="mg-comment" value="${slot.comment || ''}"></label>
       <label><input type="checkbox" id="mg-break" ${slot.break?.active ? 'checked' : ''}/> On break</label>
       <label><input type="checkbox" id="mg-bad" ${slot.bad ? 'checked' : ''}/> Bad</label>
-      <label>End time <input id="mg-end" type="time" value="${slot.endTimeOverrideHHMM || ''}"></label>
+      <label>End time <input id="mg-end" type="time" value="${endValue}"></label>
       <label>Zone <select id="mg-zone">
         ${(cfg.zones || [])
           .map((z: ZoneDef) => `<option value="${z.name}"${z.name === zone ? ' selected' : ''}>${z.name}</option>`)

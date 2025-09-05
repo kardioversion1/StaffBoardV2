@@ -121,6 +121,35 @@ switch ($action) {
     exit;
   }
 
+  case 'historyKv': {
+    $mode = $_GET['mode'] ?? '';
+    $k = $_GET['key'] ?? '';
+    if ($k === '' || strncmp($k, 'history:', 8) !== 0) bad('invalid key');
+    $kvDir = "$DATA_DIR/kv";
+    if (!is_dir($kvDir)) @mkdir($kvDir, 0775, true);
+    $path = $kvDir . '/' . basename($k) . '.json';
+
+    if ($mode === 'get') {
+      $data = safeReadJson($path, null);
+      echo json_encode($data, JSON_UNESCAPED_UNICODE); exit;
+    }
+
+    if ($mode === 'set') {
+      $raw = file_get_contents('php://input');
+      $data = json_decode($raw, true);
+      if ($raw !== '' && json_last_error() !== JSON_ERROR_NONE) bad('invalid JSON');
+      safeWriteJson($path, $data);
+      echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE); exit;
+    }
+
+    if ($mode === 'del') {
+      @unlink($path);
+      echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE); exit;
+    }
+
+    bad('invalid mode');
+  }
+
   case 'history': {
     $mode = $_GET['mode'] ?? '';
     $hist = safeReadJson($historyPath, []);

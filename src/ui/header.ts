@@ -19,12 +19,11 @@ import { showBanner } from '@/ui/banner';
 
 /** Render the application header. */
 export function renderHeader() {
-  const app = document.getElementById('app')!;
   let header = document.getElementById('header');
   if (!header) {
     header = document.createElement('header');
     header.id = 'header';
-    app.appendChild(header);
+    document.body.prepend(header);
   }
 
   const shift = deriveShift(STATE.clockHHMM);

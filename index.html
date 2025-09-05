@@ -6,8 +6,11 @@
     <title>StaffBoard V2</title>
   </head>
   <body>
-    <div id="app"></div>
-    <div id="boot-status" style="font:14px system-ui;padding:8px;color:#444"></div>
+    <header id="header"></header>
+    <nav id="tabs"></nav>
+    <main id="panel"></main>
+    <footer id="footer" class="app-footer"><small>&copy; 2024 StaffBoard</small></footer>
+    <div id="boot-status" class="boot-status"></div>
     <script>
       window.addEventListener('error', (e) => {
         const el = document.getElementById('boot-status');

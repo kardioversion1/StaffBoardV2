@@ -1,0 +1,37 @@
+.boot-status {
+  font: 14px system-ui;
+  padding: 8px;
+  color: #444;
+}
+
+.min-h-40 {
+  min-height: 40px;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.overflow-auto {
+  overflow: auto;
+}
+
+.gap-8 {
+  gap: 8px;
+}
+
+.mt-auto {
+  margin-top: auto;
+}
+
+.app-footer {
+  padding: 8px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}

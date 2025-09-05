@@ -69,11 +69,11 @@ export async function renderBuilder(root: HTMLElement): Promise<void> {
             <div id="builder-triage"></div>
             <div id="builder-secretary"></div>
           </div>
-          <div id="builder-pct-zones" class="zones-grid" style="min-height:40px"></div>
+          <div id="builder-pct-zones" class="zones-grid min-h-40"></div>
         </section>
         <section class="panel">
           <h3>Pending Zones</h3>
-          <div id="builder-zones" class="zones-grid" style="min-height:40px"></div>
+          <div id="builder-zones" class="zones-grid min-h-40"></div>
         </section>
         <div class="btn-row">
           <button id="builder-save" class="btn">Save</button>

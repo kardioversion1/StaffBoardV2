@@ -9,12 +9,11 @@ export function activeTab(): string {
 }
 
 export function renderTabs(): void {
-  const app = document.getElementById('app')!;
   let nav = document.getElementById('tabs');
   if (!nav) {
     nav = document.createElement('nav');
     nav.id = 'tabs';
-    app.appendChild(nav);
+    document.body.insertBefore(nav, document.getElementById('panel'));
   }
   nav.innerHTML = `
     <button data-tab="Board">Board</button>
@@ -30,8 +29,8 @@ export function renderTabs(): void {
   });
   let panel = document.getElementById('panel');
   if (!panel) {
-    panel = document.createElement('div');
+    panel = document.createElement('main');
     panel.id = 'panel';
-    app.appendChild(panel);
+    document.body.appendChild(panel);
   }
 }

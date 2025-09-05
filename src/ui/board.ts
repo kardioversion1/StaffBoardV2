@@ -120,7 +120,7 @@ export async function renderBoard(
           <section id="incoming-panel" class="panel">
             <h3>Incoming (click to toggle arrived)</h3>
             <button id="add-incoming" class="btn">+ Add</button>
-            <div id="incoming" style="min-height:40px"></div>
+            <div id="incoming" class="min-h-40"></div>
           </section>
 
           <section id="offgoing-panel" class="panel">

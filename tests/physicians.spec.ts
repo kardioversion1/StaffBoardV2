@@ -21,16 +21,16 @@ describe('physician schedule parsing', () => {
     ].join('\n');
     const events = __test.parseICS(sample);
     expect(events).toHaveLength(2);
-    expect(events[0]).toEqual({
-      date: '2024-01-01',
-      summary: 'Dr A',
-      location: 'Jewish Downtown',
-    });
-    expect(events[1]).toEqual({
-      date: '2024-01-01',
-      summary: 'Dr B',
-      location: 'Jewish Downtown',
-    });
+      expect(events[0]).toEqual({
+        date: '2024-01-01',
+        summary: 'Dr A',
+        location: 'Jewish Downtown',
+      });
+      expect(events[1]).toEqual({
+        date: '2024-01-01',
+        summary: 'Dr B',
+        location: 'Jewish Downtown',
+      });
   });
 
   it('handles DTSTART with TZID parameter', () => {
@@ -46,11 +46,11 @@ describe('physician schedule parsing', () => {
     ].join('\n');
     const events = __test.parseICS(sample);
     expect(events).toHaveLength(1);
-    expect(events[0]).toEqual({
-      date: '2024-01-01',
-      summary: 'Dr A',
-      location: 'Jewish Downtown',
-    });
+      expect(events[0]).toEqual({
+        date: '2024-01-01',
+        summary: 'Dr A',
+        location: 'Jewish Downtown',
+      });
   });
 
   it('falls back to DESCRIPTION when attendees missing', () => {
@@ -66,16 +66,16 @@ describe('physician schedule parsing', () => {
     ].join('\n');
     const events = __test.parseICS(sample);
     expect(events).toHaveLength(2);
-    expect(events[0]).toEqual({
-      date: '2024-01-02',
-      summary: 'Dr A',
-      location: 'Jewish Downtown',
-    });
-    expect(events[1]).toEqual({
-      date: '2024-01-02',
-      summary: 'Dr B',
-      location: 'Jewish Downtown',
-    });
+      expect(events[0]).toEqual({
+        date: '2024-01-02',
+        summary: 'Dr A',
+        location: 'Jewish Downtown',
+      });
+      expect(events[1]).toEqual({
+        date: '2024-01-02',
+        summary: 'Dr B',
+        location: 'Jewish Downtown',
+      });
   });
 
   it('converts UTC timestamps to the local date', () => {
@@ -127,6 +127,7 @@ describe('physician schedule parsing', () => {
     // Mock proxy fetch to return sample ICS
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
+      headers: { get: () => 'text/calendar' },
       text: () => Promise.resolve(sample),
     } as unknown as Response);
 
@@ -134,8 +135,8 @@ describe('physician schedule parsing', () => {
 
     const res = await getUpcomingDoctors('2024-01-01', 7);
     expect(res).toEqual({
-      '2024-01-01': ['Dr A', 'Dr B'],
-      '2024-01-05': ['Dr C'],
+      '2024-01-01': ['Dr. A', 'Dr. B'],
+      '2024-01-05': ['Dr. C'],
     });
 
     // Ensure we hit the proxy endpoint

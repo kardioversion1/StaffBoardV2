@@ -1,4 +1,4 @@
-import { getConfig, saveConfig } from './config';
+import { getConfig, saveConfig } from '.';
 
 export type UIMode = 'system' | 'light' | 'dark';
 

@@ -93,7 +93,7 @@ describe('physician schedule parsing', () => {
     expect(__test.extractDateISO('20240101T0700')).toBe('2024-01-01');
   });
 
-  it('groups upcoming physicians by date (range, location-filtered)', async () => {
+  it('groups upcoming physicians by date and location (range filtered)', async () => {
     const sample = [
       'BEGIN:VCALENDAR',
       'BEGIN:VEVENT',
@@ -108,6 +108,13 @@ describe('physician schedule parsing', () => {
       'SUMMARY:ER Main Schedule',
       'LOCATION:Jewish Downtown',
       'ATTENDEE;CN=Dr C:mailto:c@example.com',
+      'END:VEVENT',
+      'BEGIN:VEVENT',
+      'DTSTART:20240101T070000',
+      'SUMMARY:ER Main Schedule',
+      'LOCATION:Jewish South',
+      'ATTENDEE;CN=Dr S:mailto:s@example.com',
+      'ATTENDEE;CN=Dr T:mailto:t@example.com',
       'END:VEVENT',
       'BEGIN:VEVENT',
       'DTSTART:20240108T070000',
@@ -135,8 +142,11 @@ describe('physician schedule parsing', () => {
 
     const res = await getUpcomingDoctors('2024-01-01', 7);
     expect(res).toEqual({
-      '2024-01-01': ['Dr. A', 'Dr. B'],
-      '2024-01-05': ['Dr. C'],
+      '2024-01-01': {
+        Downtown: ['Dr. A', 'Dr. B'],
+        'South Hospital': ['Dr. S', 'Dr. T'],
+      },
+      '2024-01-05': { Downtown: ['Dr. C'] },
     });
 
     // Ensure we hit the proxy endpoint

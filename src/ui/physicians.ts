@@ -138,6 +138,20 @@ const JEWISH_DOWNTOWN_PATTERNS = [
   /\bUofL\b.*(JH|Jewish)/i,
 ];
 
+/** Heuristics to match JH South; add aliases as needed. */
+const JEWISH_SOUTH_PATTERNS = [
+  /jewish\s*south/i,
+  /south\s*hospital/i,
+  /\bJH\b.*south/i,
+];
+
+/** Normalize a raw location into a display label (e.g. "Downtown"). */
+function normalizeLocation(loc: string): string | null {
+  if (JEWISH_DOWNTOWN_PATTERNS.some((re) => re.test(loc))) return 'Downtown';
+  if (JEWISH_SOUTH_PATTERNS.some((re) => re.test(loc))) return 'South Hospital';
+  return null;
+}
+
 /** Fetch physician calendar text.
  *
  * ByteBloc does not send CORS headers, so direct browser requests fail. Instead
@@ -174,8 +188,7 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
     const ics = await fetchPhysicianICS();
     const events = parseICS(ics);
 
-    const isJewishDowntown = (loc: string) =>
-      JEWISH_DOWNTOWN_PATTERNS.some((re) => re.test(loc));
+    const isJewishDowntown = (loc: string) => normalizeLocation(loc) === 'Downtown';
 
     const docsSet = new Set(
       events
@@ -207,27 +220,30 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
 export async function getUpcomingDoctors(
   startDateISO: string,
   days: number
-): Promise<Record<string, string[]>> {
+): Promise<Record<string, Record<string, string[]>>> {
   const ics = await fetchPhysicianICS();
   const events = parseICS(ics);
 
   const start = new Date(startDateISO + 'T00:00:00').getTime();
   const end = start + days * 86400000;
 
-  const isJewishDowntown = (loc: string) =>
-    JEWISH_DOWNTOWN_PATTERNS.some((re) => re.test(loc));
-
-  const map: Record<string, string[]> = {};
+  const map: Record<string, Record<string, string[]>> = {};
   for (const e of events) {
     const t = new Date(e.date + 'T00:00:00').getTime();
-    if (t >= start && t < end && (e.location ? isJewishDowntown(e.location) : true)) {
+    const locName = e.location ? normalizeLocation(e.location) : null;
+    if (t >= start && t < end && locName) {
       const name = extractDoctor(e.summary.trim());
-      if (name) (map[e.date] ||= []).push(name);
+      if (name) {
+        (map[e.date] ||= {});
+        (map[e.date][locName] ||= []).push(name);
+      }
     }
   }
-  // De-dupe per date
+  // De-dupe per date/location
   for (const d of Object.keys(map)) {
-    map[d] = Array.from(new Set(map[d]));
+    for (const loc of Object.keys(map[d])) {
+      map[d][loc] = Array.from(new Set(map[d][loc]));
+    }
   }
   return map;
 }
@@ -251,10 +267,19 @@ export async function renderPhysicianPopup(
         ? '<p>No physicians scheduled</p>'
         : dates
             .map((d) => {
-              const items = data[d].map((n) => `<li>${n}</li>`).join('');
+              const groups = data[d];
+              const locs = Object.keys(groups)
+                .map((loc) => {
+                  const items = groups[loc].map((n) => `<li>${n}</li>`).join('');
+                  return `<div class="phys-loc">
+                    <strong class="phys-loc-name">${loc}</strong>
+                    <ul class="phys-list">${items}</ul>
+                  </div>`;
+                })
+                .join('');
               return `<div class="phys-day">
                 <strong class="phys-date">${d}</strong>
-                <ul class="phys-list">${items}</ul>
+                ${locs}
               </div>`;
             })
             .join('');

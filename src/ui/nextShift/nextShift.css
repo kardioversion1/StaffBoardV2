@@ -13,6 +13,15 @@
   flex-direction: column;
   gap: var(--gap);
 }
+.next-shift .assign-cols {
+  flex: 1;
+  display: flex;
+  gap: var(--gap);
+}
+.next-shift .assign-col {
+  flex: 1;
+  overflow-y: auto;
+}
 .next-shift .assign-panel {
   flex: 2;
   display: flex;
@@ -31,4 +40,9 @@
 .next-shift td {
   padding: 0.25rem;
   text-align: left;
+}
+.next-shift .zone-drop {
+  border: 1px dashed var(--line);
+  min-height: 2rem;
+  padding: 0.25rem;
 }

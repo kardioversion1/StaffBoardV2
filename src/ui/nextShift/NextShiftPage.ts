@@ -11,29 +11,7 @@ import {
 import { loadStaff, type Staff } from '@/state/staff';
 import { type Slot } from '@/slots';
 import { toDateISO, deriveShift } from '@/utils/time';
-
-function staffOptions(staff: Staff[], selected?: string): string {
-  return (
-    '<option value=""></option>' +
-    staff
-      .map(
-        (s) =>
-          `<option value="${s.id}" ${s.id === selected ? 'selected' : ''}>${
-            s.name || s.id
-          }</option>`
-      )
-      .join('')
-  );
-}
-
-function buildSelect(id: string, staff: Staff[], selected?: string): string {
-  return `<select id="${id}">${staffOptions(staff, selected)}</select>`;
-}
-
-function readSlot(id: string): Slot | undefined {
-  const el = document.getElementById(id) as HTMLSelectElement | null;
-  return el && el.value ? { nurseId: el.value } : undefined;
-}
+import { showToast } from '@/ui/banner';
 
 /** Render a simple Next Shift planning page with save and publish controls. */
 export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
@@ -50,11 +28,12 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   const zoneRows = (cfg.zones || [])
     .map((z) => {
       const slot = draft?.zones?.[z.name]?.[0];
-      return `<tr><td>${z.name}</td><td>${buildSelect(
-        `zone-${z.id}`,
-        staff,
-        slot?.nurseId
-      )}</td></tr>`;
+      const name = slot
+        ? staff.find((s) => s.id === slot.nurseId)?.name || slot.nurseId
+        : '';
+      return `<tr><td>${z.name}</td><td><div id="zone-${z.id}" class="zone-drop" data-zone="${z.name}" ${
+        slot ? `data-nurse-id="${slot.nurseId}"` : ''
+      }>${name}</div></td></tr>`;
     })
     .join('');
 
@@ -93,7 +72,6 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   const searchInput = document.getElementById('next-search') as HTMLInputElement;
   const goLiveInput = document.getElementById('next-go-live') as HTMLInputElement;
 
-  let activeSelect: HTMLSelectElement | null = null;
   let selected: string | null = null;
   let publishTimer: number | undefined;
 
@@ -132,9 +110,6 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
         root.querySelectorAll('.assign-item').forEach((item) => {
           item.classList.toggle('selected', (item as HTMLElement).dataset.id === id);
         });
-        if (activeSelect) {
-          activeSelect.value = id;
-        }
       });
       el.addEventListener('dragstart', (ev) => {
         ev.dataTransfer?.setData('text/plain', id);
@@ -145,15 +120,16 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   renderStaff();
   searchInput.addEventListener('input', () => renderStaff(searchInput.value));
 
-  root.querySelectorAll('select').forEach((sel) => {
-    sel.addEventListener('focus', () => {
-      activeSelect = sel as HTMLSelectElement;
-    });
-    sel.addEventListener('dragover', (e) => e.preventDefault());
-    sel.addEventListener('drop', (e) => {
+  root.querySelectorAll('.zone-drop').forEach((el) => {
+    el.addEventListener('dragover', (e) => e.preventDefault());
+    el.addEventListener('drop', (e) => {
       e.preventDefault();
       const id = e.dataTransfer?.getData('text/plain');
-      if (id) (sel as HTMLSelectElement).value = id;
+      if (id) {
+        const s = staff.find((st) => st.id === id);
+        (el as HTMLElement).textContent = s?.name || id;
+        (el as HTMLElement).dataset.nurseId = id;
+      }
     });
   });
 
@@ -164,8 +140,9 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
     const shift = publishAt ? deriveShift(hhmm) : draft!.shift;
     const zones: Record<string, Slot[]> = {};
     for (const z of cfg.zones || []) {
-      const slot = readSlot(`zone-${z.id}`);
-      zones[z.name] = slot ? [slot] : [];
+      const el = document.getElementById(`zone-${z.id}`) as HTMLElement | null;
+      const id = el?.dataset.nurseId;
+      zones[z.name] = id ? [{ nurseId: id }] : [];
     }
     return {
       ...draft!,
@@ -196,6 +173,13 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
     draft = gatherDraft();
     await saveNextDraft(draft);
     schedulePublish();
+    if (draft.publishAtISO) {
+      const start = draft.publishAtISO.slice(11, 16);
+      const when = new Date(draft.publishAtISO).toLocaleString();
+      showToast(`Shift saved; will publish at ${when} (start ${start})`);
+    } else {
+      showToast('Shift saved');
+    }
   });
 
   document

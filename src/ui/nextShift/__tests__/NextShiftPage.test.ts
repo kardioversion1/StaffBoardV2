@@ -40,17 +40,17 @@ describe('renderNextShiftPage', () => {
     document.body.innerHTML = '<div id="root"></div>';
   });
 
-  it('renders zone select and saves draft', async () => {
+  it('renders zone drop and saves draft', async () => {
     const root = document.getElementById('root') as HTMLElement;
     await renderNextShiftPage(root);
 
-    const zoneSel = root.querySelector('select#zone-a') as HTMLSelectElement;
-    expect(zoneSel).toBeTruthy();
+    const zone = root.querySelector('#zone-a') as HTMLElement;
+    expect(zone).toBeTruthy();
 
     const goLive = root.querySelector('#next-go-live') as HTMLInputElement;
     goLive.value = '2024-01-01T07:00';
 
-    zoneSel.value = 'n1';
+    zone.dataset.nurseId = 'n1';
     (root.querySelector('#next-save') as HTMLButtonElement).click();
     await Promise.resolve();
 
@@ -73,7 +73,7 @@ describe('renderNextShiftPage', () => {
     expect(publishNextDraft).toHaveBeenCalled();
   });
 
-  it('filters staff and assigns to the focused select', async () => {
+  it('filters staff list', async () => {
     const root = document.getElementById('root') as HTMLElement;
     await renderNextShiftPage(root);
 
@@ -83,14 +83,10 @@ describe('renderNextShiftPage', () => {
     search.value = 'ali';
     search.dispatchEvent(new Event('input'));
 
-    const zoneSel = root.querySelector('select#zone-a') as HTMLSelectElement;
-    zoneSel.focus();
-
     const item = root.querySelector('.assign-item[data-id="n1"]') as HTMLElement;
     expect(item).toBeTruthy();
 
     item.click();
-    expect(zoneSel.value).toBe('n1');
     expect(item.classList.contains('selected')).toBe(true);
   });
 });

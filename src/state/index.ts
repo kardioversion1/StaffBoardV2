@@ -227,6 +227,8 @@ let CONFIG_CACHE: Config = {
     darkPreset: 'dark-charcoal-navy',
     highContrast: false,
     compact: false,
+    iconSize: 1,
+    commentSize: 0.85,
   },
 };
 
@@ -361,6 +363,9 @@ export function mergeConfigDefaults(): Config {
     darkPreset: validDark ? (dark as string) : darkDefault,
     highContrast: cfg.uiTheme?.highContrast === true,
     compact: cfg.uiTheme?.compact === true,
+    iconSize: typeof cfg.uiTheme?.iconSize === 'number' ? cfg.uiTheme.iconSize : 1,
+    commentSize:
+      typeof cfg.uiTheme?.commentSize === 'number' ? cfg.uiTheme.commentSize : 0.85,
   };
 
   // Misc

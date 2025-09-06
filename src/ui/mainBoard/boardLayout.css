@@ -87,6 +87,14 @@
   text-overflow: ellipsis;
 }
 
+.nurse-card__comment {
+  color: var(--text-med);
+  font-size: var(--comment-text-size, .85em);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .nurse-card:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;

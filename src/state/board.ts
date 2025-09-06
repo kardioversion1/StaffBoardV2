@@ -157,7 +157,6 @@ export async function applyDraftToActive(
         role: info?.role || 'nurse',
         zone,
         startISO: now,
-        endISO: now,
         dto: slot.dto
           ? { effectiveISO: now, offgoingUntilISO: now }
           : undefined,
@@ -174,7 +173,6 @@ export async function applyDraftToActive(
       role: info?.role || 'nurse',
       zone: 'Charge',
       startISO: now,
-      endISO: now,
     });
   }
   if (draft.triage?.nurseId) {
@@ -185,7 +183,6 @@ export async function applyDraftToActive(
       role: info?.role || 'nurse',
       zone: 'Triage',
       startISO: now,
-      endISO: now,
     });
   }
   if (draft.admin?.nurseId) {
@@ -196,7 +193,6 @@ export async function applyDraftToActive(
       role: info?.role || 'nurse',
       zone: 'Secretary',
       startISO: now,
-      endISO: now,
     });
   }
   const huddle = await getHuddle(dateISO, shift as ShiftKind);

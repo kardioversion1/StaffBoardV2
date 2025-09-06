@@ -91,6 +91,7 @@ describe('renderNextShiftPage', () => {
 
     item.click();
     expect(zoneSel.value).toBe('n1');
+    expect(item.classList.contains('selected')).toBe(true);
   });
 });
 

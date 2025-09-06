@@ -133,6 +133,14 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .widget .title{font-weight:600;color:var(--text-high);display:flex;align-items:center;gap:6px}
 .widget .sub{color:var(--text-med);font-size:.85em}
 
+.weather-card{display:flex;flex-direction:column;gap:8px}
+.weather-current{display:flex;align-items:center;gap:8px}
+.weather-current .temp{font-size:2em;font-weight:600}
+.weather-current svg{width:48px;height:48px}
+.weather-hourly{display:flex;justify-content:space-between;font-size:.8em}
+.weather-hourly .hour{display:flex;flex-direction:column;align-items:center;gap:2px}
+.weather-hourly .hour svg{width:24px;height:24px}
+
 .form-row{margin:8px 0}
 .form-grid{display:grid;grid-template-columns:repeat(3,minmax(200px,1fr));gap:10px}
 .btn-row{display:flex;gap:8px;margin-top:8px}

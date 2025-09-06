@@ -10,7 +10,11 @@ export function buildURL(cfg: OpenMeteoCfg): string {
   url.searchParams.set('longitude', String(cfg.lon));
   url.searchParams.set(
     'hourly',
-    'temperature_2m,relative_humidity_2m,wet_bulb_temperature_2m'
+    'temperature_2m,relative_humidity_2m,wet_bulb_temperature_2m,weathercode'
+  );
+  url.searchParams.set(
+    'daily',
+    'temperature_2m_max,temperature_2m_min'
   );
   url.searchParams.set('timezone', 'auto');
   url.searchParams.set('forecast_days', '3');

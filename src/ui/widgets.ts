@@ -22,6 +22,15 @@ const ICONS: Record<string, () => string> = {
   mist: iconMist,
 };
 
+const DESCRIPTIONS: Record<keyof typeof ICONS, string> = {
+  sun: 'Sunny',
+  cloud: 'Cloudy',
+  rain: 'Rain',
+  storm: 'Storm',
+  snow: 'Snow',
+  mist: 'Mist',
+};
+
 function mapWeatherCode(code: number | undefined): keyof typeof ICONS {
   if (code == null) return 'sun';
   if ([95, 96, 99].includes(code)) return 'storm';
@@ -33,6 +42,13 @@ function mapWeatherCode(code: number | undefined): keyof typeof ICONS {
   if ([45, 48].includes(code)) return 'mist';
   if ([1, 2, 3].includes(code)) return 'cloud';
   return 'sun';
+}
+
+function formatHour(t: string): string {
+  return new Date(t).toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    hour12: true,
+  });
 }
 
 function card(title: string, bodyHTML: string, iconSVG = '') {
@@ -73,9 +89,7 @@ export async function renderWeather(container: HTMLElement): Promise<void> {
     const data = await res.json();
     const cw = data.current_weather;
     const time: string | undefined = cw?.time;
-    const idx = time
-      ? data.hourly?.time?.indexOf(time)
-      : -1;
+    const idx = time ? data.hourly?.time?.indexOf(time) : -1;
     const rh =
       idx != null && idx >= 0
         ? data.hourly.relative_humidity_2m[idx]
@@ -84,7 +98,9 @@ export async function renderWeather(container: HTMLElement): Promise<void> {
       idx != null && idx >= 0
         ? data.hourly.wet_bulb_temperature_2m[idx]
         : undefined;
-    const icon = ICONS[mapWeatherCode(cw?.weathercode)]?.() || '';
+    const iconKey = mapWeatherCode(cw?.weathercode);
+    const icon = ICONS[iconKey]?.() || '';
+    const desc = DESCRIPTIONS[iconKey];
     const upd = time
       ? `<div class="muted">Updated ${formatDateUS(time)} ${formatTime24h(time)}</div>`
       : '';
@@ -97,8 +113,32 @@ export async function renderWeather(container: HTMLElement): Promise<void> {
       typeof wb === 'number' && Number.isFinite(wb)
         ? ` WB ${Math.round(wb)}°`
         : '';
-    const body = `<div><span>${temp}° ${wcfg.weather.units}${rhTxt}${wbTxt}</span>${upd}</div>`;
-    container.innerHTML = card('Weather', body, icon);
+    const max = data.daily?.temperature_2m_max?.[0];
+    const min = data.daily?.temperature_2m_min?.[0];
+    const hiLo =
+      typeof max === 'number' && typeof min === 'number'
+        ? `${Math.round(max)}° / ${Math.round(min)}°`
+        : '';
+    const hourly: string[] = [];
+    if (idx != null && idx >= 0) {
+      for (let i = idx; i < idx + 6; i++) {
+        const t = data.hourly.time[i];
+        const tt = data.hourly.temperature_2m[i];
+        const wc = data.hourly.weathercode?.[i];
+        if (!t || tt == null) continue;
+        const ii = ICONS[mapWeatherCode(wc)]?.() || '';
+        hourly.push(
+          `<div class="hour"><div>${formatHour(t)}</div>${ii}<div>${Math.round(tt)}°</div></div>`
+        );
+      }
+    }
+    container.innerHTML = `
+      <div class="widget weather-card">
+        <div class="weather-current">${icon}<div class="info"><div class="temp">${temp}° ${wcfg.weather.units}</div><div>${desc}${rhTxt}${wbTxt}</div><div class="hilo">${hiLo}</div></div></div>
+        <div class="weather-hourly">${hourly.join('')}</div>
+        ${upd}
+      </div>
+    `;
   } catch {
     container.innerHTML = card(
       'Weather unavailable',

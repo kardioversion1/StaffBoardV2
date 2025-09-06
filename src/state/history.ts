@@ -117,7 +117,7 @@ export interface Assignment {
   role: RoleKind;
   zone: string;
   startISO: string;
-  endISO: string;
+  endISO?: string;
   dto?: {
     effectiveISO: string;
     offgoingUntilISO: string;
@@ -175,7 +175,7 @@ export interface NurseShiftIndexEntry {
   zone: string;
   previousZone?: string;
   startISO: string;
-  endISO: string;
+  endISO?: string;
   dto?: boolean;
 }
 
@@ -246,7 +246,7 @@ export async function indexStaffAssignments(
   await ensureVersion();
   for (const a of snapshot.zoneAssignments) {
     const start = new Date(a.startISO).getTime();
-    const end = new Date(a.endISO).getTime();
+    const end = a.endISO ? new Date(a.endISO).getTime() : NaN;
     if (isFinite(start) && isFinite(end)) {
       const minutes = (end - start) / 60000;
       if (minutes < 20) continue;
@@ -266,7 +266,7 @@ export async function indexStaffAssignments(
       zone: a.zone,
       previousZone: prevZone,
       startISO: a.startISO,
-      endISO: a.endISO,
+      ...(a.endISO ? { endISO: a.endISO } : {}),
       dto: !!a.dto,
     };
     list.unshift(entry);

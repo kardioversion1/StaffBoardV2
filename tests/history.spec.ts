@@ -93,6 +93,24 @@ describe('history persistence', () => {
     expect(rows[0].dto).toBe(true);
   });
 
+  it('handles assignments without endISO', async () => {
+    const snap: PublishedShiftSnapshot = {
+      ...base,
+      zoneAssignments: [
+        {
+          staffId: '1',
+          displayName: 'Alice',
+          role: 'nurse',
+          zone: 'A',
+          startISO: '2024-01-01T07:00:00.000Z',
+        },
+      ],
+    };
+    await indexStaffAssignments(snap);
+    const rows = await findShiftsByStaff('1');
+    expect(rows[0].endISO).toBeUndefined();
+  });
+
   it('records previous zone when nurse moves', async () => {
     const first: PublishedShiftSnapshot = {
       ...base,

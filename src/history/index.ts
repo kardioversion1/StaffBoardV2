@@ -58,7 +58,7 @@ export function exportShiftCSV(snapshot: PublishedShiftSnapshot): string {
         a.displayName,
         a.role,
         a.startISO,
-        a.endISO,
+        a.endISO ?? '',
         a.dto ? '1' : '0',
       ].join(',')
     )
@@ -84,7 +84,7 @@ export function exportNurseHistoryCSV(entries: NurseShiftIndexEntry[]): string {
         e.zone,
         e.previousZone ?? '',
         e.startISO,
-        e.endISO,
+        e.endISO ?? '',
         e.dto ? '1' : '0',
       ].join(',')
     )

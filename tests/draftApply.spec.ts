@@ -41,5 +41,12 @@ describe('applyDraftToActive', () => {
 
     expect(await DB.get(KS.ACTIVE(board.dateISO, board.shift))).toEqual(board);
     expect(await DB.get(KS.DRAFT(board.dateISO, board.shift))).toBeUndefined();
+
+    const snap = await DB.get(
+      `history:shift:${board.dateISO}:${board.shift}`
+    );
+    expect(snap.zoneAssignments[0].endISO).toBeUndefined();
+    const charge = snap.zoneAssignments.find((a: any) => a.zone === 'Charge');
+    expect(charge.endISO).toBeUndefined();
   });
 });

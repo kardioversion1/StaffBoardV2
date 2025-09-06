@@ -51,13 +51,13 @@ export function openAssignDialog(
     nurseCol.innerHTML = nurses
       .map(
         (s) =>
-          `<div class="assign-item" data-id="${s.id}">${s.name || s.id}</div>`
+          `<div class="assign-item${selected === s.id ? ' selected' : ''}" data-id="${s.id}">${s.name || s.id}</div>`
       )
       .join('');
     techCol.innerHTML = techs
       .map(
         (s) =>
-          `<div class="assign-item" data-id="${s.id}">${s.name || s.id}</div>`
+          `<div class="assign-item${selected === s.id ? ' selected' : ''}" data-id="${s.id}">${s.name || s.id}</div>`
       )
       .join('');
     overlay.querySelectorAll('.assign-item').forEach((el) => {
@@ -73,6 +73,9 @@ export function openAssignDialog(
   const select = async (id: string) => {
     selected = id;
     confirm.disabled = false;
+    overlay.querySelectorAll('.assign-item').forEach((el) => {
+      el.classList.toggle('selected', (el as HTMLElement).dataset.id === id);
+    });
     const history = await findShiftsByStaff(id);
     const recent = history.slice(0, 5);
     details.innerHTML = `

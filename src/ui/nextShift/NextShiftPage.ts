@@ -93,6 +93,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   const goLiveInput = document.getElementById('next-go-live') as HTMLInputElement;
 
   let activeSelect: HTMLSelectElement | null = null;
+  let selected: string | null = null;
   let publishTimer: number | undefined;
 
   function renderStaff(filter = ''): void {
@@ -110,7 +111,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
     nurseCol.innerHTML = nurses
       .map(
         (s) =>
-          `<div class="assign-item" draggable="true" data-id="${s.id}">${
+          `<div class="assign-item${selected === s.id ? ' selected' : ''}" draggable="true" data-id="${s.id}">${
             s.name || s.id
           }</div>`
       )
@@ -118,14 +119,18 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
     techCol.innerHTML = techs
       .map(
         (s) =>
-          `<div class="assign-item" draggable="true" data-id="${s.id}">${
+          `<div class="assign-item${selected === s.id ? ' selected' : ''}" draggable="true" data-id="${s.id}">${
             s.name || s.id
           }</div>`
       )
       .join('');
-    document.querySelectorAll('.assign-item').forEach((el) => {
+    root.querySelectorAll('.assign-item').forEach((el) => {
       const id = (el as HTMLElement).dataset.id!;
       el.addEventListener('click', () => {
+        selected = id;
+        root.querySelectorAll('.assign-item').forEach((item) => {
+          item.classList.toggle('selected', (item as HTMLElement).dataset.id === id);
+        });
         if (activeSelect) {
           activeSelect.value = id;
         }

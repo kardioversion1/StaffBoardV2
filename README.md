@@ -78,3 +78,11 @@ SetEnv HEYBRE_DATA_DIR "/home/<cpanel-user>/heybre-board-data"
 - Validate with:
   - `GET https://board.heybre.com/api.php?res=staff`
   - Save something from the UI and confirm `active-YYYY-MM-DD-<shift>.json` appears in the data dir.
+
+### Local testing and troubleshooting
+
+- Start a local API server with `php -S localhost:8000 -t server`.
+- Include the required `X-API-Key` header in requests.
+- Check the PHP console output for details on any `500` errors. These are often
+  caused by a missing SQLite extension, an unwritable data directory, or
+  invalid JSON in the request body.

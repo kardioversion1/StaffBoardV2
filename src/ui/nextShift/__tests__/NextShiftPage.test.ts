@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderNextShiftPage } from '../NextShiftPage';
 
 vi.mock('@/state/config', () => ({
+  loadConfig: vi.fn().mockResolvedValue({ zones: [{ id: 'a', name: 'A' }] }),
   getConfig: () => ({ zones: [{ id: 'a', name: 'A' }] }),
 }));
 

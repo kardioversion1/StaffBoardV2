@@ -15,7 +15,7 @@ vi.mock('@/db', () => {
   };
 });
 
-import { saveConfig } from '@/state/config';
+import { saveConfig } from '@/state';
 import { getThemeConfig } from '@/state/theme';
 
 describe('theme config presets', () => {
@@ -24,5 +24,12 @@ describe('theme config presets', () => {
     const cfg = getThemeConfig();
     expect(cfg.lightPreset).toBe('light-soft-gray');
     expect(cfg.darkPreset).toBe('dark-charcoal-navy');
+  });
+
+  it('persists icon and comment sizes', async () => {
+    await saveConfig({ uiTheme: { iconSize: 1.2, commentSize: 0.9 } as any });
+    const cfg = getThemeConfig();
+    expect(cfg.iconSize).toBe(1.2);
+    expect(cfg.commentSize).toBe(0.9);
   });
 });

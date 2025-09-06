@@ -36,6 +36,8 @@ export interface UIThemeConfig {
   custom?: Partial<ThemeTokens>;
   highContrast?: boolean;
   compact?: boolean;
+  iconSize?: number;
+  commentSize?: number;
 }
 
 /** Available light and dark presets. */
@@ -240,6 +242,8 @@ const DEFAULT_THEME: UIThemeConfig = {
   scale: 1,
   lightPreset: 'light-soft-gray',
   darkPreset: 'dark-charcoal-navy',
+  iconSize: 1,
+  commentSize: 0.85,
 };
 
 /** Get the current theme configuration merged with defaults. */
@@ -260,6 +264,8 @@ export async function saveThemeConfig(partial: Partial<UIThemeConfig>): Promise<
 export function applyTheme(cfg: UIThemeConfig = getThemeConfig()): void {
   const r = document.documentElement;
   r.style.setProperty('--scale', String(cfg?.scale ?? 1));
+  r.style.setProperty('--nurse-icon-size', `${cfg.iconSize ?? 1}em`);
+  r.style.setProperty('--comment-text-size', `${cfg.commentSize ?? 0.85}em`);
   const mode = cfg?.mode ?? 'system';
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const isDark = mode === 'dark' || (mode === 'system' && prefersDark);

@@ -155,34 +155,12 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .assignment-card{background:var(--control);border:1px solid var(--line);border-radius:14px;padding:10px 12px;min-height:84px;box-shadow:var(--elev-1)}
 
 /* color-coded nurse pills */
-.nurse-pill{
-  position:relative;display:flex;align-items:center;gap:8px;
-  padding:6px 10px;border-radius:999px;
-  background: var(--pill, var(--control));
-  border:1px solid var(--line);
-  color:var(--zone-fg);
-}
-.nurse-pill[data-type]{
-  color:var(--pill-fg);
-}
-.nurse-pill[data-type] .nurse-meta{
-  color:var(--pill-meta-fg);
-}
-.nurse-pill[data-type="home"]{--pill:var(--accent-home)}
-.nurse-pill[data-type="travel"]{--pill:var(--accent-travel)}
-.nurse-pill[data-type="flex"]{--pill:var(--accent-flex)}
-.nurse-pill[data-type="charge"]{--pill:var(--accent-charge)}
-.nurse-pill[data-type="triage"]{--pill:var(--accent-triage)}
-.nurse-pill[data-type="other"]{--pill:var(--accent-other)}
-.nurse-pill::before{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 2px var(--pill) inset,var(--halo);opacity:.75;pointer-events:none}
-.nurse-name{font-weight:600}
-.nurse-meta{color:var(--text-med);font-size:.85em}
 .chips{margin-left:auto;display:flex;gap:6px}
 .chip{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--text-med);border:1px solid var(--line);font-size:.75em;line-height:1}
-.chip .icon{font-size:1em}
+.chip .icon{font-size:var(--nurse-icon-size,1em)}
 
 /* no color-mix: simple currentColor outline */
-.nurse-pill:focus-visible,.chip:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.chip:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 
 @media print{
   #widgets,.widget{display:none!important}

@@ -29,13 +29,11 @@ export async function renderSettings(root: HTMLElement): Promise<void> {
       </div>
     </div>
     <div id="settings-widgets"></div>
-    <div id="type-legend"></div>
   `;
   await renderRosterPane();
   renderGeneralSettings();
   renderDisplaySettings();
   renderWidgetsPanel();
-  renderTypeLegend();
 }
 
 async function renderRosterPane() {
@@ -191,26 +189,11 @@ function renderGeneralSettings() {
   const cfg = getConfig();
   const ui = getUIConfig();
   const el = document.getElementById('general-settings')!;
-  const paletteVars = [
-    '--zone-bg-1', '--zone-bg-2', '--zone-bg-3',
-    '--zone-bg-4', '--zone-bg-5',
-    '--zone-bg-6', '--zone-bg-7', '--zone-bg-8',
-  ];
-  const style = getComputedStyle(document.documentElement);
-  const palette = paletteVars.map((v) => style.getPropertyValue(v).trim());
-  const zoneOptions = (z: string, sel: string | undefined) =>
-    `<select data-zone="${z}" class="zone-sel">` +
-    '<option value="">Default</option>' +
-    palette
-      .map((c) => `<option value="${c}"${sel===c?' selected':''} style="background:${c}">${c}</option>`)
-      .join('') +
-    '</select>';
   const zonesHTML = cfg.zones
     .map(
       (z, i) =>
         `<div class="form-row zone-row">
           <input class="zone-name" data-index="${i}" value="${z.name}">
-          ${zoneOptions(z.name, z.color)}
         </div>`
     )
     .join('');
@@ -247,17 +230,6 @@ function renderGeneralSettings() {
 
   (document.getElementById('welcome-btn') as HTMLButtonElement).addEventListener('click', openWelcomeModal);
 
-  el.querySelectorAll('.zone-sel').forEach((sel) => {
-    sel.addEventListener('change', async () => {
-      const zone = (sel as HTMLSelectElement).getAttribute('data-zone')!;
-      const val = (sel as HTMLSelectElement).value;
-      cfg.zoneColors![zone] = val;
-      const zObj = cfg.zones.find((z) => z.name === zone);
-      if (zObj) zObj.color = val;
-      await saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
-      document.dispatchEvent(new Event('config-changed'));
-    });
-  });
   el.querySelectorAll('.zone-name').forEach((inp) => {
     inp.addEventListener('change', async () => {
       const idx = Number((inp as HTMLElement).getAttribute('data-index'));
@@ -366,6 +338,12 @@ function renderDisplaySettings() {
         <label>Text size <input id="ds-scale" type="range" min="0.85" max="1.25" step="0.05" value="${cfg.scale}"></label>
       </div>
       <div class="form-row">
+        <label>Nurse icon size <input id="ds-icon" type="range" min="0.75" max="1.5" step="0.05" value="${cfg.iconSize ?? 1}"></label>
+      </div>
+      <div class="form-row">
+        <label>Comment text size <input id="ds-comment" type="range" min="0.7" max="1.2" step="0.05" value="${cfg.commentSize ?? 0.85}"></label>
+      </div>
+      <div class="form-row">
         <label>Theme</label>
         <div>
           <label><input type="radio" name="ds-mode" value="system"${cfg.mode==='system'?' checked':''}> System</label>
@@ -433,12 +411,14 @@ function renderDisplaySettings() {
 
   document.getElementById('ds-save')!.addEventListener('click', async () => {
     const scale = parseFloat((document.getElementById('ds-scale') as HTMLInputElement).value);
+    const iconSize = parseFloat((document.getElementById('ds-icon') as HTMLInputElement).value);
+    const commentSize = parseFloat((document.getElementById('ds-comment') as HTMLInputElement).value);
     const mode = (document.querySelector('input[name="ds-mode"]:checked') as HTMLInputElement).value as UIMode;
     const lightPreset = (document.querySelector('input[name="ds-light"]:checked') as HTMLInputElement).value;
     const darkPreset = (document.querySelector('input[name="ds-dark"]:checked') as HTMLInputElement).value;
     const highContrast = (document.getElementById('ds-contrast') as HTMLInputElement).checked;
     const compact = (document.getElementById('ds-compact') as HTMLInputElement).checked;
-    await saveThemeConfig({ scale, mode, lightPreset, darkPreset, highContrast, compact });
+    await saveThemeConfig({ scale, iconSize, commentSize, mode, lightPreset, darkPreset, highContrast, compact });
     applyTheme();
     alert('Display settings saved.');
   });
@@ -448,22 +428,6 @@ function renderDisplaySettings() {
     applyTheme();
     alert('Theme reset to preset defaults.');
   });
-}
-
-function renderTypeLegend() {
-  const el = document.getElementById('type-legend')!;
-  el.innerHTML = `
-  <section class="panel">
-    <h3>Nurse Type Legend</h3>
-    <div class="assignments">
-      <div class="nurse-pill" data-type="home"><span class="nurse-name">Home</span></div>
-      <div class="nurse-pill" data-type="travel"><span class="nurse-name">Travel</span></div>
-      <div class="nurse-pill" data-type="flex"><span class="nurse-name">Flex</span></div>
-      <div class="nurse-pill" data-type="charge"><span class="nurse-name">Charge</span></div>
-      <div class="nurse-pill" data-type="triage"><span class="nurse-name">Triage</span></div>
-      <div class="nurse-pill" data-type="other"><span class="nurse-name">Other</span></div>
-    </div>
-  </section>`;
 }
 
 function renderWidgetsPanel() {

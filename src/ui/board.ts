@@ -150,7 +150,7 @@ export async function renderBoard(
 
     const refresh = () => {
       renderLeadership(active, staff, queueSave, root, refresh);
-      renderZones(active, cfg, staff, queueSave);
+      renderZones(active, cfg, staff, queueSave, root);
     };
 
     refresh();
@@ -188,7 +188,7 @@ export async function renderBoard(
       normalizeActiveZones(active, c.zones);
       queueSave();
       renderLeadership(active, staff, queueSave, root, refresh);
-      renderZones(active, c, staff, queueSave);
+      renderZones(active, c, staff, queueSave, root);
     });
   } catch (err) {
     console.error(err);
@@ -300,10 +300,15 @@ function renderZones(
   active: ActiveBoard,
   cfg: Config,
   staff: Staff[],
-  save: () => void
-) {
-  const pctCont = document.getElementById('pct-zones')!;
-  const cont = document.getElementById('zones')!;
+  save: () => void,
+  root: ParentNode
+): void {
+  const pctCont = root.querySelector('#pct-zones') as HTMLElement | null;
+  const cont = root.querySelector('#zones') as HTMLElement | null;
+  if (!pctCont || !cont) {
+    console.warn('Missing zones container');
+    return;
+  }
   pctCont.innerHTML = '';
   cont.innerHTML = '';
   pctCont.style.minHeight = '40px';
@@ -343,7 +348,7 @@ function renderZones(
         active.incoming = active.incoming.filter((i) => i.nurseId !== nurseId);
         save();
         renderIncoming(active, staff, save);
-        renderZones(active, cfg, staff, save);
+        renderZones(active, cfg, staff, save, root);
         return;
       }
 
@@ -355,7 +360,7 @@ function renderZones(
       moved.pct = z.pct;
       cfg.zones.splice(i, 0, moved);
       await saveConfig({ zones: cfg.zones });
-      renderZones(active, cfg, staff, save);
+      renderZones(active, cfg, staff, save, root);
     });
 
     // Highlight color: explicit or from palette
@@ -393,7 +398,7 @@ function renderZones(
         await saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
         document.dispatchEvent(new Event('config-changed'));
         await save();
-        renderZones(active, cfg, staff, save);
+        renderZones(active, cfg, staff, save, root);
       }
     });
     section.appendChild(editBtn);
@@ -434,7 +439,7 @@ function renderZones(
           st,
           staff,
           save,
-          () => renderZones(active, cfg, staff, save),
+          () => renderZones(active, cfg, staff, save, root),
           z.name,
           idx,
           active,
@@ -457,7 +462,7 @@ function renderZones(
         const moved = upsertSlot(active, { zone: z.name }, { nurseId: id });
         if (moved) showBanner('Previous assignment cleared');
         save();
-        renderZones(active, cfg, staff, save);
+        renderZones(active, cfg, staff, save, root);
       });
     });
     if (hasSlots) {
@@ -480,7 +485,7 @@ function renderZones(
       if (isNaN(idx)) return;
       cfg.zones[idx].pct = pct;
       await saveConfig({ zones: cfg.zones });
-      renderZones(active, cfg, staff, save);
+      renderZones(active, cfg, staff, save, root);
     });
   };
 

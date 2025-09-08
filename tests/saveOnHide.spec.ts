@@ -38,9 +38,11 @@ vi.mock('@/state', () => {
     STATE,
     KS,
     loadStaff,
+    saveStaff: vi.fn(),
     migrateActiveBoard: (a: any) => a,
     setActiveBoardCache: () => {},
     getActiveBoardCache: () => store[KS.ACTIVE(STATE.dateISO, STATE.shift)],
+    mergeBoards: (remote: any, local: any) => ({ ...remote, ...local }),
     DB: {
       get: async (k: string) => store[k],
       set: async (k: string, v: any) => {

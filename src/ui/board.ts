@@ -100,7 +100,12 @@ export async function renderBoard(
     }
     normalizeActiveZones(active, cfg.zones);
     setActiveBoardCache(active);
-    if (usedLocal) showToast('Using local data; changes may not persist');
+    if (!usedLocal) {
+      await DB.set(saveKey, active);
+      notifyUpdate(saveKey);
+    } else {
+      showToast('Using local data; changes may not persist');
+    }
 
     // Layout
     root.innerHTML = `

@@ -1,6 +1,7 @@
 import type { Slot } from '@/slots';
 import type { Staff } from '@/state/staff';
 import { getConfig } from '@/state/config';
+import { getActiveBoardCache } from '@/state';
 import { formatName } from '@/utils/names';
 
 export function nurseTile(slot: Slot, staff: Staff): string {
@@ -21,8 +22,25 @@ export function nurseTile(slot: Slot, staff: Staff): string {
     );
   }
 
-  // Resolve privacy setting from config (with conservative defaults)
+  const board = typeof getActiveBoardCache === 'function' ? getActiveBoardCache() : undefined;
   const cfg = (typeof getConfig === 'function' ? getConfig() : {}) as any;
+  let endISO = board?.endAtISO;
+  if (!endISO && board) {
+    const anchors = cfg?.anchors || { day: '07:00', night: '19:00' };
+    const startHH = board.shift === 'day' ? anchors.day : anchors.night;
+    const start = new Date(`${board.dateISO}T${startHH}`);
+    start.setHours(start.getHours() + 12);
+    endISO = start.toISOString();
+  }
+  if (endISO) {
+    const msLeft = new Date(endISO).getTime() - Date.now();
+    if (msLeft > 0 && msLeft <= 60 * 60 * 1000) {
+      chips.push(
+        `<span class="chip" aria-label="Shift ending soon"><span class="icon">🚪</span></span>`
+      );
+    }
+  }
+  // Resolve privacy setting from config (with conservative defaults)
   const privacy =
     (cfg?.ui && typeof cfg.ui?.namePrivacy === 'boolean' ? cfg.ui.namePrivacy : undefined) ??
     (typeof cfg?.privacy === 'boolean' ? cfg.privacy : undefined) ??

@@ -10,8 +10,30 @@ import {
 } from '@/state/nextShift';
 import { loadStaff, type Staff } from '@/state/staff';
 import { type Slot } from '@/slots';
-import { toDateISO, deriveShift } from '@/utils/time';
+import { deriveShift } from '@/utils/time';
 import { showToast } from '@/ui/banner';
+
+const pad = (n: number): string => n.toString().padStart(2, '0');
+const fmtLocal = (d: Date): string =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
+
+function nextShiftStartISO(now = new Date()): string {
+  const schedule = [7, 11, 15, 19];
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  for (const h of schedule) {
+    if (minutes < h * 60) {
+      const d = new Date(now);
+      d.setHours(h, 0, 0, 0);
+      return fmtLocal(d);
+    }
+  }
+  const d = new Date(now);
+  d.setDate(d.getDate() + 1);
+  d.setHours(7, 0, 0, 0);
+  return fmtLocal(d);
+}
 
 /** Render a simple Next Shift planning page with save and publish controls. */
 export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
@@ -21,8 +43,27 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   const staff = await loadStaff();
   let draft: DraftShift | null = await loadNextDraft();
   if (!draft) {
-    const tomorrow = toDateISO(new Date(Date.now() + 24 * 60 * 60 * 1000));
-    draft = buildEmptyDraft(tomorrow, 'day', cfg.zones || []);
+    const startISO = nextShiftStartISO();
+    const dateISO = startISO.slice(0, 10);
+    const hhmm = startISO.slice(11, 16);
+    draft = buildEmptyDraft(dateISO, deriveShift(hhmm), cfg.zones || []);
+    draft.publishAtISO = startISO;
+    const end = new Date(startISO);
+    end.setHours(end.getHours() + 12);
+    draft.endAtISO = fmtLocal(end);
+  } else {
+    if (!draft.publishAtISO) {
+      const startISO = nextShiftStartISO();
+      draft.publishAtISO = startISO;
+      draft.dateISO = startISO.slice(0, 10);
+      draft.shift = deriveShift(startISO.slice(11, 16));
+    }
+    if (!draft.endAtISO) {
+      const startISO = draft.publishAtISO || nextShiftStartISO();
+      const end = new Date(startISO);
+      end.setHours(end.getHours() + 12);
+      draft.endAtISO = fmtLocal(end);
+    }
   }
 
   const zoneRows = (cfg.zones || [])
@@ -59,6 +100,9 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
             <label>Go Live <input type="datetime-local" id="next-go-live" value="${
               draft.publishAtISO || ''
             }"></label>
+            <label>End Time <input type="datetime-local" id="next-end" value="${
+              draft.endAtISO || ''
+            }"></label>
             <button id="next-save" class="btn">Save Draft</button>
             <button id="next-publish" class="btn">Publish</button>
           </div>
@@ -71,6 +115,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   const techCol = document.getElementById('next-techs') as HTMLElement;
   const searchInput = document.getElementById('next-search') as HTMLInputElement;
   const goLiveInput = document.getElementById('next-go-live') as HTMLInputElement;
+  const endInput = document.getElementById('next-end') as HTMLInputElement;
 
   let selected: string | null = null;
   let publishTimer: number | undefined;
@@ -135,6 +180,12 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
 
   function gatherDraft(): DraftShift {
     const publishAt = goLiveInput.value || '';
+    let endAt = endInput.value || '';
+    if (!endAt && publishAt) {
+      const d = new Date(publishAt);
+      d.setHours(d.getHours() + 12);
+      endAt = fmtLocal(d);
+    }
     const dateISO = publishAt ? publishAt.slice(0, 10) : draft!.dateISO;
     const hhmm = publishAt ? publishAt.slice(11, 16) : '07:00';
     const shift = publishAt ? deriveShift(hhmm) : draft!.shift;
@@ -153,6 +204,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
       admin: undefined,
       zones,
       publishAtISO: publishAt || undefined,
+      endAtISO: endAt || undefined,
     };
   }
 

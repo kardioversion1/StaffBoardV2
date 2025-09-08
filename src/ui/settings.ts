@@ -25,9 +25,9 @@ export async function renderSettings(root: HTMLElement): Promise<void> {
       <div class="settings-pane">
         <div id="nurse-editor" data-testid="nurse-editor"></div>
         <div id="general-settings" data-testid="general-settings"></div>
-        <div id="display-settings" data-testid="display-settings"></div>
       </div>
     </div>
+    <div id="display-settings" data-testid="display-settings"></div>
     <div id="settings-widgets"></div>
   `;
   await renderRosterPane();
@@ -189,14 +189,12 @@ function renderGeneralSettings() {
   const cfg = getConfig();
   const ui = getUIConfig();
   const el = document.getElementById('general-settings')!;
-  const zonesHTML = cfg.zones
+  const zonesHTML = `<div class="zones-grid">${cfg.zones
     .map(
       (z, i) =>
-        `<div class="form-row zone-row">
-          <input class="zone-name" data-index="${i}" value="${z.name}">
-        </div>`
+        `<div class="form-row zone-row"><input class="zone-name" data-index="${i}" value="${z.name}"></div>`
     )
-    .join('');
+    .join('')}</div>`;
   el.innerHTML = `
     <section class="panel">
       <h3>General</h3>

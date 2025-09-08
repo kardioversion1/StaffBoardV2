@@ -86,3 +86,84 @@ SetEnv HEYBRE_DATA_DIR "/home/<cpanel-user>/heybre-board-data"
 - Check the PHP console output for details on any `500` errors. These are often
   caused by a missing SQLite extension, an unwritable data directory, or
   invalid JSON in the request body.
+
+## Terminology Glossary
+
+| Canonical Term | Accepted Aliases | Disallowed Variants | Notes |
+| --- | --- | --- | --- |
+| staffId | nurseId | id (for staff) | Use across all payloads and DB entries |
+| nurseType | type | – | Applies only when `role: 'nurse'` |
+| zones | zoneList | pct flag (`pct`) | `zones` object keyed by name with `pct: boolean` |
+| incoming | arrivals | arrivedFlag (`arrived`), `eta` | Use `etaISO` for timestamps |
+| offgoing | departed | – | Array of `{staffId, ts}` |
+| comments | huddle | handoff | `comments` = status note; `huddle` = shift note |
+
+### Rename Map
+
+- `nurseId` → `staffId`
+- `type` → `nurseType`
+- `eta` → `etaISO`
+
+## Grep/RG Commands
+
+```sh
+rg -n "^(<<<<<<<|=======|>>>>>>>)"
+rg -n "(nurseId|staffId|\"id\"\s*:)"
+rg -n "\b(type|nurseType)\b"
+rg -n "\b(zone|zones|pct)\b"
+rg -n "\b(incoming|offgoing|arrived|eta)\b"
+rg -n "\b(handoff|huddle|comments?)\b"
+rg -n "\bcharge\b|\btriage\b|\badmin\b"
+rg -n "\b(action|key)\b" src server
+rg -n "Server\.save\(\s*'active'" src
+rg -n "\bappendHistory\b"
+```
+
+## Standards & Best Practices
+
+### TypeScript
+- Enable `exactOptionalPropertyTypes` in `tsconfig.json`.
+- Replace remaining `any` uses with discriminated unions.
+- Centralize shared API types in `src/types`.
+- Use a single debounced persistence utility (see server adapter).
+
+### PHP
+- Follow PSR-12 formatting and short array syntax.
+- Return `405` on non-POST `save` requests.
+- Distinguish 4xx vs 5xx responses with meaningful messages.
+- Assert data and DB paths are writable before serving requests.
+
+### Security & Ops
+- Keep `Content-Security-Policy: frame-ancestors 'none'`.
+- Validate `X-API-Key` exactly; no fallback.
+- Log request ID and timestamp for saves.
+- Document `action=ping` health check.
+
+## Verification Plan
+
+```sh
+# Successful save
+curl -i -X POST -H "Content-Type: application/json" \
+  -H "X-API-Key: $API" \
+  -d '{"dateISO":"2024-01-01","shift":"day","zones":{}}' \
+  http://localhost/api.php?action=save&key=active
+
+# Invalid JSON
+curl -i -X POST -H "Content-Type: application/json" \
+  -H "X-API-Key: $API" \
+  -d '{bad json}' \
+  http://localhost/api.php?action=save&key=active
+
+# Missing date/shift
+curl -i -X POST -H "Content-Type: application/json" \
+  -H "X-API-Key: $API" \
+  -d '{"zones":{}}' \
+  http://localhost/api.php?action=save&key=active
+
+# Data dir unwritable
+chmod -w server/data
+curl -i -X POST -H "Content-Type: application/json" \
+  -H "X-API-Key: $API" \
+  -d '{"dateISO":"2024-01-01","shift":"day","zones":{}}' \
+  http://localhost/api.php?action=save&key=active
+```

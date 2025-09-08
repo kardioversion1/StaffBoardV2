@@ -32,6 +32,9 @@ if (!is_dir($DATA_DIR)) {
     error_log('data dir: ' . $e->getMessage());
   }
 }
+if (!is_writable($DATA_DIR)) {
+  bad('server error: data/ not writable', 500);
+}
 
 require __DIR__ . '/db.php';
 require_once __DIR__ . '/validators.php';
@@ -110,6 +113,7 @@ try {
     }
 
     case 'save': {
+      if ($_SERVER['REQUEST_METHOD'] !== 'POST') bad('method not allowed', 405);
       if ($key === '') bad('missing key');
       $key = normalizeKey($key);
 
@@ -176,7 +180,7 @@ try {
         $out = [];
         foreach ($hist as $entry) {
           foreach (($entry['assignments'] ?? []) as $a) {
-            $nid = $a['id'] ?? $a['staffId'] ?? '';
+            $nid = $a['nurseId'] ?? $a['staffId'] ?? $a['id'] ?? '';
             if ($nid === $id) { $out[] = $entry; break; }
           }
         }
@@ -217,7 +221,7 @@ try {
         if ($from && $d < $from) continue;
         if ($to   && $d > $to)   continue;
         foreach (($entry['assignments'] ?? []) as $a) {
-          $nid = $a['id'] ?? $a['staffId'] ?? '';
+          $nid = $a['nurseId'] ?? $a['staffId'] ?? $a['id'] ?? '';
           if ($nurse && $nid !== $nurse) continue;
           fputcsv($out, [
             $d,
@@ -262,6 +266,9 @@ try {
     default:
       bad('unknown action', 404);
   }
+} catch (InvalidArgumentException $e) {
+  error_log('api: ' . $e->getMessage());
+  bad($e->getMessage(), 400);
 } catch (Throwable $e) {
   error_log('api: ' . $e->getMessage());
   bad('server error: ' . $e->getMessage(), 500);

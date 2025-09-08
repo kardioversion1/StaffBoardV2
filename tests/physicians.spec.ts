@@ -148,10 +148,16 @@ describe('physician schedule parsing', () => {
     const res = await getUpcomingDoctors('2024-01-01', 7);
     expect(res).toEqual({
       '2024-01-01': {
-        Downtown: ['Dr. A', 'Dr. B'],
-        'South Hospital': ['Dr. S', 'Dr. T'],
+        Downtown: [
+          { time: '07:00', name: 'Dr. A' },
+          { time: '07:00', name: 'Dr. B' },
+        ],
+        'South Hospital': [
+          { time: '07:00', name: 'Dr. S' },
+          { time: '07:00', name: 'Dr. T' },
+        ],
       },
-      '2024-01-05': { Downtown: ['Dr. C'] },
+      '2024-01-05': { Downtown: [{ time: '07:00', name: 'Dr. C' }] },
     });
 
     // Ensure we hit the proxy endpoint

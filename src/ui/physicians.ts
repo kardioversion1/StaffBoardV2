@@ -139,6 +139,13 @@ function parseICS(text: string): Event[] {
   return events;
 }
 
+function formatTime(hhmm: string): string {
+  const [hh] = hhmm.split(':').map(Number);
+  const hour = ((hh + 11) % 12) + 1;
+  const suffix = hh < 12 ? 'am' : 'pm';
+  return `${hour}${suffix}`;
+}
+
 /** Heuristics to match JH Downtown; add aliases as needed. */
 const JEWISH_DOWNTOWN_PATTERNS = [
   /jewish\s*downtown/i,
@@ -214,13 +221,6 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
       return;
     }
 
-    const formatTime = (hhmm: string): string => {
-      const [hh, mm] = hhmm.split(':').map(Number);
-      const hour = ((hh + 11) % 12) + 1; // 0 -> 12
-      const suffix = hh < 12 ? 'am' : 'pm';
-      return `${hour}${suffix}`;
-    };
-
     const allMidnight = docs.every((d) => d.time === '00:00');
     const items = allMidnight
       ? docs.map((d) => `<li>${d.name}</li>`).join('')
@@ -235,14 +235,14 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
 export async function getUpcomingDoctors(
   startDateISO: string,
   days: number
-): Promise<Record<string, Record<string, string[]>>> {
+): Promise<Record<string, Record<string, { time: string; name: string }[]>>> {
   const ics = await fetchPhysicianICS();
   const events = parseICS(ics);
 
   const start = new Date(startDateISO + 'T00:00:00').getTime();
   const end = start + days * 86400000;
 
-  const map: Record<string, Record<string, string[]>> = {};
+  const map: Record<string, Record<string, { time: string; name: string }[]>> = {};
   for (const e of events) {
     const t = new Date(e.date + 'T00:00:00').getTime();
     const locName = e.location ? normalizeLocation(e.location) : 'Downtown';
@@ -250,14 +250,17 @@ export async function getUpcomingDoctors(
       const name = extractDoctor(e.summary.trim());
       if (name) {
         (map[e.date] ||= {});
-        (map[e.date][locName] ||= []).push(name);
+        const arr = (map[e.date][locName] ||= []);
+        if (!arr.some((r) => r.name === name && r.time === e.time)) {
+          arr.push({ time: e.time, name });
+        }
       }
     }
   }
-  // De-dupe per date/location
+
   for (const d of Object.keys(map)) {
     for (const loc of Object.keys(map[d])) {
-      map[d][loc] = Array.from(new Set(map[d][loc]));
+      map[d][loc].sort((a, b) => a.time.localeCompare(b.time));
     }
   }
   return map;
@@ -285,7 +288,9 @@ export async function renderPhysicianPopup(
               const groups = data[d];
               const locs = Object.keys(groups)
                 .map((loc) => {
-                  const items = groups[loc].map((n) => `<li>${n}</li>`).join('');
+                  const items = groups[loc]
+                    .map((r) => `<li>${formatTime(r.time)} ${r.name}</li>`)
+                    .join('');
                   return `<div class="phys-loc">
                     <strong class="phys-loc-name">${loc}</strong>
                     <ul class="phys-list">${items}</ul>

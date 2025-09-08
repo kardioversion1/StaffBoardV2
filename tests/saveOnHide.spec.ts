@@ -83,6 +83,7 @@ describe('board save', () => {
     expect(spy).not.toHaveBeenCalled();
     Object.defineProperty(document, 'hidden', { value: true, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
+    await Promise.resolve();
     expect(spy).toHaveBeenCalled();
   });
 });

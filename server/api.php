@@ -266,3 +266,4 @@ try {
   error_log('api: ' . $e->getMessage());
   bad('server error: ' . $e->getMessage(), 500);
 }
+

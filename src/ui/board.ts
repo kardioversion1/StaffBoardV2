@@ -206,7 +206,7 @@ export async function renderBoard(
       if (document.hidden) void flushSave();
     });
 
-    window.addEventListener('beforeunload', () => {
+    window.addEventListener('pagehide', () => {
       void flushSave();
     });
 

@@ -1,10 +1,10 @@
-import { loadStaff } from '@/state';
+import { loadStaff, type Staff } from '@/state';
 import { findShiftsByStaff } from '@/state/history';
 import { exportNurseHistoryCSV } from '@/history';
 import './history.css';
 
 /**
- * Render the nurse-centric history search view.
+ * Render staff history search with two-column picker.
  * @param root element to populate
  * @returns nothing
  */
@@ -12,58 +12,93 @@ export function renderNurseHistory(root: HTMLElement): void {
   root.innerHTML = `
     <div class="history-nurse">
       <div class="form-row">
-        <select id="hist-nurse"></select>
-        <button id="hist-nurse-load" class="btn">Load</button>
-        <button id="hist-nurse-export" class="btn">Export CSV</button>
+        <input id="hist-staff-search" class="input" placeholder="Search staff">
       </div>
-      <div class="history-box">
-        <table class="history-table">
-          <thead><tr><th>Date</th><th>Shift</th><th>Zone</th><th>Prev Zone</th></tr></thead>
-          <tbody id="hist-nurse-body"><tr><td colspan="4">Select a nurse</td></tr></tbody>
-        </table>
+      <div class="assign-cols">
+        <div id="hist-nurse-list" class="assign-col"></div>
+        <div id="hist-tech-list" class="assign-col"></div>
+      </div>
+      <div id="hist-staff-details" class="history-box"></div>
+      <div class="form-row">
+        <button id="hist-staff-export" class="btn" disabled>Export CSV</button>
       </div>
     </div>
   `;
 
-  const sel = root.querySelector('#hist-nurse') as HTMLSelectElement;
-  const body = root.querySelector('#hist-nurse-body') as HTMLElement;
+  const nurseCol = root.querySelector('#hist-nurse-list') as HTMLElement;
+  const techCol = root.querySelector('#hist-tech-list') as HTMLElement;
+  const searchInput = root.querySelector('#hist-staff-search') as HTMLInputElement;
+  const details = root.querySelector('#hist-staff-details') as HTMLElement;
+  const exportBtn = root.querySelector('#hist-staff-export') as HTMLButtonElement;
+
+  let staffList: Staff[] = [];
   let current: any[] = [];
+  let selected: string | null = null;
 
   (async () => {
-    const staff = await loadStaff();
-    sel.innerHTML = staff
-      .map((s) => {
-        const label = s.name || `${s.first || ''} ${s.last || ''}`.trim() || s.id;
-        return `<option value="${s.id}">${label}</option>`;
-      })
-      .join('');
+    staffList = await loadStaff();
+    render();
   })();
 
-  document.getElementById('hist-nurse-load')!.addEventListener('click', async () => {
-    const id = sel.value;
+  function render(filter = '') {
+    const norm = filter.toLowerCase();
+    const nurses = staffList.filter(
+      (s) =>
+        s.role === 'nurse' &&
+        (!filter || (s.name || `${s.first ?? ''} ${s.last ?? ''}`.trim() || s.id).toLowerCase().includes(norm))
+    );
+    const techs = staffList.filter(
+      (s) =>
+        s.role === 'tech' &&
+        (!filter || (s.name || `${s.first ?? ''} ${s.last ?? ''}`.trim() || s.id).toLowerCase().includes(norm))
+    );
+    nurseCol.innerHTML = nurses
+      .map(
+        (s) =>
+          `<div class="assign-item${selected === s.id ? ' selected' : ''}" data-id="${s.id}">${s.name || s.id}</div>`
+      )
+      .join('');
+    techCol.innerHTML = techs
+      .map(
+        (s) =>
+          `<div class="assign-item${selected === s.id ? ' selected' : ''}" data-id="${s.id}">${s.name || s.id}</div>`
+      )
+      .join('');
+    root.querySelectorAll('.assign-item').forEach((el) => {
+      const id = (el as HTMLElement).dataset.id!;
+      el.addEventListener('click', () => select(id));
+    });
+  }
+
+  async function select(id: string) {
+    selected = id;
+    root.querySelectorAll('.assign-item').forEach((el) => {
+      el.classList.toggle('selected', (el as HTMLElement).dataset.id === id);
+    });
     current = await findShiftsByStaff(id);
-    body.innerHTML = current.length
-      ? current
+    exportBtn.disabled = current.length === 0;
+    details.innerHTML = current.length
+      ? `<table class="history-table"><thead><tr><th>Date</th><th>Shift</th><th>Zone</th><th>Prev Zone</th></tr></thead><tbody>${current
           .map(
             (r) =>
               `<tr><td>${r.dateISO}</td><td>${r.shift}</td><td>${r.zone}</td><td>${r.previousZone ?? ''}</td></tr>`
           )
-          .join('')
-      : '<tr><td colspan="4">No history found</td></tr>';
-  });
+          .join('')}</tbody></table>`
+      : '<div class="muted">No history found</div>';
+  }
 
-  document
-    .getElementById('hist-nurse-export')!
-    .addEventListener('click', () => {
-      if (current.length === 0) return;
-      const csv = exportNurseHistoryCSV(current);
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'nurse-history.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    });
+  searchInput.addEventListener('input', () => render(searchInput.value));
+
+  exportBtn.addEventListener('click', () => {
+    if (current.length === 0) return;
+    const csv = exportNurseHistoryCSV(current);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nurse-history.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
 }
 

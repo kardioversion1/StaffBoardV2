@@ -18,9 +18,9 @@ import { DEFAULT_HUDDLE_ITEMS } from '@/config/huddle';
 export function renderHistory(root: HTMLElement): void {
   root.innerHTML = `
     <div class="history-nav">
-      <button data-view="calendar">By Date</button>
-      <button data-view="nurse">By Nurse</button>
-      <button data-view="huddles">Huddles</button>
+      <button class="btn" data-view="calendar">By Date</button>
+      <button class="btn" data-view="nurse">By Nurse</button>
+      <button class="btn" data-view="huddles">Huddles</button>
     </div>
     <div class="history-actions"><button id="history-export" class="btn">Export CSV</button></div>
     <div id="history-view"></div>

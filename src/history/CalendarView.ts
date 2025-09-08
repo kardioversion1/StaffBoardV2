@@ -1,5 +1,4 @@
 import {
-  listShiftDates,
   getShiftByDate,
   savePublishedShift,
   indexStaffAssignments,
@@ -30,53 +29,69 @@ export function renderCalendarView(root: HTMLElement): void {
   root.innerHTML = `
     <div class="history-calendar">
       <div class="form-row">
+        <button class="btn" data-quick="today">Today</button>
+        <button class="btn" data-quick="yesterday">Yesterday</button>
+        <button class="btn" data-quick="week">Past Week</button>
         <input id="hist-date" type="date">
-        <button id="hist-load" class="btn">Load history</button>
+        <button id="hist-load" class="btn">Load</button>
         <button id="hist-save" class="btn">Save snapshot</button>
-        <button id="hist-export" class="btn">Export CSV</button>
+        <button id="hist-export" class="btn" disabled>Export CSV</button>
       </div>
-      <div class="form-row">
-        <input id="hist-start" type="date">
-        <input id="hist-end" type="date">
-        <button id="hist-export-range" class="btn">Export Range</button>
-      </div>
-      <ul id="hist-dates" class="history-list"></ul>
-      <pre id="hist-output" class="history-output"></pre>
+      <div id="hist-list" class="history-box"></div>
     </div>
   `;
 
-  const listEl = root.querySelector('#hist-dates') as HTMLElement;
-  const outEl = root.querySelector('#hist-output') as HTMLElement;
-  let loaded: { day?: any; night?: any } = {};
+  const listEl = root.querySelector('#hist-list') as HTMLElement;
+  const exportBtn = root.querySelector('#hist-export') as HTMLButtonElement;
+  let loaded: PublishedShiftSnapshot[] = [];
 
-  const loadDates = async () => {
-    const dates = await listShiftDates();
-    listEl.innerHTML = dates
-      .map((d) => `<li><button data-date="${d}">${d}</button></li>`)
-      .join('');
-  };
+  function renderTable(snaps: PublishedShiftSnapshot[]): void {
+    listEl.textContent = '';
+    if (snaps.length === 0) {
+      const div = document.createElement('div');
+      div.className = 'muted';
+      div.textContent = 'No history found';
+      listEl.appendChild(div);
+      return;
+    }
+    const table = document.createElement('table');
+    table.className = 'history-table';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    ['Date', 'Shift', 'Name', 'Role', 'Zone'].forEach((h) => {
+      const th = document.createElement('th');
+      th.textContent = h;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    snaps.forEach((s) => {
+      s.zoneAssignments.forEach((a) => {
+        const tr = document.createElement('tr');
+        [s.dateISO, s.shift, a.displayName, a.role, a.zone].forEach((text) => {
+          const td = document.createElement('td');
+          td.textContent = text;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    });
+    table.appendChild(tbody);
+    listEl.appendChild(table);
+  }
 
-  const loadHistory = async (date: string) => {
-    loaded.day = await getShiftByDate(date, 'day');
-    loaded.night = await getShiftByDate(date, 'night');
-    outEl.textContent = JSON.stringify(
-      { dateISO: date, entries: [loaded.day, loaded.night].filter(Boolean) },
-      null,
-      2
-    );
-  };
+  async function loadSingle(date: string): Promise<void> {
+    const day = await getShiftByDate(date, 'day');
+    const night = await getShiftByDate(date, 'night');
+    loaded = [day, night].filter(Boolean) as PublishedShiftSnapshot[];
+    renderTable(loaded);
+    exportBtn.disabled = loaded.length === 0;
+  }
 
-  listEl.addEventListener('click', async (e) => {
-    const btn = (e.target as HTMLElement).closest('button');
-    if (!btn) return;
-    const d = btn.getAttribute('data-date')!;
-    (document.getElementById('hist-date') as HTMLInputElement).value = d;
-    await loadHistory(d);
-  });
-
-  document.getElementById('hist-load')!.addEventListener('click', async () => {
+  document.getElementById('hist-load')!.addEventListener('click', () => {
     const d = (document.getElementById('hist-date') as HTMLInputElement).value;
-    if (d) await loadHistory(d);
+    if (d) void loadSingle(d);
   });
 
   document.getElementById('hist-save')!.addEventListener('click', async () => {
@@ -93,14 +108,11 @@ export function renderCalendarView(root: HTMLElement): void {
       await indexStaffAssignments(night);
     }
     alert('History saved');
-    loadDates();
   });
 
-  document.getElementById('hist-export')!.addEventListener('click', () => {
-    const parts: string[] = [];
-    if (loaded.day) parts.push(exportShiftCSV(loaded.day));
-    if (loaded.night) parts.push(exportShiftCSV(loaded.night));
-    if (parts.length === 0) return;
+  exportBtn.addEventListener('click', () => {
+    if (loaded.length === 0) return;
+    const parts = loaded.map(exportShiftCSV);
     const blob = new Blob([parts.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -110,27 +122,32 @@ export function renderCalendarView(root: HTMLElement): void {
     URL.revokeObjectURL(url);
   });
 
-  document.getElementById('hist-export-range')!.addEventListener('click', async () => {
-    const s = (document.getElementById('hist-start') as HTMLInputElement).value;
-    const e = (document.getElementById('hist-end') as HTMLInputElement).value;
-    if (!s || !e) return;
-    const dates = (await listShiftDates()).filter((d) => d >= s && d <= e);
-    const parts: string[] = [];
-    for (const d of dates) {
-      const day = await getShiftByDate(d, 'day');
-      const night = await getShiftByDate(d, 'night');
-      if (day) parts.push(exportShiftCSV(day));
-      if (night) parts.push(exportShiftCSV(night));
-    }
-    if (parts.length === 0) return;
-    const blob = new Blob([parts.join('\n')], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'shift-history-range.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+  root.querySelectorAll('[data-quick]').forEach((btn) => {
+    const el = btn as HTMLButtonElement;
+    el.addEventListener('click', async () => {
+      const mode = el.dataset.quick!;
+      const dateInput = document.getElementById('hist-date') as HTMLInputElement;
+      if (mode === 'today') {
+        const d = new Date().toISOString().slice(0, 10);
+        dateInput.value = d;
+        await loadSingle(d);
+      } else if (mode === 'yesterday') {
+        const d = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        dateInput.value = d;
+        await loadSingle(d);
+      } else if (mode === 'week') {
+        const snaps: PublishedShiftSnapshot[] = [];
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+          const day = await getShiftByDate(d, 'day');
+          const night = await getShiftByDate(d, 'night');
+          if (day) snaps.push(day);
+          if (night) snaps.push(night);
+        }
+        loaded = snaps;
+        renderTable(loaded);
+        exportBtn.disabled = loaded.length === 0;
+      }
+    });
   });
-
-  loadDates();
 }

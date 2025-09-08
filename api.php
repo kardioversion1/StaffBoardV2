@@ -230,7 +230,7 @@ switch ($action) {
   }
 
   case 'physicians': {
-    header('Content-Type: text/calendar; charset=utf-8');
+    header('Content-Type: text/html; charset=utf-8');
     $cachePath = $DATA_DIR . '/physicians.ics';
     $ttl = 300; // 5 minutes
     $ics = null;

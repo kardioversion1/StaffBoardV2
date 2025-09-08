@@ -2,6 +2,7 @@
  * Adapter for server-side persistence backed by api.php.
  */
 import { get as idbGet, set as idbSet } from '@/db';
+import { createDebouncer } from '@/utils/debouncedSave';
 
 export interface ServerAPI {
   /** Load data from the server with optional caching. */
@@ -73,7 +74,15 @@ export const load: ServerAPI['load'] = async (key, params = {}) => {
   }
 };
 
-export const save: ServerAPI['save'] = async (key, payload, params = {}) => {
+const flushActive = createDebouncer(
+  () => pendingActive!,
+  async ({ payload, params }) => rawSave('active', payload, params),
+  300
+);
+
+let pendingActive: { payload: unknown; params: Record<string, any> } | null = null;
+
+const rawSave = async (key: string, payload: unknown, params: Record<string, any>) => {
   const keyName = cacheKey(key, {});
   const qs = new URLSearchParams({ action: 'save', key, ...params });
 
@@ -113,6 +122,15 @@ export const save: ServerAPI['save'] = async (key, payload, params = {}) => {
       throw err2;
     }
   }
+};
+
+export const save: ServerAPI['save'] = async (key, payload, params = {}) => {
+  if (key === 'active') {
+    pendingActive = { payload, params };
+    flushActive();
+    return { ok: true } as any;
+  }
+  return rawSave(key, payload, params);
 };
 
 export const softDeleteStaff: ServerAPI['softDeleteStaff'] = async (id) => {

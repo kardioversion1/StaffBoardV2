@@ -12,6 +12,10 @@ function db(): PDO {
     if ($path === false || $path === '') {
       $path = __DIR__ . '/data.sqlite';
     }
+    $dir = dirname($path);
+    if (!is_dir($dir) || !is_writable($dir)) {
+      throw new RuntimeException('DB path not writable: ' . $dir);
+    }
     $pdo = new PDO('sqlite:' . $path);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     initDb($pdo);
@@ -36,11 +40,17 @@ function kvGet(string $key, $default) {
 
 function kvSet(string $key, $data): void {
   $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+  if ($json === false) {
+    throw new InvalidArgumentException('json encode failed: ' . json_last_error_msg());
+  }
   db()->prepare('REPLACE INTO kv_store (key, value) VALUES (:k, :v)')->execute([':k' => $key, ':v' => $json]);
 }
 
 function activeSave($data, ?string $date, ?string $shift): void {
   $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+  if ($json === false) {
+    throw new InvalidArgumentException('json encode failed: ' . json_last_error_msg());
+  }
   if ($date && $shift) {
     db()->prepare('REPLACE INTO active_snapshots (date, shift, data) VALUES (:d, :s, :j)')->execute([
       ':d' => $date,
@@ -66,6 +76,9 @@ function activeLoad(?string $date, ?string $shift) {
 
 function historyInsert($data): void {
   $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+  if ($json === false) {
+    throw new InvalidArgumentException('json encode failed: ' . json_last_error_msg());
+  }
   db()->prepare('INSERT INTO history (data) VALUES (:j)')->execute([':j' => $json]);
 }
 

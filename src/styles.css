@@ -189,10 +189,10 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .roster-row{display:flex;align-items:center;justify-content:space-between;padding:4px;cursor:pointer}
 .roster-row.selected{background:var(--tab)}
 .settings-pane{display:flex;flex-direction:column;gap:16px}
-.zones-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
-.zones-grid .form-row{margin:0}
-.zone-card{border:1px solid var(--line);border-radius:8px;padding:6px;background:var(--panel)}
-.zone-card h4{margin:0 0 4px}
+.settings-pane .zones-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.settings-pane .zones-grid .form-row{margin:0}
+.settings-pane .zone-card{border:1px solid var(--line);border-radius:8px;padding:6px;background:var(--panel)}
+.settings-pane .zone-card h4{margin:0 0 4px}
 .roster-controls{display:flex;flex-direction:column;gap:6px}
 #roster-list{list-style:none;padding:0;margin:8px 0;flex:1;overflow:auto}
 #roster-list li{padding:4px 6px;border-radius:6px;cursor:grab}

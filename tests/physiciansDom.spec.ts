@@ -98,10 +98,55 @@ describe('physician schedule rendering', () => {
       } as unknown as Response)
     );
 
-    const data = await phys.getUpcomingDoctors('2024-01-01', 1);
-    expect(data).toEqual({ '2024-01-01': { Downtown: ['Dr. Bayers', 'Dr. Fox'] } });
+      const data = await phys.getUpcomingDoctors('2024-01-01', 1);
+      expect(data).toEqual({
+        '2024-01-01': {
+          Downtown: [
+            { time: '00:00', name: 'Dr. Bayers' },
+            { time: '00:00', name: 'Dr. Fox' },
+          ],
+        },
+      });
+    });
+
+    it('renders popup with per-day schedules for both locations', async () => {
+    const sample = [
+      'BEGIN:VCALENDAR',
+      'BEGIN:VEVENT',
+      'DTSTART:20240101T060000',
+      'LOCATION:Jewish Downtown',
+      'DESCRIPTION:Dr A',
+      'END:VEVENT',
+      'BEGIN:VEVENT',
+      'DTSTART:20240101T120000',
+      'LOCATION:Jewish South',
+      'DESCRIPTION:Dr B',
+      'END:VEVENT',
+      'BEGIN:VEVENT',
+      'DTSTART:20240102T060000',
+      'LOCATION:Jewish Downtown',
+      'DESCRIPTION:Dr C',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\n');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'text/calendar' },
+        text: () => Promise.resolve(sample),
+      } as unknown as Response)
+    );
+
+    await phys.renderPhysicianPopup('2024-01-01', 2);
+    const overlay = document.querySelector('.phys-overlay') as HTMLElement;
+    const text = overlay.textContent || '';
+    expect(text).toContain('2024-01-01');
+    expect(text).toContain('Downtown');
+    expect(text).toContain('South Hospital');
+    expect(text).toContain('6am Dr. A');
+    expect(text).toContain('12pm Dr. B');
+    expect(text).toContain('2024-01-02');
+    expect(text).toContain('6am Dr. C');
   });
-
-  // Popup rendering is indirectly covered via renderPhysicians tests.
 });
-

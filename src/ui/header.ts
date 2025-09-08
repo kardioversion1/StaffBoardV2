@@ -75,7 +75,7 @@ export function renderHeader() {
       const tasks: Promise<any>[] = [];
 
       const local =
-        getActiveBoardCache() ??
+        getActiveBoardCache(STATE.dateISO, shift) ??
         (await DB.get<ActiveBoard>(KS.ACTIVE(STATE.dateISO, shift)));
       if (local) {
         const remote = await Server.load('active', {

@@ -121,12 +121,15 @@ export function initState() {
   STATE.shift = deriveShift(STATE.clockHHMM);
 }
 
-let ACTIVE_BOARD_CACHE: ActiveBoard | undefined;
+const ACTIVE_BOARD_CACHE: Record<string, ActiveBoard> = {};
 export function setActiveBoardCache(board: ActiveBoard): void {
-  ACTIVE_BOARD_CACHE = board;
+  ACTIVE_BOARD_CACHE[KS.ACTIVE(board.dateISO, board.shift)] = board;
 }
-export function getActiveBoardCache(): ActiveBoard | undefined {
-  return ACTIVE_BOARD_CACHE;
+export function getActiveBoardCache(
+  dateISO: string,
+  shift: Shift
+): ActiveBoard | undefined {
+  return ACTIVE_BOARD_CACHE[KS.ACTIVE(dateISO, shift)];
 }
 
 /** Merge a local board into the remote one without overwriting remote edits. */

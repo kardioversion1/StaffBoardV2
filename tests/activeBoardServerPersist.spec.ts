@@ -5,6 +5,7 @@ const store: Record<string, any> = {};
 vi.mock('@/state', () => {
   const KS = {
     ACTIVE: (d: string, s: string) => `ACTIVE:${d}:${s}`,
+    DRAFT: (d: string, s: string) => `DRAFT:${d}:${s}`,
   };
   const STATE = {
     dateISO: '2024-01-01',
@@ -21,6 +22,8 @@ vi.mock('@/state', () => {
     CURRENT_SCHEMA_VERSION: 1,
     migrateActiveBoard: (a: any) => a,
     setActiveBoardCache: vi.fn(),
+    getActiveBoardCache: (_d: string, _s: string) => undefined,
+    mergeBoards: (remote: any, local: any) => ({ ...remote, ...local }),
     DB: {
       get: async (k: string) => store[k],
       set: async (k: string, v: any) => {

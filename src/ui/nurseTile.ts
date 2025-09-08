@@ -1,7 +1,7 @@
 import type { Slot } from '@/slots';
 import type { Staff } from '@/state/staff';
 import { getConfig } from '@/state/config';
-import { getActiveBoardCache } from '@/state';
+import { getActiveBoardCache, STATE } from '@/state';
 import { formatName } from '@/utils/names';
 
 export function nurseTile(slot: Slot, staff: Staff): string {
@@ -22,7 +22,10 @@ export function nurseTile(slot: Slot, staff: Staff): string {
     );
   }
 
-  const board = typeof getActiveBoardCache === 'function' ? getActiveBoardCache() : undefined;
+  const board =
+    typeof getActiveBoardCache === 'function'
+      ? getActiveBoardCache(STATE.dateISO, STATE.shift)
+      : undefined;
   const cfg = (typeof getConfig === 'function' ? getConfig() : {}) as any;
   let endISO = board?.endAtISO;
   if (!endISO && board) {

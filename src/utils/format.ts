@@ -24,3 +24,19 @@ export function formatTime24h(d: Date | string | number) {
     minute: '2-digit',
   }).format(new Date(d));
 }
+
+/**
+ * Format duration between two ISO timestamps as H:MM.
+ * @param startISO start ISO timestamp
+ * @param endISO end ISO timestamp
+ * @returns formatted duration or empty string if invalid
+ */
+export function formatDuration(startISO: string, endISO: string): string {
+  const start = new Date(startISO).getTime();
+  const end = new Date(endISO).getTime();
+  if (!isFinite(start) || !isFinite(end) || end <= start) return '';
+  const minutes = Math.round((end - start) / 60000);
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}:${String(mins).padStart(2, '0')}`;
+}

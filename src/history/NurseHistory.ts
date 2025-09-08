@@ -1,6 +1,7 @@
 import { loadStaff, type Staff } from '@/state';
 import { findShiftsByStaff } from '@/state/history';
 import { exportNurseHistoryCSV } from '@/history';
+import { formatTime24h, formatDuration } from '@/utils/format';
 import './history.css';
 
 /**
@@ -78,11 +79,13 @@ export function renderNurseHistory(root: HTMLElement): void {
     current = await findShiftsByStaff(id);
     exportBtn.disabled = current.length === 0;
     details.innerHTML = current.length
-      ? `<table class="history-table"><thead><tr><th>Date</th><th>Shift</th><th>Zone</th><th>Prev Zone</th></tr></thead><tbody>${current
-          .map(
-            (r) =>
-              `<tr><td>${r.dateISO}</td><td>${r.shift}</td><td>${r.zone}</td><td>${r.previousZone ?? ''}</td></tr>`
-          )
+      ? `<table class="history-table"><thead><tr><th>Date</th><th>Shift</th><th>Zone</th><th>Prev Zone</th><th>Start</th><th>End</th><th>Total</th></tr></thead><tbody>${current
+          .map((r) => {
+            const start = formatTime24h(r.startISO);
+            const end = r.endISO ? formatTime24h(r.endISO) : '';
+            const total = r.endISO ? formatDuration(r.startISO, r.endISO) : '';
+            return `<tr><td>${r.dateISO}</td><td>${r.shift}</td><td>${r.zone}</td><td>${r.previousZone ?? ''}</td><td>${start}</td><td>${end}</td><td>${total}</td></tr>`;
+          })
           .join('')}</tbody></table>`
       : '<div class="muted">No history found</div>';
   }

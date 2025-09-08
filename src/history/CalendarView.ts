@@ -6,6 +6,7 @@ import {
 } from '@/state/history';
 import { exportShiftCSV } from '@/history';
 import { DB, KS } from '@/state';
+import { formatTime24h, formatDuration } from '@/utils/format';
 import './history.css';
 
 function isPublishedShiftSnapshot(obj: any): obj is PublishedShiftSnapshot {
@@ -58,7 +59,7 @@ export function renderCalendarView(root: HTMLElement): void {
     table.className = 'history-table';
     const thead = document.createElement('thead');
     const headRow = document.createElement('tr');
-    ['Date', 'Shift', 'Name', 'Role', 'Zone'].forEach((h) => {
+    ['Date', 'Shift', 'Name', 'Role', 'Zone', 'Start', 'End', 'Total'].forEach((h) => {
       const th = document.createElement('th');
       th.textContent = h;
       headRow.appendChild(th);
@@ -69,7 +70,10 @@ export function renderCalendarView(root: HTMLElement): void {
     snaps.forEach((s) => {
       s.zoneAssignments.forEach((a) => {
         const tr = document.createElement('tr');
-        [s.dateISO, s.shift, a.displayName, a.role, a.zone].forEach((text) => {
+        const start = formatTime24h(a.startISO);
+        const end = a.endISO ? formatTime24h(a.endISO) : '';
+        const total = a.endISO ? formatDuration(a.startISO, a.endISO) : '';
+        [s.dateISO, s.shift, a.displayName, a.role, a.zone, start, end, total].forEach((text) => {
           const td = document.createElement('td');
           td.textContent = text;
           tr.appendChild(td);

@@ -24,7 +24,7 @@ describe('physician schedule rendering', () => {
       'END:VEVENT',
       'BEGIN:VEVENT',
       'DTSTART:20240101T140000',
-      'LOCATION:Jewish Downtown',
+      'LOCATION:Jewish South',
       'DESCRIPTION:Dr Rassi',
       'END:VEVENT',
       'BEGIN:VEVENT',
@@ -45,19 +45,20 @@ describe('physician schedule rendering', () => {
 
     const el = document.createElement('div');
     await phys.renderPhysicians(el, '2024-01-01');
-    expect(el.querySelectorAll('li')).toHaveLength(4);
+    expect(el.querySelectorAll('li')).toHaveLength(3);
     const text = el.textContent || '';
     expect(text).toContain('6am Dr. DiMeo');
     expect(text).toContain('12pm Dr. Cohen');
-    expect(text).toContain('2pm Dr. Rassi');
     expect(text).toContain('10pm Dr. Fischer');
+    expect(text).not.toContain('Dr. Rassi');
   });
 
-  it('handles events without explicit start times', async () => {
+  it('shows times even when midnight', async () => {
     const sample = [
       'BEGIN:VCALENDAR',
       'BEGIN:VEVENT',
       'DTSTART:20240101T000000',
+      'LOCATION:Jewish Downtown',
       'ATTENDEE;CN="Dr Bayers":mailto:bayers@example.com',
       'ATTENDEE;CN="Dr Fox":mailto:fox@example.com',
       'END:VEVENT',
@@ -75,7 +76,7 @@ describe('physician schedule rendering', () => {
     const el = document.createElement('div');
     await phys.renderPhysicians(el, '2024-01-01');
     const items = Array.from(el.querySelectorAll('li')).map((li) => li.textContent?.trim());
-    expect(items).toEqual(['Dr. Bayers', 'Dr. Fox']);
+    expect(items).toEqual(['12am Dr. Bayers', '12am Dr. Fox']);
   });
 
   it('aggregates upcoming physicians without locations', async () => {

@@ -46,23 +46,39 @@ export function renderCalendarView(root: HTMLElement): void {
   let loaded: PublishedShiftSnapshot[] = [];
 
   function renderTable(snaps: PublishedShiftSnapshot[]): void {
+    listEl.textContent = '';
     if (snaps.length === 0) {
-      listEl.innerHTML = '<div class="muted">No history found</div>';
+      const div = document.createElement('div');
+      div.className = 'muted';
+      div.textContent = 'No history found';
+      listEl.appendChild(div);
       return;
     }
-    const rows = snaps
-      .flatMap((s) =>
-        s.zoneAssignments.map(
-          (a) =>
-            `<tr><td>${s.dateISO}</td><td>${s.shift}</td><td>${a.displayName}</td><td>${a.role}</td><td>${a.zone}</td></tr>`
-        )
-      )
-      .join('');
-    listEl.innerHTML = `
-      <table class="history-table">
-        <thead><tr><th>Date</th><th>Shift</th><th>Name</th><th>Role</th><th>Zone</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
+    const table = document.createElement('table');
+    table.className = 'history-table';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    ['Date', 'Shift', 'Name', 'Role', 'Zone'].forEach((h) => {
+      const th = document.createElement('th');
+      th.textContent = h;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    snaps.forEach((s) => {
+      s.zoneAssignments.forEach((a) => {
+        const tr = document.createElement('tr');
+        [s.dateISO, s.shift, a.displayName, a.role, a.zone].forEach((text) => {
+          const td = document.createElement('td');
+          td.textContent = text;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    });
+    table.appendChild(tbody);
+    listEl.appendChild(table);
   }
 
   async function loadSingle(date: string): Promise<void> {

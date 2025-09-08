@@ -14,6 +14,7 @@ export type Slot = {
   };
   endTimeOverrideHHMM?: string;
   dto?: boolean;
+  assignedTs?: number;
 };
 
 export interface Board {
@@ -60,6 +61,7 @@ export function upsertSlot(
   target: SlotTarget,
   slot: Slot
 ): boolean {
+  slot.assignedTs = Date.now();
   const removed = ensureUniqueAssignment(board, slot.nurseId);
   if (target === "charge") {
     board.charge = slot;

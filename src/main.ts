@@ -91,13 +91,14 @@ initState();
       initState();
       await applyDraftToActive(STATE.dateISO, STATE.shift);
       renderAll();
-    } else if (STATE.clockHHMM !== hhmm) {
-      STATE.clockHHMM = hhmm;
-      document.querySelectorAll('.clock-big').forEach((el) => {
-        (el as HTMLElement).textContent = hhmm;
-      });
-    }
-  }, 1000);
+  } else if (STATE.clockHHMM !== hhmm) {
+    STATE.clockHHMM = hhmm;
+    document.querySelectorAll('.clock-big').forEach((el) => {
+      (el as HTMLElement).textContent = hhmm;
+    });
+    document.dispatchEvent(new Event('clock-tick'));
+  }
+}, 1000);
 
   const activeTimer = setInterval(async () => {
     const { dateISO, shift } = STATE;

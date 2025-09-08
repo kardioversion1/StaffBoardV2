@@ -19,6 +19,7 @@ export const CURRENT_SCHEMA_VERSION = 2;
 export interface ActiveShift {
   dateISO: string;
   shift: Shift;
+  endAtISO?: string;
   charge?: Slot;
   triage?: Slot;
   admin?: Slot;
@@ -73,6 +74,15 @@ export function migrateActiveBoard(raw: any): ActiveBoard {
   return {
     dateISO: raw?.dateISO ?? toDateISO(new Date()),
     shift: raw?.shift === 'night' ? 'night' : 'day',
+    endAtISO:
+      typeof raw?.endAtISO === 'string'
+        ? raw.endAtISO
+        : (() => {
+            const startHH = raw?.shift === 'night' ? '19:00' : '07:00';
+            const d = new Date(`${raw?.dateISO ?? toDateISO(new Date())}T${startHH}`);
+            d.setHours(d.getHours() + 12);
+            return d.toISOString();
+          })(),
     charge: raw?.charge ?? undefined,
     triage: raw?.triage ?? undefined,
     admin: raw?.admin ?? undefined,
@@ -104,6 +114,15 @@ export function migrateDraft(raw: any): DraftShift {
   return {
     dateISO: raw?.dateISO ?? toDateISO(new Date()),
     shift: raw?.shift === 'night' ? 'night' : 'day',
+    endAtISO:
+      typeof raw?.endAtISO === 'string'
+        ? raw.endAtISO
+        : (() => {
+            const startHH = raw?.shift === 'night' ? '19:00' : '07:00';
+            const d = new Date(`${raw?.dateISO ?? toDateISO(new Date())}T${startHH}`);
+            d.setHours(d.getHours() + 12);
+            return d.toISOString();
+          })(),
     charge: raw?.charge ?? undefined,
     triage: raw?.triage ?? undefined,
     admin: raw?.admin ?? undefined,

@@ -10,6 +10,7 @@ import { type ZoneDef } from '@/utils/zones';
 
 export interface DraftShift extends BaseDraftShift {
   publishAtISO?: string;
+  endAtISO?: string;
 }
 
 /** Build an empty draft with zones populated but no assignments. */
@@ -31,6 +32,7 @@ export function buildEmptyDraft(
     handoff: '',
     version: CURRENT_SCHEMA_VERSION,
     publishAtISO: undefined,
+    endAtISO: undefined,
   };
 }
 

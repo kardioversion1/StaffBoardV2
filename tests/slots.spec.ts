@@ -106,7 +106,7 @@ describe("nurse tile snapshot", () => {
       type: "other",
     });
     expect(html).toMatchInlineSnapshot(
-      `"<div class=\"nurse-card\" data-type=\"other\" data-role=\"nurse\" tabindex=\"0\" aria-label=\"Alice, other nurse, comment note, on break, has student, marked bad\"><div class=\"nurse-card__text\"><div class=\"nurse-card__name\">Alice</div><div class=\"nurse-card__meta\">other nurse</div><div class=\"nurse-card__comment\"><span class=\"icon\">💬</span> note</div></div><span class=\"chips\"><span class=\"chip\" aria-label=\"On break\"><span class=\"icon\">☕</span></span><span class=\"chip\" aria-label=\"Has student\"><span class=\"icon\">🎓</span></span><span class=\"chip\" aria-label=\"Marked bad\"><span class=\"icon\">⚠️</span></span></span></div>"`
+      `"<div class=\"nurse-card\" data-type=\"other\" data-role=\"nurse\" tabindex=\"0\" aria-label=\"Alice, other nurse, comment note, on break, has student, marked bad\"><div class=\"nurse-card__text\"><div class=\"nurse-card__name\">Alice</div><div class=\"nurse-card__meta\">other nurse</div><div class=\"nurse-card__comment\"><span class=\"icon\">💬</span> note</div></div><span class=\"chips\"><span class=\"chip\" aria-label=\"On break\" title=\"On break\"><span class=\"icon\">☕</span></span><span class=\"chip\" aria-label=\"Has student\" title=\"Has student\"><span class=\"icon\">🎓</span></span><span class=\"chip\" aria-label=\"Marked bad\" title=\"Marked bad\"><span class=\"icon\">⚠️</span></span></span></div>"`
     );
   });
 });

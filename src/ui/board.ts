@@ -449,6 +449,7 @@ function renderZones(
     const editBtn = document.createElement('button');
     editBtn.textContent = '⚙';
     editBtn.className = 'zone-card__edit';
+    editBtn.title = 'Edit zone';
     editBtn.addEventListener('click', async () => {
       const val = prompt('Rename zone', z.name)?.trim();
       if (val && val !== z.name) {
@@ -532,6 +533,7 @@ function renderZones(
     addBtn.className = hasSlots
       ? 'zone-card__add zone-card__add--small'
       : 'zone-card__add zone-card__add--large';
+    addBtn.title = 'Add staff';
     addBtn.addEventListener('click', () => {
       openAssignDialog(staff, (id) => {
         const moved = upsertSlot(active, { zone: z.name }, { nurseId: id });
@@ -765,6 +767,8 @@ function manageSlot(
       <h3>Manage ${st.name || labelFromId(st.id)}</h3>
       <label>Name <input id="mg-name" value="${st.name || ''}"></label>
       <label>RF <input id="mg-rf" type="number" value="${st.rf ?? ''}"></label>
+      <label>End time <input id="mg-end" type="time" value="${endValue}"></label>
+      <label>Comment <input id="mg-comment" placeholder="Add comment" value="${slot.comment || ''}"></label>
       <label>Role <select id="mg-role">
         <option value="nurse"${currentRole === 'nurse' ? ' selected' : ''}>Nurse</option>
         <option value="tech"${currentRole === 'tech' ? ' selected' : ''}>Tech</option>
@@ -780,10 +784,8 @@ function manageSlot(
         </select></label>
       </div>
       <label>Student <input id="mg-student" value="${typeof slot.student === 'string' ? slot.student : ''}"></label>
-      <label>Comment <input id="mg-comment" value="${slot.comment || ''}"></label>
       <label><input type="checkbox" id="mg-break" ${slot.break?.active ? 'checked' : ''}/> On break</label>
       <label><input type="checkbox" id="mg-bad" ${slot.bad ? 'checked' : ''}/> Bad</label>
-      <label>End time <input id="mg-end" type="time" value="${endValue}"></label>
       <label>Zone <select id="mg-zone">
         ${(cfg.zones || [])
           .map((z: ZoneDef) => `<option value="${z.name}"${z.name === zone ? ' selected' : ''}>${z.name}</option>`)

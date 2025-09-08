@@ -4,21 +4,22 @@ import { getConfig } from '@/state/config';
 import { getActiveBoardCache, STATE } from '@/state';
 import { formatName } from '@/utils/names';
 
+/** Render a nurse tile with status icons. */
 export function nurseTile(slot: Slot, staff: Staff): string {
   const chips: string[] = [];
   if (slot.break?.active) {
     chips.push(
-      `<span class="chip" aria-label="On break"><span class="icon">☕</span></span>`
+      `<span class="chip" aria-label="On break" title="On break"><span class="icon">☕</span></span>`
     );
   }
   if (slot.student) {
     chips.push(
-      `<span class="chip" aria-label="Has student"><span class="icon">🎓</span></span>`
+      `<span class="chip" aria-label="Has student" title="Has student"><span class="icon">🎓</span></span>`
     );
   }
   if (slot.bad) {
     chips.push(
-      `<span class="chip" aria-label="Marked bad"><span class="icon">⚠️</span></span>`
+      `<span class="chip" aria-label="Marked bad" title="Marked bad"><span class="icon">⚠️</span></span>`
     );
   }
 
@@ -39,7 +40,7 @@ export function nurseTile(slot: Slot, staff: Staff): string {
     const msLeft = new Date(endISO).getTime() - Date.now();
     if (msLeft > 0 && msLeft <= 60 * 60 * 1000) {
       chips.push(
-        `<span class="chip" aria-label="Shift ending soon"><span class="icon">🚪</span></span>`
+        `<span class="chip" aria-label="Shift ending soon" title="Shift ending soon"><span class="icon">🚪</span></span>`
       );
     }
   }

@@ -35,7 +35,7 @@ import {
 } from '@/slots';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
-import { showBanner } from '@/ui/banner';
+import { showBanner, showToast } from '@/ui/banner';
 import { openAssignDialog } from '@/ui/assignDialog';
 
 // --- helpers ---------------------------------------------------------------
@@ -77,7 +77,22 @@ export async function renderBoard(
 
     // Load or initialize active shift tuple
     const saveKey = KS.ACTIVE(ctx.dateISO, ctx.shift);
-    let active = await DB.get<ActiveBoard>(saveKey);
+
+    let active: ActiveBoard | undefined;
+    let usedLocal = false;
+
+    try {
+      active = await Server.load<ActiveBoard>('active', {
+        date: ctx.dateISO,
+        shift: ctx.shift,
+      });
+    } catch {
+      /* ignore network errors */
+    }
+    if (!active) {
+      active = await DB.get<ActiveBoard>(saveKey);
+      usedLocal = !!active;
+    }
     if (!active) {
       active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones);
     } else {
@@ -85,6 +100,7 @@ export async function renderBoard(
     }
     normalizeActiveZones(active, cfg.zones);
     setActiveBoardCache(active);
+    if (usedLocal) showToast('Using local data; changes may not persist');
 
     // Layout
     root.innerHTML = `
@@ -137,30 +153,40 @@ export async function renderBoard(
       </div>
     `;
 
-    // Debounced save
-    let saveTimer: ReturnType<typeof setTimeout>;
-    const flushSave = () => {
-      clearTimeout(saveTimer);
-      DB.set(saveKey, active);
-      Server.save('active', active).catch(() => {});
-      notifyUpdate(saveKey);
+    // Debounced save (server-first, then local always)
+    let saveTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const flushSave = async () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      try {
+        await Server.save('active', active!);
+      } catch (err) {
+        console.error('failed to save active board', err);
+        showToast('Saving locally; server unreachable');
+      } finally {
+        await DB.set(saveKey, active!);
+        notifyUpdate(saveKey);
+      }
     };
+
     const queueSave = () => {
-      clearTimeout(saveTimer);
+      if (saveTimer) clearTimeout(saveTimer);
       saveTimer = setTimeout(flushSave, 300);
     };
 
     const refresh = () => {
-      renderLeadership(active, staff, queueSave, root, refresh);
-      renderZones(active, cfg, staff, queueSave, root);
+      renderLeadership(active!, staff, queueSave, root, refresh);
+      renderZones(active!, cfg, staff, queueSave, root);
     };
 
     refresh();
-    wireComments(active, queueSave);
-    await renderIncoming(active, staff, queueSave);
-    renderOffgoing(active, queueSave);
+    wireComments(active!, queueSave);
+    await renderIncoming(active!, staff, queueSave);
+    renderOffgoing(active!, queueSave);
+
     const weatherBody = document.getElementById('weather-body');
     if (weatherBody) await renderWeather(weatherBody);
+
     await renderPhysicians(
       document.getElementById('phys') as HTMLElement,
       ctx.dateISO
@@ -172,10 +198,12 @@ export async function renderBoard(
     });
 
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) flushSave();
+      if (document.hidden) void flushSave();
     });
 
-    window.addEventListener('beforeunload', flushSave);
+    window.addEventListener('beforeunload', () => {
+      void flushSave();
+    });
 
     onUpdate(saveKey, async () => {
       const updated = await DB.get<ActiveBoard>(saveKey);
@@ -189,10 +217,10 @@ export async function renderBoard(
     // Re-render on config changes (e.g., zone list or colors)
     document.addEventListener('config-changed', () => {
       const c = getConfig();
-      normalizeActiveZones(active, c.zones);
+      normalizeActiveZones(active!, c.zones);
       queueSave();
-      renderLeadership(active, staff, queueSave, root, refresh);
-      renderZones(active, c, staff, queueSave, root);
+      renderLeadership(active!, staff, queueSave, root, refresh);
+      renderZones(active!, c, staff, queueSave, root);
     });
   } catch (err) {
     console.error(err);
@@ -500,7 +528,7 @@ function renderZones(
 // --- comments --------------------------------------------------------------
 
 function wireComments(active: ActiveBoard, save: () => void) {
-  const el = document.getElementById('comments') as HTMLTextAreaElement;
+  const el = document.getElementById('comments') as HTMLTextAreaElement | null;
   if (!el) return;
 
   el.value = active.comments || '';
@@ -576,29 +604,25 @@ async function renderIncoming(
       card.addEventListener('dragstart', (e) => {
         (e as DragEvent).dataTransfer?.setData('incoming-id', inc.nurseId);
       });
-      card.addEventListener('click', () => {
+      const toggleArrived = () => {
         if (STATE.locked) return;
         inc.arrived = !inc.arrived;
         save();
         renderIncoming(active, staffList, save);
-      });
+      };
+      card.addEventListener('click', toggleArrived);
       row.appendChild(card);
 
       const eta = document.createElement('div');
       eta.textContent = `${inc.eta}${inc.arrived ? ' ✓' : ''}`;
-      eta.addEventListener('click', () => {
-        if (STATE.locked) return;
-        inc.arrived = !inc.arrived;
-        save();
-        renderIncoming(active, staffList, save);
-      });
+      eta.addEventListener('click', toggleArrived);
       row.appendChild(eta);
 
       cont.appendChild(row);
     });
   }
 
-  const btn = document.getElementById('add-incoming') as HTMLButtonElement;
+  const btn = document.getElementById('add-incoming') as HTMLButtonElement | null;
   if (btn) {
     btn.disabled = STATE.locked;
     btn.onclick = () => {
@@ -617,18 +641,16 @@ async function renderIncoming(
             </div>
           </div>`;
         document.body.appendChild(overlay);
-        const etaEl = overlay.querySelector('#inc-eta') as HTMLInputElement;
-        overlay
-          .querySelector('#inc-save')
-          ?.addEventListener('click', () => {
-            active.incoming.push({ nurseId: id, eta: etaEl.value.trim() });
-            save();
-            renderIncoming(active, staffList, save);
-            overlay.remove();
-          });
-        overlay
-          .querySelector('#inc-cancel')
-          ?.addEventListener('click', () => overlay.remove());
+        const etaEl = overlay.querySelector('#inc-eta') as HTMLInputElement | null;
+        const saveBtn = overlay.querySelector('#inc-save') as HTMLButtonElement | null;
+        const cancelBtn = overlay.querySelector('#inc-cancel') as HTMLButtonElement | null;
+        saveBtn?.addEventListener('click', () => {
+          active.incoming.push({ nurseId: id, eta: (etaEl?.value || '').trim() });
+          save();
+          void renderIncoming(active, staffList, save);
+          overlay.remove();
+        });
+        cancelBtn?.addEventListener('click', () => overlay.remove());
       });
     };
   }

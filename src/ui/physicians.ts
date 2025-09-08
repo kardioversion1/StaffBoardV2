@@ -3,6 +3,7 @@ import { getConfig } from '@/state';
 type Event = {
   date: string; // YYYY-MM-DD
   time: string; // HH:MM
+  end?: string; // HH:MM
   summary: string;
   location: string;
 };
@@ -93,11 +94,16 @@ function parseICS(text: string): Event[] {
         const dt = extractDateTime(String(current.DTSTART));
         if (dt) {
           const { date, time } = dt;
+          const endDt = current.DTEND
+            ? extractDateTime(String(current.DTEND))
+            : null;
           const location = icsUnescape(String(current.LOCATION || '')).trim();
           const attendees = current.attendees as string[];
           if (attendees.length) {
             for (const name of attendees) {
-              events.push({ date, time, summary: name, location });
+              const evt: Event = { date, time, summary: name, location };
+              if (endDt) evt.end = endDt.time;
+              events.push(evt);
             }
           } else if (current.DESCRIPTION) {
             const desc = icsUnescape(String(current.DESCRIPTION));
@@ -106,12 +112,16 @@ function parseICS(text: string): Event[] {
               .map((s) => s.trim())
               .filter((s) => s && !/er\s*main\s*schedule/i.test(s));
             for (const name of names) {
-              events.push({ date, time, summary: name, location });
+              const evt: Event = { date, time, summary: name, location };
+              if (endDt) evt.end = endDt.time;
+              events.push(evt);
             }
           } else if (current.SUMMARY) {
             const sum = icsUnescape(String(current.SUMMARY)).trim();
             if (!/er\s*main\s*schedule/i.test(sum)) {
-              events.push({ date, time, summary: sum, location });
+              const evt: Event = { date, time, summary: sum, location };
+              if (endDt) evt.end = endDt.time;
+              events.push(evt);
             }
           }
         }
@@ -161,6 +171,24 @@ function normalizeLocation(loc: string): string | null {
   return null;
 }
 
+const formatTime = (hhmm: string): string => {
+  const [hh, mm] = hhmm.split(':').map(Number);
+  const hour = ((hh + 11) % 12) + 1;
+  const suffix = hh < 12 ? 'am' : 'pm';
+  return `${hour}${suffix}`;
+};
+
+const formatTimeFull = (hhmm: string): string => {
+  const [hh, mm] = hhmm.split(':').map(Number);
+  const hour = ((hh + 11) % 12) + 1;
+  const suffix = hh < 12 ? 'AM' : 'PM';
+  return `${String(hour).padStart(2, '0')}:${String(mm).padStart(2, '0')} ${suffix}`;
+};
+
+const formatRange = (start: string, end?: string): string => {
+  return end ? `${formatTimeFull(start)} - ${formatTimeFull(end)}` : formatTimeFull(start);
+};
+
 /** Fetch physician calendar text.
  *
  * ByteBloc does not send CORS headers, so direct browser requests fail. Instead
@@ -197,13 +225,13 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
     const ics = await fetchPhysicianICS();
     const events = parseICS(ics);
 
-    const isJewishDowntown = (loc: string) => normalizeLocation(loc) === 'Downtown';
-
     const docsMap = new Map<string, { name: string; time: string }>();
     for (const e of events) {
       if (e.date !== dateISO) continue;
-      if (e.location && !isJewishDowntown(e.location)) continue;
-      const name = extractDoctor(e.summary);
+      const loc = e.location ? normalizeLocation(e.location) : null;
+      if (loc !== 'Downtown') continue;
+      const parts = e.summary.split('|').map((s) => s.trim());
+      const name = extractDoctor(parts[1] || parts[0]);
       if (!name) continue;
       docsMap.set(`${name}|${e.time}`, { name, time: e.time });
     }
@@ -214,17 +242,9 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
       return;
     }
 
-    const formatTime = (hhmm: string): string => {
-      const [hh, mm] = hhmm.split(':').map(Number);
-      const hour = ((hh + 11) % 12) + 1; // 0 -> 12
-      const suffix = hh < 12 ? 'am' : 'pm';
-      return `${hour}${suffix}`;
-    };
-
-    const allMidnight = docs.every((d) => d.time === '00:00');
-    const items = allMidnight
-      ? docs.map((d) => `<li>${d.name}</li>`).join('')
-      : docs.map((d) => `<li>${formatTime(d.time)} ${d.name}</li>`).join('');
+    const items = docs
+      .map((d) => `<li>${formatTime(d.time)} ${d.name}</li>`)
+      .join('');
     el.innerHTML = `<ul class="phys-list">${items}</ul>`;
   } catch {
     el.textContent = 'Physician schedule unavailable';
@@ -269,8 +289,32 @@ export async function renderPhysicianPopup(
   days: number
 ): Promise<void> {
   try {
-    const data = await getUpcomingDoctors(startDateISO, days);
-    const dates = Object.keys(data).sort();
+    const ics = await fetchPhysicianICS();
+    const events = parseICS(ics);
+
+    const start = new Date(startDateISO + 'T00:00:00').getTime();
+    const end = start + days * 86400000;
+
+    const map: Record<string, Record<string, { shift: string; start: string; end: string; name: string }[]>> = {};
+    for (const e of events) {
+      const t = new Date(e.date + 'T00:00:00').getTime();
+      if (t < start || t >= end) continue;
+      const loc = e.location ? normalizeLocation(e.location) : null;
+      if (!loc) continue;
+      const parts = e.summary.split('|').map((s) => s.trim());
+      const name = extractDoctor(parts[1] || parts[0]);
+      if (!name) continue;
+      const shift = parts.length > 1 ? parts[0] : '';
+      (map[e.date] ||= {});
+      (map[e.date][loc] ||= []).push({
+        shift,
+        start: e.time,
+        end: e.end || '',
+        name,
+      });
+    }
+
+    const dates = Object.keys(map).sort();
 
     const overlay = document.createElement('div');
     overlay.className = 'phys-overlay';
@@ -282,13 +326,19 @@ export async function renderPhysicianPopup(
         ? '<p>No physicians scheduled</p>'
         : dates
             .map((d) => {
-              const groups = data[d];
+              const groups = map[d];
               const locs = Object.keys(groups)
                 .map((loc) => {
-                  const items = groups[loc].map((n) => `<li>${n}</li>`).join('');
+                  const rows = groups[loc]
+                    .sort((a, b) => a.start.localeCompare(b.start))
+                    .map(
+                      (r) =>
+                        `<tr><td>${r.shift}</td><td>${formatRange(r.start, r.end)}</td><td>${r.name}</td></tr>`
+                    )
+                    .join('');
                   return `<div class="phys-loc">
                     <strong class="phys-loc-name">${loc}</strong>
-                    <ul class="phys-list">${items}</ul>
+                    <table class="phys-table"><thead><tr><th>Shift</th><th>Time</th><th>Provider</th></tr></thead><tbody>${rows}</tbody></table>
                   </div>`;
                 })
                 .join('');

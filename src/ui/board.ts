@@ -139,13 +139,15 @@ export async function renderBoard(
 
     // Debounced save
     let saveTimer: ReturnType<typeof setTimeout>;
+    const flushSave = () => {
+      clearTimeout(saveTimer);
+      DB.set(saveKey, active);
+      Server.save('active', active).catch(() => {});
+      notifyUpdate(saveKey);
+    };
     const queueSave = () => {
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        DB.set(saveKey, active);
-        Server.save('active', active).catch(() => {});
-        notifyUpdate(saveKey);
-      }, 300);
+      saveTimer = setTimeout(flushSave, 300);
     };
 
     const refresh = () => {
@@ -170,8 +172,10 @@ export async function renderBoard(
     });
 
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) queueSave();
+      if (document.hidden) flushSave();
     });
+
+    window.addEventListener('beforeunload', flushSave);
 
     onUpdate(saveKey, async () => {
       const updated = await DB.get<ActiveBoard>(saveKey);

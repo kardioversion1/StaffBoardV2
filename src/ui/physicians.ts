@@ -221,7 +221,10 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
       return `${hour}${suffix}`;
     };
 
-    const items = docs.map((d) => `<li>${formatTime(d.time)} ${d.name}</li>`).join('');
+    const allMidnight = docs.every((d) => d.time === '00:00');
+    const items = allMidnight
+      ? docs.map((d) => `<li>${d.name}</li>`).join('')
+      : docs.map((d) => `<li>${formatTime(d.time)} ${d.name}</li>`).join('');
     el.innerHTML = `<ul class="phys-list">${items}</ul>`;
   } catch {
     el.textContent = 'Physician schedule unavailable';
@@ -242,7 +245,7 @@ export async function getUpcomingDoctors(
   const map: Record<string, Record<string, string[]>> = {};
   for (const e of events) {
     const t = new Date(e.date + 'T00:00:00').getTime();
-    const locName = e.location ? normalizeLocation(e.location) : null;
+    const locName = e.location ? normalizeLocation(e.location) : 'Downtown';
     if (t >= start && t < end && locName) {
       const name = extractDoctor(e.summary.trim());
       if (name) {

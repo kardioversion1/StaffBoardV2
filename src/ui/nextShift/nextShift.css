@@ -42,7 +42,9 @@
   text-align: left;
 }
 .next-shift .zone-drop {
-  border: 1px dashed var(--line);
-  min-height: 2rem;
-  padding: 0.25rem;
+  border: 2px dashed var(--accent);
+  min-height: 3rem;
+  padding: 0.5rem;
+  background: rgba(74, 163, 255, 0.15);
+  border-radius: 8px;
 }

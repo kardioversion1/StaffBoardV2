@@ -9,13 +9,28 @@ describe('physician schedule rendering', () => {
     document.body.innerHTML = '';
   });
 
-  it('shows only physician last names on the board', async () => {
+  it('shows start times and last names on the board', async () => {
     const sample = [
       'BEGIN:VCALENDAR',
       'BEGIN:VEVENT',
-      'DTSTART:20240101T070000',
+      'DTSTART:20240101T060000',
       'LOCATION:Jewish Downtown',
-      'DESCRIPTION:--- Jewish Hospital ---\\nDr DiMeo\\nDr Cohen\\nDr Rassi\\nDr Fischer',
+      'DESCRIPTION:Dr DiMeo',
+      'END:VEVENT',
+      'BEGIN:VEVENT',
+      'DTSTART:20240101T120000',
+      'LOCATION:Jewish Downtown',
+      'DESCRIPTION:Dr Cohen',
+      'END:VEVENT',
+      'BEGIN:VEVENT',
+      'DTSTART:20240101T140000',
+      'LOCATION:Jewish Downtown',
+      'DESCRIPTION:Dr Rassi',
+      'END:VEVENT',
+      'BEGIN:VEVENT',
+      'DTSTART:20240101T220000',
+      'LOCATION:Jewish Downtown',
+      'DESCRIPTION:Dr Fischer',
       'END:VEVENT',
       'END:VCALENDAR',
     ].join('\n');
@@ -30,15 +45,12 @@ describe('physician schedule rendering', () => {
 
     const el = document.createElement('div');
     await phys.renderPhysicians(el, '2024-01-01');
-    expect(el.querySelectorAll('li')).toHaveLength(3);
+    expect(el.querySelectorAll('li')).toHaveLength(4);
     const text = el.textContent || '';
-    expect(text).toContain('Dr. DiMeo');
-    expect(text).toContain('Dr. Cohen');
-    expect(text).toContain('Dr. Rassi');
-    expect(text).not.toContain('Dr. Fischer');
-    expect(text).not.toContain('Jewish Hospital');
-    expect(text).not.toContain('Day');
-    expect(text).not.toContain('6a – 2p');
+    expect(text).toContain('6am Dr. DiMeo');
+    expect(text).toContain('12pm Dr. Cohen');
+    expect(text).toContain('2pm Dr. Rassi');
+    expect(text).toContain('10pm Dr. Fischer');
   });
 
   // Popup rendering is indirectly covered via renderPhysicians tests.

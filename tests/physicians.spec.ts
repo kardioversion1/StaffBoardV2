@@ -23,11 +23,13 @@ describe('physician schedule parsing', () => {
     expect(events).toHaveLength(2);
       expect(events[0]).toEqual({
         date: '2024-01-01',
+        time: '07:00',
         summary: 'Dr A',
         location: 'Jewish Downtown',
       });
       expect(events[1]).toEqual({
         date: '2024-01-01',
+        time: '07:00',
         summary: 'Dr B',
         location: 'Jewish Downtown',
       });
@@ -48,6 +50,7 @@ describe('physician schedule parsing', () => {
     expect(events).toHaveLength(1);
       expect(events[0]).toEqual({
         date: '2024-01-01',
+        time: '07:00',
         summary: 'Dr A',
         location: 'Jewish Downtown',
       });
@@ -68,11 +71,13 @@ describe('physician schedule parsing', () => {
     expect(events).toHaveLength(2);
       expect(events[0]).toEqual({
         date: '2024-01-02',
+        time: '07:00',
         summary: 'Dr A',
         location: 'Jewish Downtown',
       });
       expect(events[1]).toEqual({
         date: '2024-01-02',
+        time: '07:00',
         summary: 'Dr B',
         location: 'Jewish Downtown',
       });

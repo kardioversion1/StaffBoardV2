@@ -1,7 +1,8 @@
 import { getConfig } from '@/state';
 
 type Event = {
-  date: string;     // YYYY-MM-DD
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
   summary: string;
   location: string;
 };
@@ -55,19 +56,26 @@ function unfoldICSLines(text: string): string[] {
  *  appear on the following day.
  */
 function extractDateISO(dtstart: string): string | null {
+  const res = extractDateTime(dtstart);
+  return res?.date ?? null;
+}
+
+function extractDateTime(dtstart: string): { date: string; time: string } | null {
   const val = dtstart.includes(':') ? dtstart.split(':', 2)[1] : dtstart;
   const m = /^(\d{4})(\d{2})(\d{2})(T(\d{2})(\d{2})(\d{2})?(Z)?)?/i.exec(
     val.trim()
   );
   if (!m) return null;
   const [, y, mo, da, , hh = '00', mm = '00', ss = '00', z] = m;
-  const date = z
+  const dateObj = z
     ? new Date(Date.UTC(+y, +mo - 1, +da, +hh, +mm, +ss))
     : new Date(+y, +mo - 1, +da, +hh, +mm, +ss);
-  const yyyy = String(date.getFullYear()).padStart(4, '0');
-  const mon = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${yyyy}-${mon}-${day}`;
+  const yyyy = String(dateObj.getFullYear()).padStart(4, '0');
+  const mon = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const hour = String(dateObj.getHours()).padStart(2, '0');
+  const minute = String(dateObj.getMinutes()).padStart(2, '0');
+  return { date: `${yyyy}-${mon}-${day}`, time: `${hour}:${minute}` };
 }
 
 function parseICS(text: string): Event[] {
@@ -82,13 +90,14 @@ function parseICS(text: string): Event[] {
     }
     if (line === 'END:VEVENT') {
       if (current?.DTSTART) {
-        const dateISO = extractDateISO(String(current.DTSTART));
-        if (dateISO) {
+        const dt = extractDateTime(String(current.DTSTART));
+        if (dt) {
+          const { date, time } = dt;
           const location = icsUnescape(String(current.LOCATION || '')).trim();
           const attendees = current.attendees as string[];
           if (attendees.length) {
             for (const name of attendees) {
-              events.push({ date: dateISO, summary: name, location });
+              events.push({ date, time, summary: name, location });
             }
           } else if (current.DESCRIPTION) {
             const desc = icsUnescape(String(current.DESCRIPTION));
@@ -97,12 +106,12 @@ function parseICS(text: string): Event[] {
               .map((s) => s.trim())
               .filter((s) => s && !/er\s*main\s*schedule/i.test(s));
             for (const name of names) {
-              events.push({ date: dateISO, summary: name, location });
+              events.push({ date, time, summary: name, location });
             }
           } else if (current.SUMMARY) {
             const sum = icsUnescape(String(current.SUMMARY)).trim();
             if (!/er\s*main\s*schedule/i.test(sum)) {
-              events.push({ date: dateISO, summary: sum, location });
+              events.push({ date, time, summary: sum, location });
             }
           }
         }
@@ -190,26 +199,29 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
 
     const isJewishDowntown = (loc: string) => normalizeLocation(loc) === 'Downtown';
 
-    const docsSet = new Set(
-      events
-        .filter(
-          (e) =>
-            e.date === dateISO &&
-            (e.location ? isJewishDowntown(e.location) : true)
-        )
-        .map((e) => extractDoctor(e.summary))
-        .filter((n): n is string => Boolean(n))
-    );
-    const docs = Array.from(docsSet);
+    const docsMap = new Map<string, { name: string; time: string }>();
+    for (const e of events) {
+      if (e.date !== dateISO) continue;
+      if (e.location && !isJewishDowntown(e.location)) continue;
+      const name = extractDoctor(e.summary);
+      if (!name) continue;
+      docsMap.set(`${name}|${e.time}`, { name, time: e.time });
+    }
+    const docs = Array.from(docsMap.values()).sort((a, b) => a.time.localeCompare(b.time));
 
     if (docs.length === 0) {
       el.textContent = 'No physicians scheduled';
       return;
     }
-    const items = docs
-      .slice(0, 3)
-      .map((d) => `<li>${d}</li>`)
-      .join('');
+
+    const formatTime = (hhmm: string): string => {
+      const [hh, mm] = hhmm.split(':').map(Number);
+      const hour = ((hh + 11) % 12) + 1; // 0 -> 12
+      const suffix = hh < 12 ? 'am' : 'pm';
+      return `${hour}${suffix}`;
+    };
+
+    const items = docs.map((d) => `<li>${formatTime(d.time)} ${d.name}</li>`).join('');
     el.innerHTML = `<ul class="phys-list">${items}</ul>`;
   } catch {
     el.textContent = 'Physician schedule unavailable';

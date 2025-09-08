@@ -128,3 +128,16 @@
   transform: translate(-50%, -50%);
   font-size: 2rem;
 }
+
+.recent-assignment {
+  animation: zone-glow 1s ease-in-out infinite alternate;
+}
+
+@keyframes zone-glow {
+  from {
+    box-shadow: 0 0 0 2px var(--ring);
+  }
+  to {
+    box-shadow: 0 0 0 6px var(--ring);
+  }
+}

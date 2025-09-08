@@ -40,6 +40,13 @@ import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 import { showBanner, showToast } from '@/ui/banner';
 import { openAssignDialog } from '@/ui/assignDialog';
 
+const RECENT_MS = 15 * 60 * 1000;
+const toMin = (hhmm: string): number => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+};
+let clockHandler: (() => void) | null = null;
+
 // --- helpers ---------------------------------------------------------------
 
 function buildEmptyActive(
@@ -199,11 +206,23 @@ export async function renderBoard(
 
     refresh();
     wireComments(active!, queueSave);
-    await renderIncoming(active!, staff, queueSave);
-    renderOffgoing(active!, queueSave);
+      await renderIncoming(active!, staff, queueSave);
+  renderOffgoing(active!, queueSave);
 
-    const weatherBody = document.getElementById('weather-body');
-    if (weatherBody) await renderWeather(weatherBody);
+      const checkArrivals = () => {
+        if (autoAssignArrivals(active!, cfg)) {
+          queueSave();
+          void renderIncoming(active!, staff, queueSave);
+          renderZones(active!, cfg, staff, queueSave, root);
+        }
+      };
+      if (clockHandler) document.removeEventListener('clock-tick', clockHandler);
+      clockHandler = checkArrivals;
+      document.addEventListener('clock-tick', checkArrivals);
+      checkArrivals();
+
+      const weatherBody = document.getElementById('weather-body');
+      if (weatherBody) await renderWeather(weatherBody);
 
     await renderPhysicians(
       document.getElementById('phys') as HTMLElement,
@@ -478,7 +497,13 @@ function renderZones(
         role: st.role || 'nurse',
         type: st.type || 'other',
       } as Staff);
-      row.appendChild(tileWrapper.firstElementChild!);
+      const tile = tileWrapper.firstElementChild as HTMLElement;
+      row.appendChild(tile);
+      if (s.assignedTs && Date.now() - s.assignedTs < RECENT_MS) {
+        tile.classList.add('recent-assignment');
+        const remaining = RECENT_MS - (Date.now() - s.assignedTs);
+        setTimeout(() => tile.classList.remove('recent-assignment'), remaining);
+      }
 
       const btn = document.createElement('button');
       btn.textContent = 'Manage';
@@ -579,10 +604,6 @@ async function renderIncoming(
 
   // auto-populate from draft schedule 40 min before start time
   const draft = await DB.get<DraftShift>(KS.DRAFT(STATE.dateISO, STATE.shift));
-  const toMin = (hhmm: string) => {
-    const [h, m] = hhmm.split(':').map(Number);
-    return h * 60 + m;
-  };
   let changed = false;
   if (draft) {
     const slots: Slot[] = [];
@@ -625,8 +646,19 @@ async function renderIncoming(
       const toggleArrived = () => {
         if (STATE.locked) return;
         inc.arrived = !inc.arrived;
+        const cfg = getConfig();
+        const moved = autoAssignArrivals(active, cfg);
         save();
-        renderIncoming(active, staffList, save);
+        void renderIncoming(active, staffList, save);
+        if (moved) {
+          renderZones(
+            active,
+            cfg,
+            staffList,
+            save,
+            document.getElementById('panel')!
+          );
+        }
       };
       card.addEventListener('click', toggleArrived);
       row.appendChild(card);
@@ -686,6 +718,24 @@ function renderOffgoing(active: ActiveBoard, save: () => void) {
     cont.appendChild(div);
   }
   save();
+}
+
+function autoAssignArrivals(active: ActiveBoard, cfg: Config): boolean {
+  const auxName = 'Aux 1';
+  if (!cfg.zones?.some((z) => z.name === auxName) || !active.zones[auxName]) {
+    return false;
+  }
+  const now = toMin(STATE.clockHHMM);
+  let moved = false;
+  active.incoming = active.incoming.filter((inc) => {
+    if (inc.arrived && inc.eta && toMin(inc.eta) <= now) {
+      upsertSlot(active, { zone: auxName }, { nurseId: inc.nurseId, startHHMM: inc.eta });
+      moved = true;
+      return false;
+    }
+    return true;
+  });
+  return moved;
 }
 
 // --- manage overlay --------------------------------------------------------

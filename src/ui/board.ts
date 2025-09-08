@@ -35,7 +35,7 @@ import {
 } from '@/slots';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
-import { showBanner } from '@/ui/banner';
+import { showBanner, showToast } from '@/ui/banner';
 import { openAssignDialog } from '@/ui/assignDialog';
 
 // --- helpers ---------------------------------------------------------------
@@ -77,7 +77,20 @@ export async function renderBoard(
 
     // Load or initialize active shift tuple
     const saveKey = KS.ACTIVE(ctx.dateISO, ctx.shift);
-    let active = await DB.get<ActiveBoard>(saveKey);
+    let active: ActiveBoard | undefined;
+    let usedLocal = false;
+    try {
+      active = await Server.load<ActiveBoard>('active', {
+        date: ctx.dateISO,
+        shift: ctx.shift,
+      });
+    } catch {
+      /* ignore network errors */
+    }
+    if (!active) {
+      active = await DB.get<ActiveBoard>(saveKey);
+      usedLocal = !!active;
+    }
     if (!active) {
       active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones);
     } else {
@@ -85,6 +98,7 @@ export async function renderBoard(
     }
     normalizeActiveZones(active, cfg.zones);
     setActiveBoardCache(active);
+    if (usedLocal) showToast('Using local data; changes may not persist');
 
     // Layout
     root.innerHTML = `
@@ -141,10 +155,20 @@ export async function renderBoard(
     let saveTimer: ReturnType<typeof setTimeout>;
     const queueSave = () => {
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        DB.set(saveKey, active);
-        Server.save('active', active).catch(() => {});
-        notifyUpdate(saveKey);
+      saveTimer = setTimeout(async () => {
+        try {
+          await Server.save('active', active);
+        } catch (err) {
+          console.error('failed to save active board', err);
+          showToast('Saving locally; server unreachable');
+        } finally {
+          try {
+            await DB.set(saveKey, active);
+            notifyUpdate(saveKey);
+          } catch (err) {
+            console.error('failed to cache active board', err);
+          }
+        }
       }, 300);
     };
 

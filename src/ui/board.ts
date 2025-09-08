@@ -81,7 +81,10 @@ export async function renderBoard(
     const saveKey = KS.ACTIVE(ctx.dateISO, ctx.shift);
 
     // Prefer in-memory cache to preserve unsaved edits when switching tabs
-    let active: ActiveBoard | undefined = getActiveBoardCache();
+    let active: ActiveBoard | undefined = getActiveBoardCache(
+      ctx.dateISO,
+      ctx.shift
+    );
     let usedLocal = !!active;
 
     try {

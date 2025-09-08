@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@/state', () => ({
   getConfig: () => ({ showPinned: {} }),
-  getActiveBoardCache: () => undefined,
+  getActiveBoardCache: (_d: string, _s: string) => undefined,
 }));
 
 import { renderLeadership } from '@/ui/board';

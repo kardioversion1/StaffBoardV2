@@ -58,14 +58,17 @@ export function initState(): void {
   STATE.shift = deriveShift(STATE.clockHHMM);
 }
 
-let ACTIVE_BOARD_CACHE: ActiveBoard | undefined;
+const ACTIVE_BOARD_CACHE: Record<string, ActiveBoard> = {};
 /** Cache the current active board */
 export function setActiveBoardCache(board: ActiveBoard): void {
-  ACTIVE_BOARD_CACHE = board;
+  ACTIVE_BOARD_CACHE[KS.ACTIVE(board.dateISO, board.shift)] = board;
 }
 /** Retrieve the cached active board */
-export function getActiveBoardCache(): ActiveBoard | undefined {
-  return ACTIVE_BOARD_CACHE;
+export function getActiveBoardCache(
+  dateISO: string,
+  shift: Shift
+): ActiveBoard | undefined {
+  return ACTIVE_BOARD_CACHE[KS.ACTIVE(dateISO, shift)];
 }
 
 /** Migrate possibly older active board structures */

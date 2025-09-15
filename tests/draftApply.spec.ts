@@ -13,7 +13,7 @@ vi.mock('@/db', () => ({
     Array.from(store.keys()).filter((k) => k.startsWith(prefix)),
 }));
 
-import { applyDraftToActive, KS, DB, type DraftShift } from '@/state/board';
+import { applyDraftToActive, KS, DB, type DraftShift } from '@/state';
 
 async function clearDB() {
   store.clear();
@@ -45,8 +45,12 @@ describe('applyDraftToActive', () => {
     const snap = await DB.get(
       `history:shift:${board.dateISO}:${board.shift}`
     );
-    expect(snap.zoneAssignments[0].endISO).toBeUndefined();
+    const zoneAssign = snap.zoneAssignments[0];
+    expect(zoneAssign.endISO).toBeDefined();
     const charge = snap.zoneAssignments.find((a: any) => a.zone === 'Charge');
-    expect(charge.endISO).toBeUndefined();
+    expect(charge?.endISO).toBeDefined();
+    const diff =
+      Date.parse(zoneAssign.endISO) - Date.parse(zoneAssign.startISO);
+    expect(diff).toBe(12 * 60 * 60 * 1000);
   });
 });

@@ -153,6 +153,9 @@ const formatTimeFull = (hhmm: string): string => {
 const formatRange = (start: string, end?: string): string =>
   end ? `${formatTimeFull(start)} - ${formatTimeFull(end)}` : formatTimeFull(start);
 
+const formatRangeShort = (start: string, end?: string): string =>
+  end ? `${formatTime(start)}-${formatTime(end)}` : formatTime(start);
+
 /** Heuristics to match JH Downtown; add aliases as needed. */
 const JEWISH_DOWNTOWN_PATTERNS = [
   /jewish\s*downtown/i,
@@ -207,7 +210,7 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
     const docsMap = new Map<string, { name: string; time: string }>();
     for (const e of events) {
       if (e.date !== dateISO) continue;
-      const loc = e.location ? normalizeLocation(e.location) : null;
+      const loc = e.location ? normalizeLocation(e.location) : 'Downtown';
       if (loc !== 'Downtown') continue;
 
       const parts = e.summary.split('|').map((s) => s.trim());
@@ -224,11 +227,7 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
       return;
     }
 
-    // If every item starts at midnight, render names without times.
-    const allMidnight = docs.every((d) => d.time === '00:00');
-    const items = allMidnight
-      ? docs.map((d) => `<li>${d.name}</li>`).join('')
-      : docs.map((d) => `<li>${formatTime(d.time)} ${d.name}</li>`).join('');
+    const items = docs.map((d) => `<li>${formatTime(d.time)} ${d.name}</li>`).join('');
 
     el.innerHTML = `<ul class="phys-list">${items}</ul>`;
   } catch {
@@ -250,7 +249,7 @@ export async function getUpcomingDoctors(
   const map: Record<string, Record<string, { time: string; name: string }[]>> = {};
   for (const e of events) {
     const t = new Date(e.date + 'T00:00:00').getTime();
-    const locName = e.location ? normalizeLocation(e.location) : null;
+    const locName = e.location ? normalizeLocation(e.location) : 'Downtown';
     if (t >= start && t < end && locName) {
       const name = extractDoctor(e.summary.trim());
       if (name) {
@@ -328,7 +327,7 @@ export async function renderPhysicianPopup(
                     .sort((a, b) => a.start.localeCompare(b.start))
                     .map(
                       (r) =>
-                        `<tr><td>${r.shift}</td><td>${formatRange(r.start, r.end)}</td><td>${r.name}</td></tr>`
+                        `<tr><td>${r.shift}</td><td>${formatRangeShort(r.start, r.end)} </td><td>${r.name}</td></tr>`
                     )
                     .join('');
                   return `<div class="phys-loc">

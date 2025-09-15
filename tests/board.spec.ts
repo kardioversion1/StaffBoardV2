@@ -4,6 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('@/state', () => ({
   getConfig: () => ({ showPinned: {} }),
   getActiveBoardCache: (_d: string, _s: string) => undefined,
+  STATE: { dateISO: '2024-01-01', shift: 'day', locked: false, clockHHMM: '00:00' },
 }));
 
 import { renderLeadership } from '@/ui/board';

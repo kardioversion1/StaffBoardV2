@@ -52,6 +52,24 @@ const toHHMM = (min: number): string => {
 const defaultEnd = (start: string): string => toHHMM((toMin(start) + 12 * 60) % 1440);
 let clockHandler: (() => void) | null = null;
 
+const offlineQueue: ActiveBoard[] = [];
+
+async function flushQueuedSaves(): Promise<void> {
+  while (offlineQueue.length) {
+    const board = offlineQueue[0];
+    try {
+      await Server.save('active', board);
+      offlineQueue.shift();
+    } catch {
+      break;
+    }
+  }
+}
+
+window.addEventListener('online', () => {
+  void flushQueuedSaves();
+});
+
 // --- helpers ---------------------------------------------------------------
 
 function buildEmptyActive(
@@ -195,9 +213,11 @@ export async function renderBoard(
       if (saveTimer) clearTimeout(saveTimer);
       try {
         await Server.save('active', active!);
+        void flushQueuedSaves();
       } catch (err) {
         console.error('failed to save active board', err);
         showToast('Saving locally; server unreachable');
+        offlineQueue.push(structuredClone(active!));
       }
     };
 

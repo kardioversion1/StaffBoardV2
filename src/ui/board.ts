@@ -188,25 +188,28 @@ export async function renderBoard(
       </div>
     `;
 
-    // Debounced save (server-first, then local always)
+    // Save immediately to IndexedDB/broadcast, debounce server writes
     let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const flushSave = async () => {
+    const saveLocal = () => {
+      void DB.set(saveKey, active!);
+      notifyUpdate(saveKey);
+    };
+
+    const flushServer = async () => {
       if (saveTimer) clearTimeout(saveTimer);
       try {
         await Server.save('active', active!);
       } catch (err) {
         console.error('failed to save active board', err);
         showToast('Saving locally; server unreachable');
-      } finally {
-        await DB.set(saveKey, active!);
-        notifyUpdate(saveKey);
       }
     };
 
     const queueSave = () => {
+      saveLocal();
       if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(flushSave, 300);
+      saveTimer = setTimeout(flushServer, 300);
     };
 
     const refresh = () => {
@@ -245,11 +248,15 @@ export async function renderBoard(
     });
 
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) void flushSave();
+      if (document.hidden) {
+        saveLocal();
+        void flushServer();
+      }
     });
 
     window.addEventListener('pagehide', () => {
-      void flushSave();
+      saveLocal();
+      void flushServer();
     });
 
     onUpdate(saveKey, async () => {

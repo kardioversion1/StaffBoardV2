@@ -17,7 +17,7 @@ import { seedDefaults } from '@/seedDefaults';
 import { seedDemoHistory } from '@/history/seed';
 import { hhmmNowLocal, deriveShift } from '@/utils/time';
 import { renderHeader } from '@/ui/header';
-import { renderTabs, activeTab } from '@/ui/tabs';
+import { renderTabs, activeTab, initTabs } from '@/ui/tabs';
 import { renderBoard } from '@/ui/board';
 import { renderSettings } from '@/ui/settings';
 import { renderHistoryTab } from '@/ui/historyTab';
@@ -33,7 +33,7 @@ document.addEventListener('history-saved', () =>
 export async function renderAll() {
   applyTheme();
   await renderHeader();
-  await renderTabs();
+  renderTabs();
   const root = document.getElementById('panel');
   if (!root) {
     console.error('Missing #panel element');
@@ -65,6 +65,7 @@ export async function manualHandoff() {
 }
 
 initState();
+initTabs();
 (async () => {
   const { dateISO, shift } = STATE;
   if (!(await Server.health())) {

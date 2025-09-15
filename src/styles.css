@@ -95,6 +95,11 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .date-small{font-size:var(--f);color:var(--text-muted)}
 .actions{display:flex;gap:var(--gap);align-items:center}
 
+/* tab navigation */
+#tabs{display:flex;gap:var(--gap);margin-bottom:var(--gap)}
+#tabs [role="tab"]{background:var(--tab);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+#tabs [role="tab"].active{background:var(--accent);color:var(--text)}
+
 /* choose the variable-based sidebar width */
 .layout{display:grid;grid-template-columns:1fr var(--right-sidebar-w);gap:var(--gap)}
 .layout[data-testid="main-board"]{

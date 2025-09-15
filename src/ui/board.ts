@@ -148,7 +148,12 @@ export async function renderBoard(
 
           <section class="panel">
             <h3>Comments</h3>
-            <textarea id="comments" class="input" placeholder="Current Status..."></textarea>
+            <textarea
+              id="comments"
+              class="input"
+              placeholder="Current Status..."
+              data-gramm="false"
+            ></textarea>
           </section>
         </div>
 

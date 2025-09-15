@@ -89,6 +89,21 @@ describe('renderNextShiftPage', () => {
     expect(publishNextDraft).toHaveBeenCalled();
   });
 
+  it('clears a zone when delete is clicked', async () => {
+    vi.setSystemTime(new Date('2024-01-01T08:00:00'));
+    const root = document.getElementById('root') as HTMLElement;
+    await renderNextShiftPage(root);
+
+    const zone = root.querySelector('#zone-a') as HTMLElement;
+    zone.textContent = 'Alice';
+    zone.dataset.nurseId = 'n1';
+
+    (root.querySelector('.zone-clear[data-zone-id="a"]') as HTMLButtonElement).click();
+
+    expect(zone.textContent).toBe('');
+    expect(zone.dataset.nurseId).toBeUndefined();
+  });
+
   it('filters staff list', async () => {
     vi.setSystemTime(new Date('2024-01-01T08:00:00'));
     const root = document.getElementById('root') as HTMLElement;

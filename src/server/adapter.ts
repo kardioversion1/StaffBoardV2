@@ -5,6 +5,8 @@ import { get as idbGet, set as idbSet } from '@/db';
 import { createDebouncer } from '@/utils/debouncedSave';
 
 export interface ServerAPI {
+  /** Perform a simple health check on the API. */
+  health(): Promise<boolean>;
   /** Load data from the server with optional caching. */
   load<T = any>(key: string, params?: Record<string, any>): Promise<T>;
   /** Save data to the server and cache locally. */
@@ -27,6 +29,18 @@ const API_KEY = import.meta.env.VITE_API_KEY || '';
 const withAuth = (headers: HeadersInit = {}): HeadersInit => (
   API_KEY ? { 'X-API-Key': API_KEY, ...headers } : headers
 );
+
+export const health: ServerAPI['health'] = async () => {
+  try {
+    const res = await fetch('/api.php?action=health', {
+      cache: 'no-store',
+      headers: withAuth(),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
 
 export const load: ServerAPI['load'] = async (key, params = {}) => {
   const keyName = cacheKey(key, params);
@@ -172,6 +186,7 @@ export const publishNextToActive: ServerAPI['publishNextToActive'] = async (
 };
 
 const Server: ServerAPI = {
+  health,
   load,
   save,
   softDeleteStaff,

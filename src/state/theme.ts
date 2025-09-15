@@ -33,11 +33,11 @@ export interface UIThemeConfig {
   scale: number;
   lightPreset: string;
   darkPreset: string;
-  custom?: Partial<ThemeTokens>;
-  highContrast?: boolean;
-  compact?: boolean;
-  iconSize?: number;
-  commentSize?: number;
+  custom?: Partial<ThemeTokens> | undefined;
+  highContrast?: boolean | undefined;
+  compact?: boolean | undefined;
+  iconSize?: number | undefined;
+  commentSize?: number | undefined;
 }
 
 /** Available light and dark presets. */

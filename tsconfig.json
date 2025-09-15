@@ -9,7 +9,9 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "resolveJsonModule": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "exactOptionalPropertyTypes": true,
+    "lib": ["ES2021", "DOM"]
   },
   "include": ["src"]
 }

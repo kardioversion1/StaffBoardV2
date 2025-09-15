@@ -489,21 +489,26 @@ export async function applyDraftToActive(
   for (const [zone, slots] of Object.entries(draft.zones)) {
     for (const slot of slots) {
       const info = staffMap[slot.nurseId];
-      const now = new Date().toISOString();
+      const start = new Date();
+      const startISO = start.toISOString();
+      const endISO = new Date(start.getTime() + 12 * 60 * 60 * 1000).toISOString();
       assignments.push({
         staffId: slot.nurseId,
         displayName: info?.name || slot.nurseId,
         role: info?.role || 'nurse',
         zone,
-        startISO: now,
+        startISO,
+        endISO,
         dto: slot.dto
-          ? { effectiveISO: now, offgoingUntilISO: now }
+          ? { effectiveISO: startISO, offgoingUntilISO: startISO }
           : undefined,
       });
     }
   }
 
-  const now = new Date().toISOString();
+  const baseStart = new Date();
+  const baseStartISO = baseStart.toISOString();
+  const baseEndISO = new Date(baseStart.getTime() + 12 * 60 * 60 * 1000).toISOString();
   if (draft.charge?.nurseId) {
     const info = staffMap[draft.charge.nurseId];
     assignments.push({
@@ -511,7 +516,8 @@ export async function applyDraftToActive(
       displayName: info?.name || draft.charge.nurseId,
       role: info?.role || 'nurse',
       zone: 'Charge',
-      startISO: now,
+      startISO: baseStartISO,
+      endISO: baseEndISO,
     });
   }
   if (draft.triage?.nurseId) {
@@ -521,7 +527,8 @@ export async function applyDraftToActive(
       displayName: info?.name || draft.triage.nurseId,
       role: info?.role || 'nurse',
       zone: 'Triage',
-      startISO: now,
+      startISO: baseStartISO,
+      endISO: baseEndISO,
     });
   }
   if (draft.admin?.nurseId) {
@@ -531,7 +538,8 @@ export async function applyDraftToActive(
       displayName: info?.name || draft.admin.nurseId,
       role: info?.role || 'nurse',
       zone: 'Secretary',
-      startISO: now,
+      startISO: baseStartISO,
+      endISO: baseEndISO,
     });
   }
   const huddle = await getHuddle(dateISO, shift as ShiftKind);

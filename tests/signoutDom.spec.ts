@@ -18,7 +18,7 @@ vi.mock('@/main', () => ({ manualHandoff: () => {} }));
 import { saveUIConfig, applyUI } from '@/state/uiConfig';
 import { saveConfig } from '@/state/config';
 import { saveStaff } from '@/state/staff';
-import { STATE, initState } from '@/state/board';
+import { STATE, initState } from '@/state';
 import { renderHeader } from '@/ui/header';
 import { renderBoard } from '@/ui/board';
 

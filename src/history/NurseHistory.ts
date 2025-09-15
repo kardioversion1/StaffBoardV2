@@ -1,6 +1,6 @@
 import { loadStaff, type Staff } from '@/state';
-import { findShiftsByStaff } from '@/state/history';
-import { exportNurseHistoryCSV } from '@/history';
+import { findShiftsByStaff } from '@/history';
+import { exportNurseHistoryCSV } from '@/history/ui';
 import { formatTime24h, formatDuration } from '@/utils/format';
 import './history.css';
 

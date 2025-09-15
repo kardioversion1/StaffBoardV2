@@ -15,7 +15,7 @@ import {
   type ShiftKind,
   type PublishedShiftSnapshot,
   type Assignment,
-} from '@/state/history';
+} from '@/history';
 import type { UIThemeConfig } from '@/state/theme';
 import { THEME_PRESETS } from '@/state/theme';
 

@@ -5,7 +5,7 @@ import {
   getShiftByDate,
   type PublishedShiftSnapshot,
   type HuddleRecord,
-} from '@/state/history';
+} from '@/history';
 
 /** Seed a demonstration shift from yesterday if none exists. */
 export async function seedDemoHistory(): Promise<void> {

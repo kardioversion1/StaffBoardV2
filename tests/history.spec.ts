@@ -25,7 +25,7 @@ import {
   adminOverrideShift,
   type PublishedShiftSnapshot,
   type HuddleRecord,
-} from '@/state/history';
+} from '@/history';
 
 describe('history persistence', () => {
   const base: PublishedShiftSnapshot = {

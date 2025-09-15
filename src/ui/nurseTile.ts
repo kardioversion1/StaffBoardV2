@@ -17,9 +17,9 @@ export function nurseTile(slot: Slot, staff: Staff): string {
       `<span class="chip" aria-label="Has student" title="Has student"><span class="icon">🎓</span></span>`
     );
   }
-  if (slot.bad) {
+  if (slot.highAcuityUntil && slot.highAcuityUntil > Date.now()) {
     chips.push(
-      `<span class="chip" aria-label="Marked bad" title="Marked bad"><span class="icon">⚠️</span></span>`
+      `<span class="chip" aria-label="Recovering from high acuity" title="Recovering from high acuity"><span class="icon">🔥</span></span>`
     );
   }
 
@@ -66,7 +66,7 @@ export function nurseTile(slot: Slot, staff: Staff): string {
   const statuses: string[] = [];
   if (slot.break?.active) statuses.push('on break');
   if (slot.student) statuses.push('has student');
-  if (slot.bad) statuses.push('marked bad');
+  if (slot.highAcuityUntil && slot.highAcuityUntil > Date.now()) statuses.push('recovering from high acuity');
 
   const aria =
     `${name}` +
@@ -79,5 +79,9 @@ export function nurseTile(slot: Slot, staff: Staff): string {
     ? `<div class="nurse-card__comment"><span class="icon">💬</span> ${slot.comment}</div>`
     : '';
 
-  return `<div class="nurse-card" data-type="${staff.type ?? 'other'}" data-role="${staff.role ?? 'nurse'}" tabindex="0" aria-label="${aria}"><div class="nurse-card__text"><div class="nurse-card__name">${name}</div><div class="nurse-card__meta">${meta}</div>${commentHtml}</div>${chipStr}</div>`;
+  const metaHtml = staff.rf
+    ? `<div class="nurse-card__meta"><span>${meta}</span><span class="nurse-card__rf">${staff.rf}</span></div>`
+    : `<div class="nurse-card__meta">${meta}</div>`;
+
+  return `<div class="nurse-card" data-type="${staff.type ?? 'other'}" data-role="${staff.role ?? 'nurse'}" tabindex="0" aria-label="${aria}"><div class="nurse-card__text"><div class="nurse-card__name">${name}</div>${metaHtml}${commentHtml}</div>${chipStr}</div>`;
 }

@@ -35,7 +35,6 @@ import {
   removeSlot,
   type Slot,
 } from '@/slots';
-import { canonNurseType, type NurseType } from '@/domain/lexicon';
 import { normalizeActiveZones, type ZoneDef } from '@/utils/zones';
 import { showBanner, showToast } from '@/ui/banner';
 import { openAssignDialog } from '@/ui/assignDialog';
@@ -755,127 +754,79 @@ function manageSlot(
 ): void {
   if (!st) return;
 
-  const currentRole = st.role;
-  const endValue = slot.endTimeOverrideHHMM && /^\d{4}$/.test(slot.endTimeOverrideHHMM)
+  const startValue = slot.startHHMM || STATE.clockHHMM;
+  const pad2 = (n: number) => n.toString().padStart(2, '0');
+  const duration = cfg.shiftDurations?.[STATE.shift] ?? 12;
+  let endValue = slot.endTimeOverrideHHMM && /^\d{4}$/.test(slot.endTimeOverrideHHMM)
     ? slot.endTimeOverrideHHMM.replace(/(\d{2})(\d{2})/, '$1:$2')
-    : (slot.endTimeOverrideHHMM || '');
+    : slot.endTimeOverrideHHMM || '';
+  if (!endValue && startValue) {
+    const [sh, sm] = startValue.split(':').map(Number);
+    const end = new Date();
+    end.setHours(sh + duration, sm);
+    endValue = `${pad2(end.getHours())}:${pad2(end.getMinutes())}`;
+  }
 
   const overlay = document.createElement('div');
   overlay.className = 'manage-overlay';
   overlay.innerHTML = `
     <div class="manage-dialog">
-      <h3>Manage ${st.name || labelFromId(st.id)}</h3>
-      <label>Name <input id="mg-name" value="${st.name || ''}"></label>
-      <label>RF <input id="mg-rf" type="number" value="${st.rf ?? ''}"></label>
-      <label>End time <input id="mg-end" type="time" value="${endValue}"></label>
-      <label>Comment <input id="mg-comment" placeholder="Add comment" value="${slot.comment || ''}"></label>
-      <label>Role <select id="mg-role">
-        <option value="nurse"${currentRole === 'nurse' ? ' selected' : ''}>Nurse</option>
-        <option value="tech"${currentRole === 'tech' ? ' selected' : ''}>Tech</option>
-      </select></label>
-      <div id="mg-type-wrap" style="display:${currentRole === 'nurse' ? '' : 'none'}">
-        <label>Type <select id="mg-type">
-          <option value="home"${st.type === 'home' ? ' selected' : ''}>home</option>
-          <option value="travel"${st.type === 'travel' ? ' selected' : ''}>travel</option>
-          <option value="flex"${st.type === 'flex' ? ' selected' : ''}>flex</option>
-          <option value="charge"${st.type === 'charge' ? ' selected' : ''}>charge</option>
-          <option value="triage"${st.type === 'triage' ? ' selected' : ''}>triage</option>
-          <option value="other"${st.type === 'other' ? ' selected' : ''}>other</option>
-        </select></label>
+      <div class="manage-header">
+        <div class="role-chip">${st.role === 'nurse' ? 'RN' : 'TECH'}</div>
+        <h3>${st.name || labelFromId(st.id)}</h3>
+        <div class="staff-type">${st.type}</div>
       </div>
-      <label>Student <input id="mg-student" value="${typeof slot.student === 'string' ? slot.student : ''}"></label>
-      <label><input type="checkbox" id="mg-break" ${slot.break?.active ? 'checked' : ''}/> On break</label>
-      <label><input type="checkbox" id="mg-bad" ${slot.bad ? 'checked' : ''}/> Bad</label>
-      <label>Zone <select id="mg-zone">
-        ${(cfg.zones || [])
-          .map((z: ZoneDef) => `<option value="${z.name}"${z.name === zone ? ' selected' : ''}>${z.name}</option>`)
-          .join('')}
-      </select></label>
+      <div class="manage-grid">
+        <div class="manage-col">
+          <label>Start <input id="mg-start" type="time" value="${startValue}" disabled></label>
+          <label>End <input id="mg-end" type="time" required value="${endValue}"></label>
+          <label>RF <input id="mg-rf" type="number" value="${st.rf ?? ''}"></label>
+        </div>
+        <div class="manage-col">
+          <label class="mod"><span class="icon">🎓</span><input id="mg-student" placeholder="Student" value="${typeof slot.student === 'string' ? slot.student : ''}"></label>
+          <label class="mod"><span class="icon">☕</span><input type="checkbox" id="mg-break" ${slot.break?.active ? 'checked' : ''}/> Break</label>
+          <label class="mod"><span class="icon">🔥</span><input type="checkbox" id="mg-high" ${slot.highAcuityUntil && slot.highAcuityUntil > Date.now() ? 'checked' : ''}/> High acuity</label>
+          <label class="mod">Zone <select id="mg-zone">
+            ${(cfg.zones || [])
+              .map((z: ZoneDef) => `<option value="${z.name}"${z.name === zone ? ' selected' : ''}>${z.name}</option>`)
+              .join('')}
+          </select></label>
+        </div>
+      </div>
       <div class="dialog-actions">
         <button id="mg-save" class="btn">Save</button>
-        <button id="mg-dto" class="btn">DTO</button>
         <button id="mg-cancel" class="btn">Cancel</button>
       </div>
     </div>
   `;
   document.body.appendChild(overlay);
 
-  const roleSel = overlay.querySelector('#mg-role') as HTMLSelectElement;
-  const typeWrap = overlay.querySelector('#mg-type-wrap') as HTMLElement;
-  roleSel.addEventListener('change', () => {
-    typeWrap.style.display = roleSel.value === 'nurse' ? '' : 'none';
-  });
-
   overlay.querySelector('#mg-cancel')!.addEventListener('click', () => overlay.remove());
 
-  overlay.querySelector('#mg-dto')!.addEventListener('click', async () => {
-    // End shift early: move to offgoing (kept for 60 min by renderOffgoing)
-    if (removeSlot(board, { zone, index })) showBanner('Assignment cleared');
-    board.offgoing.push({ nurseId: st.id, ts: Date.now() });
-
-    // Append to history
-    interface HistoryEntry {
-      nurseId: string;
-      dateISO: string;
-      shift: 'day' | 'night';
-      endedISO: string;
-    }
-    const hist = (await DB.get<HistoryEntry[]>(KS.HISTORY)) || [];
-    hist.push({
-      nurseId: st.id,
-      dateISO: board.dateISO,
-      shift: board.shift,
-      endedISO: new Date().toISOString(),
-    });
-    await DB.set(KS.HISTORY, hist);
-
-    save();
-    overlay.remove();
-    rerender();
-  });
-
   overlay.querySelector('#mg-save')!.addEventListener('click', async () => {
-    // Basic fields
-    st.name = (overlay.querySelector('#mg-name') as HTMLInputElement).value.trim() || undefined;
-
     const rfVal = (overlay.querySelector('#mg-rf') as HTMLInputElement).value.trim();
     st.rf = rfVal ? Number(rfVal) : undefined;
 
-    const selectedRole = roleSel.value as Staff['role'];
-    st.role = selectedRole;
-
-    // Only nurses have a nurse type
-    if (st.role === 'nurse') {
-      const tval = (overlay.querySelector('#mg-type') as HTMLSelectElement).value;
-      const canon = (canonNurseType(tval) || st.type) as NurseType;
-      st.type = canon;
-    }
-
-    // Slot-level fields
     const studVal = (overlay.querySelector('#mg-student') as HTMLInputElement).value.trim();
     slot.student = studVal ? studVal : undefined;
-
-    const commentVal = (overlay.querySelector('#mg-comment') as HTMLInputElement).value.trim();
-    slot.comment = commentVal ? commentVal : undefined;
 
     const breakChecked = (overlay.querySelector('#mg-break') as HTMLInputElement).checked;
     if (breakChecked && !slot.break?.active) startBreak(slot, {});
     if (!breakChecked && slot.break?.active) endBreak(slot);
 
-    slot.bad = (overlay.querySelector('#mg-bad') as HTMLInputElement).checked;
+    const highChecked = (overlay.querySelector('#mg-high') as HTMLInputElement).checked;
+    slot.highAcuityUntil = highChecked ? Date.now() + 2 * 60 * 60 * 1000 : undefined;
 
     const endVal = (overlay.querySelector('#mg-end') as HTMLInputElement).value;
-    slot.endTimeOverrideHHMM = endVal ? endVal : undefined;
+    slot.endTimeOverrideHHMM = endVal;
 
-    // Zone move
     const zoneSel = overlay.querySelector('#mg-zone') as HTMLSelectElement;
     if (zoneSel.value !== zone) {
       const moved = moveSlot(board, { zone, index }, { zone: zoneSel.value });
       if (moved) showBanner('Previous assignment cleared');
     }
 
-    // Persist
-    await saveStaff(staffList); // best-effort staff write
+    await saveStaff(staffList);
     save();
     overlay.remove();
     rerender();

@@ -16,6 +16,17 @@ for the UI.
 - Install dependencies: `npm ci`
 - Diagnostics: visit `/diag.html`
 
+## Setup
+
+- Copy `.env.example` to `.env` and fill in required values.
+- `VITE_API_KEY` must match the key expected by the PHP API.
+
+### Production
+
+Supply `VITE_API_KEY` via CI secrets (e.g., GitHub Actions) or your host's
+environment variable settings (Netlify, Vercel, etc.) rather than committing
+it to source control.
+
 ## Roster management
 
 The Settings tab includes an editable staff roster with JSON import/export for nurses, techs, sitters, ancillary staff, and administrators.

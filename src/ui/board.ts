@@ -5,20 +5,18 @@ import {
   DB,
   KS,
   STATE,
-  loadStaff,
-  saveStaff,
   CURRENT_SCHEMA_VERSION,
   migrateActiveBoard,
   setActiveBoardCache,
   getActiveBoardCache,
   mergeBoards,
-  type Staff,
   type ActiveBoard,
   type DraftShift,
   getConfig,
   saveConfig,
   type Config,
 } from '@/state';
+import { rosterStore, type Staff } from '@/state/staff';
 import { notifyUpdate, onUpdate } from '@/state/sync';
 
 import { setNurseCache, labelFromId } from '@/utils/names';
@@ -69,9 +67,11 @@ async function flushQueuedSaves(): Promise<Error | null> {
   return null;
 }
 
-window.addEventListener('online', () => {
-  void flushQueuedSaves();
-});
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    void flushQueuedSaves();
+  });
+}
 
 // --- helpers ---------------------------------------------------------------
 
@@ -107,7 +107,7 @@ export async function renderBoard(
     const cfg = getConfig();
     if (!cfg.zones) cfg.zones = [];
 
-    const staff: Staff[] = await loadStaff();
+    const staff: Staff[] = await rosterStore.load();
     setNurseCache(staff);
 
     // Load or initialize active shift tuple
@@ -874,7 +874,7 @@ function manageSlot(
       if (moved) showBanner('Previous assignment cleared');
     }
 
-    await saveStaff(staffList);
+    await rosterStore.save(staffList);
     save();
     overlay.remove();
     rerender();

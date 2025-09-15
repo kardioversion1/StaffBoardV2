@@ -26,13 +26,9 @@ vi.mock('@/state', () => {
       version: 1,
     },
   };
-  const loadStaff = async () => [{ id: 'n1', name: 'Alice', role: 'nurse', type: 'home' }];
-  const saveStaff = vi.fn(() => new Promise<void>((r) => { resolveSave = r; }));
   return {
     STATE,
     KS,
-    loadStaff,
-    saveStaff,
     CURRENT_SCHEMA_VERSION: 1,
     migrateActiveBoard: (a: any) => a,
     setActiveBoardCache: () => {},
@@ -47,6 +43,13 @@ vi.mock('@/state', () => {
   };
 });
 
+vi.mock('@/state/staff', () => ({
+  rosterStore: {
+    load: async () => [{ id: 'n1', name: 'Alice', role: 'nurse', type: 'home' }],
+    save: vi.fn(() => new Promise<void>((r) => { resolveSave = r; })),
+  },
+}));
+
 vi.mock('@/server', () => ({ load: vi.fn(), save: vi.fn() }));
 vi.mock('@/ui/widgets', () => ({ renderWeather: vi.fn() }));
 vi.mock('@/ui/physicians', () => ({ renderPhysicians: vi.fn(), renderPhysicianPopup: vi.fn() }));
@@ -54,7 +57,7 @@ vi.mock('@/ui/assignDialog', () => ({ openAssignDialog: vi.fn() }));
 vi.mock('@/ui/banner', () => ({ showBanner: vi.fn(), showToast: vi.fn() }));
 
 import { renderBoard } from '@/ui/board';
-import { saveStaff } from '@/state';
+import { rosterStore } from '@/state/staff';
 
 describe('manage overlay', () => {
   it('waits for roster save before closing', async () => {
@@ -71,7 +74,7 @@ describe('manage overlay', () => {
     expect(document.querySelector('.manage-overlay')).toBeTruthy();
     resolveSave();
     await Promise.resolve();
-    expect(saveStaff).toHaveBeenCalled();
+    expect((rosterStore.save as any)).toHaveBeenCalled();
     expect(document.querySelector('.manage-overlay')).toBeNull();
   });
 });

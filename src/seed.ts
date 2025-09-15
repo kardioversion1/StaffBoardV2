@@ -1,4 +1,5 @@
-import { getConfig, saveConfig, Staff } from '@/state';
+import { getConfig, saveConfig } from '@/state';
+import type { Staff } from '@/state/staff';
 import { normalizeZones, type ZoneDef } from '@/utils/zones';
 import type { Board, Slot } from '@/slots';
 

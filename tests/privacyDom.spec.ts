@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 /** @vitest-environment happy-dom */
 import { saveConfig } from '@/state/config';
-import { Staff } from '@/state/staff';
+import type { Staff } from '@/state/staff';
 import { nurseTile } from '@/ui/nurseTile';
 import { vi } from 'vitest';
 

@@ -37,5 +37,14 @@ describe('API auth', () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(logs).toContain('unauthorized');
   });
+
+  it('accepts correct key', async () => {
+    const res = await fetch('http://127.0.0.1:8020/api.php?action=ping', {
+      headers: { 'X-API-Key': 'test-key' },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+  });
 });
 

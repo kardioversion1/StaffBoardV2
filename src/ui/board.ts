@@ -67,9 +67,11 @@ async function flushQueuedSaves(): Promise<void> {
   }
 }
 
-window.addEventListener('online', () => {
-  void flushQueuedSaves();
-});
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    void flushQueuedSaves();
+  });
+}
 
 // --- helpers ---------------------------------------------------------------
 

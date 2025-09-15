@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('@/state', () => {
   const KS = {
@@ -68,6 +68,10 @@ import { openAssignDialog } from '@/ui/assignDialog';
 import { save as serverSave } from '@/server';
 
 describe('offline save queue', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
   it('flushes queued saves when back online', async () => {
     vi.useFakeTimers();
     const root = document.createElement('div');

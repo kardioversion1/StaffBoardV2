@@ -5,7 +5,7 @@ import type { UIThemeConfig } from '@/state/theme';
 import { THEME_PRESETS } from '@/state/theme';
 import * as Server from '@/server';
 import { KS } from './keys';
-import { STATE } from './board';
+import { STATE } from './index';
 
 export type WidgetsConfig = {
   show?: boolean;

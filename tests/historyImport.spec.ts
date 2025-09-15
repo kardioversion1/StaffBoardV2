@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { importHistoryFromJSON, KS, DB } from '@/state/board';
+import { importHistoryFromJSON, KS, DB } from '@/state';
 
 describe('history import', () => {
   it('parses json and stores shifts', async () => {

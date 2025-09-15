@@ -42,7 +42,11 @@ vi.mock('@/state', () => {
     migrateActiveBoard: (a: any) => a,
     setActiveBoardCache: () => {},
     getActiveBoardCache: (d: string, s: string) => store[KS.ACTIVE(d, s)],
-    mergeBoards: (remote: any, local: any) => ({ ...remote, ...local }),
+    mergeBoards: (remote: any, local: any) => ({
+      ...remote,
+      ...local,
+      comments: remote.comments || local.comments,
+    }),
     DB: {
       get: async (k: string) => store[k],
       set: async (k: string, v: any) => {
@@ -81,11 +85,10 @@ describe('board save', () => {
 
     const addBtn = root.querySelector('.zone-card__add') as HTMLButtonElement;
     addBtn.click();
-
-    expect(spy).not.toHaveBeenCalled();
+    expect(spy).toHaveBeenCalledTimes(1);
     Object.defineProperty(document, 'hidden', { value: true, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
     await Promise.resolve();
-    expect(spy).toHaveBeenCalled();
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });

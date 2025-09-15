@@ -50,7 +50,7 @@ describe('mergeBoards', () => {
     expect(merged.incoming).toHaveLength(2);
   });
 
-  it('keeps remote metadata when incoming entries collide', () => {
+  it('preserves local metadata when incoming entries collide', () => {
     const remote = {
       ...base(),
       incoming: [{ nurseId: 'n1', eta: '1', arrived: true }],
@@ -60,10 +60,10 @@ describe('mergeBoards', () => {
       incoming: [{ nurseId: 'n1', eta: '1', arrived: false }],
     };
     const merged = mergeBoards(remote, local);
-    expect(merged.incoming[0].arrived).toBe(true);
+    expect(merged.incoming[0].arrived).toBe(false);
   });
 
-  it('keeps remote metadata when offgoing entries collide', () => {
+  it('preserves local metadata when offgoing entries collide', () => {
     const remote = {
       ...base(),
       offgoing: [{ nurseId: 'n1', ts: 1, note: 'server' } as any],
@@ -73,7 +73,7 @@ describe('mergeBoards', () => {
       offgoing: [{ nurseId: 'n1', ts: 1, note: 'client' } as any],
     };
     const merged = mergeBoards(remote, local);
-    expect((merged.offgoing[0] as any).note).toBe('server');
+    expect((merged.offgoing[0] as any).note).toBe('client');
   });
 
   it('preserves remote ordering when arrays collide', () => {

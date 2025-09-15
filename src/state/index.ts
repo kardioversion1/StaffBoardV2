@@ -153,7 +153,7 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
     for (const item of b) {
       const k = key(item);
       const existing = map.get(k);
-      map.set(k, existing ? { ...item, ...existing } : item);
+      map.set(k, existing ? { ...existing, ...item } : item);
     }
     return Array.from(map.values());
   };

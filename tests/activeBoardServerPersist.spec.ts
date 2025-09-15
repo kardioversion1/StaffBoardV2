@@ -23,7 +23,11 @@ vi.mock('@/state', () => {
     migrateActiveBoard: (a: any) => a,
     setActiveBoardCache: vi.fn(),
     getActiveBoardCache: (_d: string, _s: string) => undefined,
-    mergeBoards: (remote: any, local: any) => ({ ...remote, ...local }),
+    mergeBoards: (remote: any, local: any) => ({
+      ...remote,
+      ...local,
+      comments: remote.comments || local.comments,
+    }),
     DB: {
       get: async (k: string) => store[k],
       set: async (k: string, v: any) => {

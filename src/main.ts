@@ -10,6 +10,7 @@ import {
   DB,
   KS,
   mergeBoards,
+  type ActiveBoard,
 } from '@/state';
 import { applyTheme } from '@/state/theme';
 import { applyUI } from '@/state/uiConfig';
@@ -104,7 +105,7 @@ initState();
     const { dateISO, shift } = STATE;
     try {
       const remote = await Server.load('active', { date: dateISO, shift });
-      const local = await DB.get(KS.ACTIVE(dateISO, shift));
+      const local = await DB.get<ActiveBoard>(KS.ACTIVE(dateISO, shift));
       if (remote) {
         const merged = local ? mergeBoards(remote, local) : remote;
         if (JSON.stringify(merged) !== JSON.stringify(local)) {

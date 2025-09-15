@@ -7,19 +7,19 @@ import * as Server from '@/server';
 
 export type Staff = {
   id: string;
-  name?: string;
-  first?: string;
-  last?: string;
-  rf?: number;
+  name?: string | undefined;
+  first?: string | undefined;
+  last?: string | undefined;
+  rf?: number | undefined;
   role: 'nurse' | 'tech';
   type: NurseType;
-  active?: boolean;
-  notes?: string;
-  prefDay?: boolean;
-  prefNight?: boolean;
-  eligibleRoles?: ('charge' | 'triage' | 'admin')[];
-  defaultZone?: string;
-  dtoEligible?: boolean;
+  active?: boolean | undefined;
+  notes?: string | undefined;
+  prefDay?: boolean | undefined;
+  prefNight?: boolean | undefined;
+  eligibleRoles?: ('charge' | 'triage' | 'admin')[] | undefined;
+  defaultZone?: string | undefined;
+  dtoEligible?: boolean | undefined;
 };
 
 /** Load staff roster from server or local DB */

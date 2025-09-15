@@ -20,11 +20,11 @@ import type { UIThemeConfig } from '@/state/theme';
 import { THEME_PRESETS } from '@/state/theme';
 
 export type WidgetsConfig = {
-  show?: boolean;
+  show?: boolean | undefined;
   weather: {
     units: 'F' | 'C';
-    lat?: number;
-    lon?: number;
+    lat?: number | undefined;
+    lon?: number | undefined;
   };
 };
 
@@ -35,37 +35,37 @@ export type Config = {
   pin: string;
   relockMin: number;
   widgets: WidgetsConfig;
-  zoneColors?: Record<string, string>;
-  shiftDurations?: { day: number; night: number };
-  dtoMinutes?: number;
-  showPinned?: { charge: boolean; triage: boolean };
-  rss?: { url: string; enabled: boolean };
-  physicians?: { calendarUrl: string };
-  privacy?: boolean;
+  zoneColors?: Record<string, string> | undefined;
+  shiftDurations?: { day: number; night: number } | undefined;
+  dtoMinutes?: number | undefined;
+  showPinned?: { charge: boolean; triage: boolean } | undefined;
+  rss?: { url: string; enabled: boolean } | undefined;
+  physicians?: { calendarUrl: string } | undefined;
+  privacy?: boolean | undefined;
   ui?: {
     signoutMode?: 'shiftHuddle' | 'disabled' | 'legacySignout';
-    rightSidebarWidthPx?: number;
-    rightSidebarMinPx?: number;
-    rightSidebarMaxPx?: number;
-  };
-  uiTheme?: UIThemeConfig;
+    rightSidebarWidthPx?: number | undefined;
+    rightSidebarMinPx?: number | undefined;
+    rightSidebarMaxPx?: number | undefined;
+  } | undefined;
+  uiTheme?: UIThemeConfig | undefined;
 };
 
 export type Staff = {
   id: string;
-  name?: string;
-  first?: string;
-  last?: string;
-  rf?: number;
+  name?: string | undefined;
+  first?: string | undefined;
+  last?: string | undefined;
+  rf?: number | undefined;
   role: 'nurse' | 'tech';
   type: NurseType;
-  active?: boolean;
-  notes?: string;
-  prefDay?: boolean;
-  prefNight?: boolean;
-  eligibleRoles?: ('charge' | 'triage' | 'admin')[];
-  defaultZone?: string;
-  dtoEligible?: boolean;
+  active?: boolean | undefined;
+  notes?: string | undefined;
+  prefDay?: boolean | undefined;
+  prefNight?: boolean | undefined;
+  eligibleRoles?: ('charge' | 'triage' | 'admin')[] | undefined;
+  defaultZone?: string | undefined;
+  dtoEligible?: boolean | undefined;
 };
 
 import { ensureUniqueAssignment, type Slot } from '@/slots';
@@ -74,8 +74,8 @@ export type { Slot } from '@/slots';
 export interface ZoneAssignment {
   id: string;
   role: 'nurse' | 'tech';
-  start?: string;
-  end?: string;
+  start?: string | undefined;
+  end?: string | undefined;
 }
 
 export const CURRENT_SCHEMA_VERSION = 2;
@@ -83,12 +83,12 @@ export const CURRENT_SCHEMA_VERSION = 2;
 export interface ActiveShift {
   dateISO: string;
   shift: Shift;
-  endAtISO?: string;
-  charge?: Slot;
-  triage?: Slot;
-  admin?: Slot;
+  endAtISO?: string | undefined;
+  charge?: Slot | undefined;
+  triage?: Slot | undefined;
+  admin?: Slot | undefined;
   zones: Record<string, Slot[]>;
-  incoming: { nurseId: string; eta: string; arrived?: boolean }[];
+  incoming: { nurseId: string; eta: string; arrived?: boolean | undefined }[];
   offgoing: { nurseId: string; ts: number }[];
   comments: string;
   huddle: string;

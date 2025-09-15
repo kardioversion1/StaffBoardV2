@@ -9,8 +9,8 @@ import * as Server from '@/server';
 import { type ZoneDef } from '@/utils/zones';
 
 export interface DraftShift extends BaseDraftShift {
-  publishAtISO?: string;
-  endAtISO?: string;
+  publishAtISO?: string | undefined;
+  endAtISO?: string | undefined;
 }
 
 /** Build an empty draft with zones populated but no assignments. */
@@ -99,5 +99,3 @@ export async function publishNextDraft(opts?: { appendHistory?: boolean }): Prom
   await DB.set(KS.DRAFT(draft.dateISO, draft.shift), draft);
   await applyDraftToActive(draft.dateISO, draft.shift);
 }
-
-export type { DraftShift };

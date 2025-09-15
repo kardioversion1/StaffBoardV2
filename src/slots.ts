@@ -2,25 +2,25 @@
 export type Slot = {
   nurseId: string;
   /** Optional scheduled start time in HH:MM */
-  startHHMM?: string;
-  student?: string | boolean;
-  comment?: string;
-  highAcuityUntil?: number;
+  startHHMM?: string | undefined;
+  student?: string | boolean | undefined;
+  comment?: string | undefined;
+  highAcuityUntil?: number | undefined;
   break?: {
     active: boolean;
-    startISO?: string;
-    plannedEndHHMM?: string;
-    relievedBy?: { id?: string; rf?: string; name?: string };
-  };
-  endTimeOverrideHHMM?: string;
-  dto?: boolean;
-  assignedTs?: number;
+    startISO?: string | undefined;
+    plannedEndHHMM?: string | undefined;
+    relievedBy?: { id?: string; rf?: string; name?: string } | undefined;
+  } | undefined;
+  endTimeOverrideHHMM?: string | undefined;
+  dto?: boolean | undefined;
+  assignedTs?: number | undefined;
 };
 
 export interface Board {
-  charge?: Slot;
-  triage?: Slot;
-  admin?: Slot;
+  charge?: Slot | undefined;
+  triage?: Slot | undefined;
+  admin?: Slot | undefined;
   zones: Record<string, Slot[]>;
 }
 
@@ -86,15 +86,21 @@ export function removeSlot(
   target: "charge" | "triage" | "admin" | { zone: string; index: number }
 ): boolean {
   let removed = false;
-  if (target === "charge" && board.charge) {
-    board.charge = undefined;
-    removed = true;
-  } else if (target === "triage" && board.triage) {
-    board.triage = undefined;
-    removed = true;
-  } else if (target === "admin" && board.admin) {
-    board.admin = undefined;
-    removed = true;
+  if (target === "charge") {
+    if (board.charge) {
+      board.charge = undefined;
+      removed = true;
+    }
+  } else if (target === "triage") {
+    if (board.triage) {
+      board.triage = undefined;
+      removed = true;
+    }
+  } else if (target === "admin") {
+    if (board.admin) {
+      board.admin = undefined;
+      removed = true;
+    }
   } else {
     const arr = board.zones[target.zone];
     if (arr && arr.splice(target.index, 1).length) removed = true;

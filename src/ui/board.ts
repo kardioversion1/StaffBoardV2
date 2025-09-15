@@ -44,6 +44,12 @@ const toMin = (hhmm: string): number => {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
 };
+const toHHMM = (min: number): string => {
+  const h = Math.floor(min / 60) % 24;
+  const m = min % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+const defaultEnd = (start: string): string => toHHMM((toMin(start) + 12 * 60) % 1440);
 let clockHandler: (() => void) | null = null;
 
 // --- helpers ---------------------------------------------------------------
@@ -182,25 +188,28 @@ export async function renderBoard(
       </div>
     `;
 
-    // Debounced save (server-first, then local always)
+    // Save immediately to IndexedDB/broadcast, debounce server writes
     let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const flushSave = async () => {
+    const saveLocal = () => {
+      void DB.set(saveKey, active!);
+      notifyUpdate(saveKey);
+    };
+
+    const flushServer = async () => {
       if (saveTimer) clearTimeout(saveTimer);
       try {
         await Server.save('active', active!);
       } catch (err) {
         console.error('failed to save active board', err);
         showToast('Saving locally; server unreachable');
-      } finally {
-        await DB.set(saveKey, active!);
-        notifyUpdate(saveKey);
       }
     };
 
     const queueSave = () => {
+      saveLocal();
       if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(flushSave, 300);
+      saveTimer = setTimeout(flushServer, 300);
     };
 
     const refresh = () => {
@@ -239,11 +248,15 @@ export async function renderBoard(
     });
 
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) void flushSave();
+      if (document.hidden) {
+        saveLocal();
+        void flushServer();
+      }
     });
 
     window.addEventListener('pagehide', () => {
-      void flushSave();
+      saveLocal();
+      void flushServer();
     });
 
     onUpdate(saveKey, async () => {
@@ -414,8 +427,11 @@ function renderZones(
         const end = rawEnd && /^\d{4}$/.test(rawEnd)
           ? rawEnd.replace(/(\d{2})(\d{2})/, '$1:$2')
           : rawEnd;
-        const slot: Slot = { nurseId, startHHMM: STATE.clockHHMM };
-        if (end) slot.endTimeOverrideHHMM = end;
+        const slot: Slot = {
+          nurseId,
+          startHHMM: STATE.clockHHMM,
+          endTimeOverrideHHMM: end || defaultEnd(STATE.clockHHMM),
+        };
         const moved = upsertSlot(active, { zone: z.name }, slot);
         if (moved) showBanner('Previous assignment cleared');
         active.incoming = active.incoming.filter((i) => i.nurseId !== nurseId);
@@ -540,7 +556,12 @@ function renderZones(
     addBtn.title = 'Add staff';
     addBtn.addEventListener('click', () => {
       openAssignDialog(staff, (id) => {
-        const moved = upsertSlot(active, { zone: z.name }, { nurseId: id });
+        const slot: Slot = {
+          nurseId: id,
+          startHHMM: STATE.clockHHMM,
+          endTimeOverrideHHMM: defaultEnd(STATE.clockHHMM),
+        };
+        const moved = upsertSlot(active, { zone: z.name }, slot);
         if (moved) showBanner('Previous assignment cleared');
         save();
         renderZones(active, cfg, staff, save, root);
@@ -735,7 +756,13 @@ function autoAssignArrivals(active: ActiveBoard, cfg: Config): boolean {
   let moved = false;
   active.incoming = active.incoming.filter((inc) => {
     if (inc.arrived && inc.eta && toMin(inc.eta) <= now) {
-      upsertSlot(active, { zone: auxName }, { nurseId: inc.nurseId, startHHMM: inc.eta });
+      upsertSlot(active, {
+        zone: auxName,
+      }, {
+        nurseId: inc.nurseId,
+        startHHMM: inc.eta,
+        endTimeOverrideHHMM: defaultEnd(inc.eta),
+      });
       moved = true;
       return false;
     }

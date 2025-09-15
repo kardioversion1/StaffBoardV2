@@ -1,5 +1,5 @@
-import { listHuddles, type HuddleRecord } from '@/state/history';
-import { exportHuddlesCSV } from '@/history';
+import { listHuddles, type HuddleRecord } from '@/history';
+import { exportHuddlesCSV } from '@/history/ui';
 import './history.css';
 
 /**

@@ -3,7 +3,7 @@ import {
   getHuddle,
   submitHuddle,
   type HuddleRecord,
-} from '@/state/history';
+} from '@/history';
 import { DEFAULT_HUDDLE_ITEMS } from '@/config/huddle';
 import { loadStaff, type Staff } from '@/state/staff';
 

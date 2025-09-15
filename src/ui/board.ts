@@ -49,7 +49,8 @@ const toHHMM = (min: number): string => {
   const m = min % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
-const defaultEnd = (start: string): string => toHHMM((toMin(start) + 12 * 60) % 1440);
+export const defaultEnd = (start: string): string =>
+  toHHMM((toMin(start) + 12 * 60) % 1440);
 let clockHandler: (() => void) | null = null;
 
 const offlineQueue: ActiveBoard[] = [];

@@ -96,17 +96,17 @@ describe("nurse tile snapshot", () => {
         relievedBy: { rf: "552" },
       },
       endTimeOverrideHHMM: "13:00",
-      dto: true,
-      bad: true,
+      highAcuityUntil: Date.now() + 60 * 60 * 1000,
     };
     const html = renderTile(slot, {
       id: "1",
       name: "Alice",
       role: "nurse",
       type: "other",
+      rf: 123,
     });
     expect(html).toMatchInlineSnapshot(
-      `"<div class=\"nurse-card\" data-type=\"other\" data-role=\"nurse\" tabindex=\"0\" aria-label=\"Alice, other nurse, comment note, on break, has student, marked bad\"><div class=\"nurse-card__text\"><div class=\"nurse-card__name\">Alice</div><div class=\"nurse-card__meta\">other nurse</div><div class=\"nurse-card__comment\"><span class=\"icon\">💬</span> note</div></div><span class=\"chips\"><span class=\"chip\" aria-label=\"On break\" title=\"On break\"><span class=\"icon\">☕</span></span><span class=\"chip\" aria-label=\"Has student\" title=\"Has student\"><span class=\"icon\">🎓</span></span><span class=\"chip\" aria-label=\"Marked bad\" title=\"Marked bad\"><span class=\"icon\">⚠️</span></span></span></div>"`
+      `"<div class=\"nurse-card\" data-type=\"other\" data-role=\"nurse\" tabindex=\"0\" aria-label=\"Alice, other nurse, comment note, on break, has student, recovering from high acuity\"><div class=\"nurse-card__text\"><div class=\"nurse-card__name\">Alice</div><div class=\"nurse-card__meta\"><span>other nurse</span><span class=\"nurse-card__rf\">123</span></div><div class=\"nurse-card__comment\"><span class=\"icon\">💬</span> note</div></div><span class=\"chips\"><span class=\"chip\" aria-label=\"On break\" title=\"On break\"><span class=\"icon\">☕</span></span><span class=\"chip\" aria-label=\"Has student\" title=\"Has student\"><span class=\"icon\">🎓</span></span><span class=\"chip\" aria-label=\"Recovering from high acuity\" title=\"Recovering from high acuity\"><span class=\"icon\">🔥</span></span></span></div>"`
     );
   });
 });

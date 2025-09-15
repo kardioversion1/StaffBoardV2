@@ -86,6 +86,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  justify-content: space-between;
+}
+
+.nurse-card__rf {
+  margin-left: 8px;
 }
 
 .nurse-card__comment {

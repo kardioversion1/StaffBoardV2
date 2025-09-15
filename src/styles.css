@@ -209,6 +209,13 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .manage-dialog{background:var(--panel);padding:16px;border-radius:8px;display:flex;flex-direction:column;gap:8px;min-width:340px}
 .manage-dialog label{display:flex;flex-direction:column;gap:4px}
 .manage-dialog .dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.manage-header{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.role-chip{align-self:flex-start;padding:2px 6px;border:1px solid var(--card-border);border-radius:4px;font-weight:600}
+.staff-type{color:var(--text-med);font-size:.85em}
+.manage-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.manage-col{display:flex;flex-direction:column;gap:8px}
+.manage-col label.mod{flex-direction:row;align-items:center}
+.manage-col label.mod .icon{margin-right:4px}
 .assign-dialog{min-width:400px}
 .assign-cols{display:flex;gap:8px}
 .assign-col{flex:1;max-height:200px;overflow-y:auto;border:1px solid var(--card-border);border-radius:4px;}

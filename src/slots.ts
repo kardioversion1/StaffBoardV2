@@ -5,7 +5,7 @@ export type Slot = {
   startHHMM?: string;
   student?: string | boolean;
   comment?: string;
-  bad?: boolean;
+  highAcuityUntil?: number;
   break?: {
     active: boolean;
     startISO?: string;

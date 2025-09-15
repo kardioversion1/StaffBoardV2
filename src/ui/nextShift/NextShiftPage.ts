@@ -72,9 +72,9 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
       const name = slot
         ? staff.find((s) => s.id === slot.nurseId)?.name || slot.nurseId
         : '';
-      return `<tr><td>${z.name}</td><td><div id="zone-${z.id}" class="zone-drop" data-zone="${z.name}" ${
+      return `<tr><td>${z.name}</td><td class="zone-cell"><div id="zone-${z.id}" class="zone-drop" data-zone="${z.name}" ${
         slot ? `data-nurse-id="${slot.nurseId}"` : ''
-      }>${name}</div></td></tr>`;
+      }>${name}</div><button class="btn zone-clear" data-zone-id="${z.id}">Clear</button></td></tr>`;
     })
     .join('');
 
@@ -174,6 +174,17 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
         const s = staff.find((st) => st.id === id);
         (el as HTMLElement).textContent = s?.name || id;
         (el as HTMLElement).dataset.nurseId = id;
+      }
+    });
+  });
+
+  root.querySelectorAll('.zone-clear').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = (btn as HTMLElement).dataset.zoneId;
+      const zone = document.getElementById(`zone-${id}`) as HTMLElement | null;
+      if (zone) {
+        zone.textContent = '';
+        delete zone.dataset.nurseId;
       }
     });
   });

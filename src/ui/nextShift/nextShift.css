@@ -48,3 +48,17 @@
   background: rgba(74, 163, 255, 0.15);
   border-radius: 8px;
 }
+
+.next-shift .zone-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.next-shift .zone-cell .zone-drop {
+  flex: 1;
+}
+
+.next-shift .zone-clear {
+  padding: 0.25rem 0.5rem;
+}

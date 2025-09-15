@@ -9,6 +9,7 @@ import {
   zonesInvalid,
   DB,
   KS,
+  mergeBoards,
 } from '@/state';
 import { applyTheme } from '@/state/theme';
 import { applyUI } from '@/state/uiConfig';
@@ -70,10 +71,6 @@ initState();
     const roster = await Server.load('roster');
     await DB.set(KS.STAFF, roster);
   } catch {}
-  try {
-    const active = await Server.load('active', { date: dateISO, shift });
-    if (active) await DB.set(KS.ACTIVE(dateISO, shift), active);
-  } catch {}
   loadConfig().then(async () => {
     await seedDefaults();
     await seedDemoHistory();
@@ -105,18 +102,16 @@ initState();
     try {
       const remote = await Server.load('active', { date: dateISO, shift });
       const local = await DB.get(KS.ACTIVE(dateISO, shift));
-      if (remote && JSON.stringify(remote) !== JSON.stringify(local)) {
-        await DB.set(KS.ACTIVE(dateISO, shift), remote);
-        renderAll();
+      if (remote) {
+        const merged = local ? mergeBoards(remote, local) : remote;
+        if (JSON.stringify(merged) !== JSON.stringify(local)) {
+          await DB.set(KS.ACTIVE(dateISO, shift), merged);
+          renderAll();
+        }
       }
     } catch {}
   }, 60 * 1000);
 
-    if (import.meta.hot) {
-      import.meta.hot.dispose(() => {
-        clearInterval(clockTimer);
-        clearInterval(activeTimer);
-      });
-    }
+
   });
 })();

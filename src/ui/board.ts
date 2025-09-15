@@ -92,12 +92,13 @@ export async function renderBoard(
     // Load or initialize active shift tuple
     const saveKey = KS.ACTIVE(ctx.dateISO, ctx.shift);
 
-    // Prefer in-memory cache to preserve unsaved edits when switching tabs
-    let active: ActiveBoard | undefined = getActiveBoardCache(
-      ctx.dateISO,
-      ctx.shift
-    );
-    let usedLocal = !!active;
+    let active: ActiveBoard | undefined = await DB.get<ActiveBoard>(saveKey);
+    let usedLocal = true;
+
+    const cached = getActiveBoardCache(ctx.dateISO, ctx.shift);
+    if (cached) {
+      active = active ? mergeBoards(active, cached) : cached;
+    }
 
     try {
       const remote = await Server.load<ActiveBoard>('active', {
@@ -113,10 +114,6 @@ export async function renderBoard(
     }
 
     if (!active) {
-      active = await DB.get<ActiveBoard>(saveKey);
-      usedLocal = !!active;
-    }
-    if (!active) {
       active = buildEmptyActive(ctx.dateISO, ctx.shift, cfg.zones);
     } else {
       active = migrateActiveBoard(active);
@@ -124,11 +121,9 @@ export async function renderBoard(
 
     normalizeActiveZones(active, cfg.zones);
     setActiveBoardCache(active);
-
-    if (!usedLocal) {
-      await DB.set(saveKey, active);
-      notifyUpdate(saveKey);
-    } else {
+    await DB.set(saveKey, active);
+    notifyUpdate(saveKey);
+    if (usedLocal) {
       showToast('Using local data; changes may not persist');
     }
 

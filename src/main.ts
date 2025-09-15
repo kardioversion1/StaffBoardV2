@@ -67,6 +67,9 @@ export async function manualHandoff() {
 initState();
 (async () => {
   const { dateISO, shift } = STATE;
+  if (!(await Server.health())) {
+    showBanner('Server unreachable');
+  }
   try {
     const roster = await Server.load('roster');
     await DB.set(KS.STAFF, roster);

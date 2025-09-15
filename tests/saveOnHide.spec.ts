@@ -33,12 +33,9 @@ vi.mock('@/state', () => {
       { id: 'n1', name: 'Alice', role: 'nurse', type: 'home' },
     ],
   };
-  const loadStaff = async () => store[KS.STAFF];
   return {
     STATE,
     KS,
-    loadStaff,
-    saveStaff: vi.fn(),
     migrateActiveBoard: (a: any) => a,
     setActiveBoardCache: () => {},
     getActiveBoardCache: (d: string, s: string) => store[KS.ACTIVE(d, s)],
@@ -60,6 +57,13 @@ vi.mock('@/state', () => {
     saveConfig: async () => {},
   };
 });
+
+vi.mock('@/state/staff', () => ({
+  rosterStore: {
+    load: async () => [{ id: 'n1', name: 'Alice', role: 'nurse', type: 'home' }],
+    save: vi.fn(),
+  },
+}));
 
 vi.mock('@/server', () => ({ load: vi.fn(), save: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/ui/widgets', () => ({ renderWeather: vi.fn() }));

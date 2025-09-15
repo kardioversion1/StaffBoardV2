@@ -13,11 +13,12 @@ vi.mock('@/db', () => {
     keys: async () => Object.keys(store),
   };
 });
+vi.mock('@/state/staff/service', () => ({ fetchRoster: vi.fn().mockResolvedValue([]), pushRoster: vi.fn() }));
 vi.mock('@/main', () => ({ manualHandoff: () => {} }));
 
 import { saveUIConfig, applyUI } from '@/state/uiConfig';
 import { saveConfig } from '@/state/config';
-import { saveStaff } from '@/state/staff';
+import { rosterStore } from '@/state/staff';
 import { STATE, initState } from '@/state';
 import { renderHeader } from '@/ui/header';
 import { renderBoard } from '@/ui/board';
@@ -25,7 +26,7 @@ import { renderBoard } from '@/ui/board';
 beforeEach(async () => {
   initState();
   await saveConfig({});
-  await saveStaff([]);
+  await rosterStore.save([]);
   document.body.innerHTML = '<div id="app"></div><div id="panel"></div>';
 });
 

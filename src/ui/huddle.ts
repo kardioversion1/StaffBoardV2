@@ -5,7 +5,7 @@ import {
   type HuddleRecord,
 } from '@/state/history';
 import { DEFAULT_HUDDLE_ITEMS } from '@/config/huddle';
-import { loadStaff, type Staff } from '@/state/staff';
+import { rosterStore, type Staff } from '@/state/staff';
 
 let record: HuddleRecord;
 
@@ -18,7 +18,8 @@ export async function openHuddle(
   dateISO: string,
   shift: 'day' | 'night'
 ): Promise<void> {
-  const staff = await loadStaff();
+  await rosterStore.load();
+  const staff = rosterStore.active();
   record =
     (await getHuddle(dateISO, shift)) || {
       dateISO,

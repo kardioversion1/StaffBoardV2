@@ -13,12 +13,9 @@ vi.mock('@/state', () => {
     clockHHMM: '07:00',
     locked: false,
   };
-  const loadStaff = async () => [];
   return {
     STATE,
     KS,
-    loadStaff,
-    saveStaff: vi.fn(),
     CURRENT_SCHEMA_VERSION: 1,
     migrateActiveBoard: (a: any) => a,
     setActiveBoardCache: vi.fn(),
@@ -38,6 +35,13 @@ vi.mock('@/state', () => {
     saveConfig: async () => {},
   };
 });
+
+vi.mock('@/state/staff', () => ({
+  rosterStore: {
+    load: async () => [],
+    save: vi.fn(),
+  },
+}));
 
 vi.mock('@/server', () => ({ load: vi.fn(), save: vi.fn() }));
 vi.mock('@/state/sync', () => ({ notifyUpdate: vi.fn(), onUpdate: vi.fn() }));

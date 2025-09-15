@@ -3,9 +3,6 @@
 import { Shift, hhmmNowLocal, toDateISO, deriveShift } from '@/utils/time';
 import * as DB from '@/db';
 import * as Server from '@/server';
-import { canonNurseType, type NurseType } from '@/domain/lexicon';
-import { ensureStaffId } from '@/utils/id';
-import { ensureRole } from '@/utils/role';
 import { normalizeZones, type ZoneDef } from '@/utils/zones';
 import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 import {
@@ -18,6 +15,7 @@ import {
 } from '@/state/history';
 import type { UIThemeConfig } from '@/state/theme';
 import { THEME_PRESETS } from '@/state/theme';
+import { rosterStore, type Staff } from '@/state/staff';
 
 export type WidgetsConfig = {
   show?: boolean;
@@ -51,22 +49,6 @@ export type Config = {
   uiTheme?: UIThemeConfig;
 };
 
-export type Staff = {
-  id: string;
-  name?: string;
-  first?: string;
-  last?: string;
-  rf?: number;
-  role: 'nurse' | 'tech';
-  type: NurseType;
-  active?: boolean;
-  notes?: string;
-  prefDay?: boolean;
-  prefNight?: boolean;
-  eligibleRoles?: ('charge' | 'triage' | 'admin')[];
-  defaultZone?: string;
-  dtoEligible?: boolean;
-};
 
 import { ensureUniqueAssignment, type Slot } from '@/slots';
 export type { Slot } from '@/slots';
@@ -435,34 +417,6 @@ export const KS = {
   DRAFT: (dateISO: string, shift: Shift) => `DRAFT:${dateISO}:${shift}`,
 } as const;
 
-// ------- Staff load/save -------
-
-export async function loadStaff(): Promise<Staff[]> {
-  try {
-    const remote = await Server.load('roster');
-    await DB.set(KS.STAFF, remote);
-  } catch {}
-  const list = (await DB.get<Staff[]>(KS.STAFF)) || [];
-  let changed = false;
-  const normalized = list.map((s) => {
-    ensureRole(s);
-    const id = ensureStaffId(s.id);
-    const rawType = (s as { type?: string | null }).type;
-    const type = (canonNurseType(rawType) || rawType || 'home') as NurseType;
-    if (id !== s.id) changed = true;
-    return { ...s, id, type } as Staff;
-  });
-  if (changed) await DB.set(KS.STAFF, normalized);
-  return normalized;
-}
-
-export async function saveStaff(list: Staff[]): Promise<void> {
-  try {
-    await Server.save('roster', list);
-  } catch {}
-  await DB.set(KS.STAFF, list);
-}
-
 // ------- History import / apply draft -------
 
 export async function importHistoryFromJSON(json: string): Promise<DraftShift[]> {
@@ -481,7 +435,7 @@ export async function applyDraftToActive(
   await DB.del(KS.DRAFT(dateISO, shift));
 
   // Build and persist a published snapshot for history.
-  const staff = await loadStaff();
+  const staff = await rosterStore.load();
   const staffMap: Record<string, Staff> = Object.fromEntries(
     staff.map((s) => [s.id, s])
   );

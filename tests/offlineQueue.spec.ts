@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('@/state', () => {
+const { KS, STATE, store } = vi.hoisted(() => {
   const KS = {
     STAFF: 'STAFF',
     HISTORY: 'HISTORY',
@@ -33,29 +33,35 @@ vi.mock('@/state', () => {
       { id: 'n1', name: 'Alice', role: 'nurse', type: 'home' },
     ],
   };
-  const loadStaff = async () => store[KS.STAFF];
-  return {
-    STATE,
-    KS,
-    loadStaff,
-    saveStaff: vi.fn(),
-    migrateActiveBoard: (a: any) => a,
-    setActiveBoardCache: () => {},
-    getActiveBoardCache: (d: string, s: string) => store[KS.ACTIVE(d, s)],
-    mergeBoards: (remote: any, local: any) => ({ ...remote, ...local }),
-    DB: {
-      get: async (k: string) => store[k],
-      set: async (k: string, v: any) => {
-        store[k] = v;
-      },
-      del: async (k: string) => {
-        delete store[k];
-      },
-    },
-    getConfig: () => ({ zones: [{ name: 'Zone A', color: 'var(--panel)' }] }),
-    saveConfig: async () => {},
-  };
+  return { KS, STATE, store };
 });
+
+vi.mock('@/state', () => ({
+  STATE,
+  KS,
+  migrateActiveBoard: (a: any) => a,
+  setActiveBoardCache: () => {},
+  getActiveBoardCache: (d: string, s: string) => store[KS.ACTIVE(d, s)],
+  mergeBoards: (remote: any, local: any) => ({ ...remote, ...local }),
+  DB: {
+    get: async (k: string) => store[k],
+    set: async (k: string, v: any) => {
+      store[k] = v;
+    },
+    del: async (k: string) => {
+      delete store[k];
+    },
+  },
+  getConfig: () => ({ zones: [{ name: 'Zone A', color: 'var(--panel)' }] }),
+  saveConfig: async () => {},
+}));
+
+vi.mock('@/state/staff', () => ({
+  rosterStore: {
+    load: async () => store[KS.STAFF],
+    save: vi.fn(),
+  },
+}));
 
 vi.mock('@/server', () => ({ load: vi.fn(), save: vi.fn() }));
 vi.mock('@/ui/widgets', () => ({ renderWeather: vi.fn() }));

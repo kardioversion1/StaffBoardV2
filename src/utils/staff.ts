@@ -1,4 +1,4 @@
-import type { Staff } from "../state";
+import type { Staff } from "@/state";
 
 /**
  * Check if an employee id is unique in a list.

@@ -156,9 +156,9 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
           item.classList.toggle('selected', (item as HTMLElement).dataset.id === id);
         });
       });
-        (el as HTMLElement).addEventListener('dragstart', (ev) => {
-          (ev as DragEvent).dataTransfer?.setData('text/plain', id);
-        });
+      (el as HTMLElement).addEventListener('dragstart', (ev: DragEvent) => {
+        ev.dataTransfer?.setData('text/plain', id);
+      });
     });
   }
 
@@ -166,11 +166,10 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   searchInput.addEventListener('input', () => renderStaff(searchInput.value));
 
   root.querySelectorAll('.zone-drop').forEach((el) => {
-      (el as HTMLElement).addEventListener('dragover', (e) => e.preventDefault());
-      (el as HTMLElement).addEventListener('drop', (e) => {
-        const ev = e as DragEvent;
-        ev.preventDefault();
-        const id = ev.dataTransfer?.getData('text/plain');
+    (el as HTMLElement).addEventListener('dragover', (e: DragEvent) => e.preventDefault());
+    (el as HTMLElement).addEventListener('drop', (e: DragEvent) => {
+      e.preventDefault();
+      const id = e.dataTransfer?.getData('text/plain');
       if (id) {
         const s = staff.find((st) => st.id === id);
         (el as HTMLElement).textContent = s?.name || id;

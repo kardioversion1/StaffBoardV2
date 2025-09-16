@@ -16,6 +16,11 @@ import {
 import type { UIThemeConfig } from '@/state/theme';
 import { THEME_PRESETS } from '@/state/theme';
 import { rosterStore, type Staff } from '@/state/staff';
+import { ensureUniqueAssignment, type Slot } from '@/slots';
+
+export type { Slot } from '@/slots';
+
+// ------- Schema / core types -------
 
 export type WidgetsConfig = {
   show?: boolean | undefined;
@@ -48,9 +53,6 @@ export type Config = {
   } | undefined;
   uiTheme?: UIThemeConfig | undefined;
 };
-
-import { ensureUniqueAssignment, type Slot } from '@/slots';
-export type { Slot } from '@/slots';
 
 export interface ZoneAssignment {
   id: string;
@@ -95,17 +97,21 @@ export const STATE: AppState = {
   shift: deriveShift(_clock),
 };
 
-export function initState() {
+export function initState(): void {
   STATE.dateISO = toDateISO(new Date());
   STATE.locked = false;
   STATE.clockHHMM = hhmmNowLocal();
   STATE.shift = deriveShift(STATE.clockHHMM);
 }
 
+// ------- Active board cache -------
+
 const ACTIVE_BOARD_CACHE: Record<string, ActiveBoard> = {};
+
 export function setActiveBoardCache(board: ActiveBoard): void {
   ACTIVE_BOARD_CACHE[KS.ACTIVE(board.dateISO, board.shift)] = board;
 }
+
 export function getActiveBoardCache(
   dateISO: string,
   shift: Shift
@@ -113,10 +119,13 @@ export function getActiveBoardCache(
   return ACTIVE_BOARD_CACHE[KS.ACTIVE(dateISO, shift)];
 }
 
+// ------- Board merge -------
+
 /** Merge a local board into the remote one without overwriting remote edits. */
 export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoard {
   const merged: ActiveBoard = { ...remote, zones: { ...remote.zones } };
 
+  // Text fields prefer remote, fall back to local
   merged.comments = remote.comments || local.comments;
   merged.huddle = remote.huddle || local.huddle;
   merged.handoff = remote.handoff || local.handoff;
@@ -128,9 +137,7 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
   ): T[] => {
     const map = new Map<string, T>();
     // Insert remote items first so their order is preserved when merging.
-    for (const item of a) {
-      map.set(key(item), item);
-    }
+    for (const item of a) map.set(key(item), item);
     for (const item of b) {
       const k = key(item);
       const existing = map.get(k);
@@ -150,6 +157,7 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
     (o) => `${o.nurseId}|${o.ts}`
   );
 
+  // Pinned roles: ensure uniqueness
   if (local.charge) {
     ensureUniqueAssignment(merged, local.charge.nurseId);
     merged.charge = local.charge;
@@ -163,6 +171,7 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
     merged.admin = local.admin;
   }
 
+  // Zones: append local slots ensuring uniqueness across board
   for (const [zone, slots] of Object.entries(local.zones)) {
     for (const slot of slots) {
       ensureUniqueAssignment(merged, slot.nurseId);
@@ -174,7 +183,7 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
   return merged;
 }
 
-// ------- Config defaults / loaders (single-source implementation) -------
+// ------- Config defaults / loaders -------
 
 export const WIDGETS_DEFAULTS: WidgetsConfig = {
   show: true,
@@ -523,5 +532,5 @@ export async function applyDraftToActive(
   }
 }
 
+// Re-export DB for convenience (legacy callers)
 export { DB };
-

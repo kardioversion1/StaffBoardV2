@@ -69,7 +69,7 @@ export function upsertSlot(
     board.triage = slot;
   } else if (target === "admin") {
     board.admin = slot;
-  } else {
+  } else if (typeof target === "object" && target && "zone" in target) {
     const arr = board.zones[target.zone] || (board.zones[target.zone] = []);
     if (target.index === undefined || target.index >= arr.length) {
       arr.push(slot);
@@ -101,7 +101,7 @@ export function removeSlot(
       board.admin = undefined;
       removed = true;
     }
-  } else {
+  } else if (typeof target === "object" && target && "zone" in target && "index" in target) {
     const arr = board.zones[target.zone];
     if (arr && arr.splice(target.index, 1).length) removed = true;
   }
@@ -123,7 +123,7 @@ export function moveSlot(
   } else if (from === "admin") {
     slot = board.admin;
     board.admin = undefined;
-  } else {
+  } else if (typeof from === "object" && from && "zone" in from && "index" in from) {
     slot = board.zones[from.zone]?.splice(from.index, 1)[0];
   }
   return slot ? upsertSlot(board, to, slot) : false;

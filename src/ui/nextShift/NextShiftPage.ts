@@ -8,7 +8,7 @@ import {
   publishNextDraft,
   type DraftShift,
 } from '@/state/nextShift';
-import { loadStaff, type Staff } from '@/state/staff';
+import { rosterStore, type Staff } from '@/state/staff';
 import { type Slot } from '@/slots';
 import { deriveShift } from '@/utils/time';
 import { showToast } from '@/ui/banner';
@@ -40,7 +40,8 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   await loadConfig();
   await seedZonesIfNeeded();
   const cfg = getConfig();
-  const staff = await loadStaff();
+  await rosterStore.load();
+  const staff = rosterStore.active();
   let draft: DraftShift | null = await loadNextDraft();
   if (!draft) {
     const startISO = nextShiftStartISO();

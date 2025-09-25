@@ -5,20 +5,18 @@ import {
   DB,
   KS,
   STATE,
-  loadStaff,
-  saveStaff,
   CURRENT_SCHEMA_VERSION,
   migrateActiveBoard,
   setActiveBoardCache,
   getActiveBoardCache,
   mergeBoards,
-  type Staff,
   type ActiveBoard,
   type DraftShift,
   getConfig,
   saveConfig,
   type Config,
 } from '@/state';
+import { rosterStore, type Staff } from '@/state/staff';
 import { notifyUpdate, onUpdate } from '@/state/sync';
 
 import { setNurseCache, labelFromId } from '@/utils/names';
@@ -55,16 +53,18 @@ let clockHandler: (() => void) | null = null;
 
 const offlineQueue: ActiveBoard[] = [];
 
-async function flushQueuedSaves(): Promise<void> {
+/** Attempt to flush queued board saves in order. */
+async function flushQueuedSaves(): Promise<Error | null> {
   while (offlineQueue.length) {
     const board = offlineQueue[0];
     try {
       await Server.save('active', board);
       offlineQueue.shift();
-    } catch {
-      break;
+    } catch (err) {
+      return err as Error;
     }
   }
+  return null;
 }
 
 if (typeof window !== 'undefined') {
@@ -107,7 +107,7 @@ export async function renderBoard(
     const cfg = getConfig();
     if (!cfg.zones) cfg.zones = [];
 
-    const staff: Staff[] = await loadStaff();
+    const staff: Staff[] = await rosterStore.load();
     setNurseCache(staff);
 
     // Load or initialize active shift tuple
@@ -214,13 +214,11 @@ export async function renderBoard(
 
     const flushServer = async () => {
       if (saveTimer) clearTimeout(saveTimer);
-      try {
-        await Server.save('active', active!);
-        void flushQueuedSaves();
-      } catch (err) {
+      offlineQueue.push(structuredClone(active!));
+      const err = await flushQueuedSaves();
+      if (err) {
         console.error('failed to save active board', err);
         showToast('Saving locally; server unreachable');
-        offlineQueue.push(structuredClone(active!));
       }
     };
 
@@ -876,7 +874,7 @@ function manageSlot(
       if (moved) showBanner('Previous assignment cleared');
     }
 
-    await saveStaff(staffList);
+    await rosterStore.save(staffList);
     save();
     overlay.remove();
     rerender();

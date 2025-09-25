@@ -1,5 +1,5 @@
 import data from '../staff_and_zones.json';
-import { loadStaff, saveStaff, Staff } from '@/state';
+import { loadStaff, saveStaff, type Staff } from '@/state/staff';
 import { seedZonesIfNeeded } from '@/seed';
 import { ensureStaffId } from '@/utils/id';
 

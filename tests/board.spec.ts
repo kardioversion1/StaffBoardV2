@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 /** @vitest-environment happy-dom */
 
 vi.mock('@/state', () => ({
-  getConfig: () => ({ showPinned: {} }),
+  getConfig: () => ({ showPinned: {}, zones: [] }),
   getActiveBoardCache: (_d: string, _s: string) => undefined,
   STATE: { dateISO: '2024-01-01', shift: 'day', locked: false, clockHHMM: '00:00' },
 }));

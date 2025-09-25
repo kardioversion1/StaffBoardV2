@@ -12,13 +12,14 @@ import {
   type ShiftKind,
   type PublishedShiftSnapshot,
   type Assignment,
-} from '@/state/history';
+} from '@/history';
 import type { UIThemeConfig } from '@/state/theme';
 import { THEME_PRESETS } from '@/state/theme';
 import { rosterStore, type Staff } from '@/state/staff';
 import { ensureUniqueAssignment, type Slot } from '@/slots';
 
 export type { Slot } from '@/slots';
+export type { Staff } from '@/state/staff';
 
 // ------- Schema / core types -------
 
@@ -424,6 +425,16 @@ export const KS = {
   ONBAT: (dateISO: string, shift: Shift) => `ONBAT:${dateISO}:${shift}`,
   DRAFT: (dateISO: string, shift: Shift) => `DRAFT:${dateISO}:${shift}`,
 } as const;
+
+// ------- Staff load/save (legacy wrappers over rosterStore) -------
+
+export async function loadStaff(): Promise<Staff[]> {
+  return rosterStore.load();
+}
+
+export async function saveStaff(list: Staff[]): Promise<void> {
+  await rosterStore.save(list);
+}
 
 // ------- History import / apply draft -------
 

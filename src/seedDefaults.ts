@@ -7,9 +7,14 @@ import { ensureStaffId } from '@/utils/id';
 export async function seedDefaults(): Promise<void> {
   await rosterStore.load();
   let staff = rosterStore.all();
-  if (staff.length === 0 && Array.isArray(data.staff)) {
-    staff = data.staff.map((s) => ({ ...s, id: ensureStaffId(s.id) })) as Staff[];
+
+  if (staff.length === 0 && Array.isArray((data as any).staff)) {
+    staff = (data as any).staff.map((s: Partial<Staff>) => ({
+      ...s,
+      id: ensureStaffId(s.id as string | undefined),
+    })) as Staff[];
     await rosterStore.save(staff);
   }
+
   await seedZonesIfNeeded();
 }

@@ -8,11 +8,11 @@ import { KS } from './keys';
 import { STATE } from './index';
 
 export type WidgetsConfig = {
-  show?: boolean;
+  show?: boolean | undefined;
   weather: {
     units: 'F' | 'C';
-    lat?: number;
-    lon?: number;
+    lat?: number | undefined;
+    lon?: number | undefined;
   };
 };
 
@@ -23,20 +23,20 @@ export type Config = {
   pin: string;
   relockMin: number;
   widgets: WidgetsConfig;
-  zoneColors?: Record<string, string>;
-  shiftDurations?: { day: number; night: number };
-  dtoMinutes?: number;
-  showPinned?: { charge: boolean; triage: boolean };
-  rss?: { url: string; enabled: boolean };
-  physicians?: { calendarUrl: string };
-  privacy?: boolean;
+  zoneColors?: Record<string, string> | undefined;
+  shiftDurations?: { day: number; night: number } | undefined;
+  dtoMinutes?: number | undefined;
+  showPinned?: { charge: boolean; triage: boolean } | undefined;
+  rss?: { url: string; enabled: boolean } | undefined;
+  physicians?: { calendarUrl: string } | undefined;
+  privacy?: boolean | undefined;
   ui?: {
     signoutMode?: 'shiftHuddle' | 'disabled' | 'legacySignout';
-    rightSidebarWidthPx?: number;
-    rightSidebarMinPx?: number;
-    rightSidebarMaxPx?: number;
-  };
-  uiTheme?: UIThemeConfig;
+    rightSidebarWidthPx?: number | undefined;
+    rightSidebarMinPx?: number | undefined;
+    rightSidebarMaxPx?: number | undefined;
+  } | undefined;
+  uiTheme?: UIThemeConfig | undefined;
 };
 
 export const WIDGETS_DEFAULTS: WidgetsConfig = {

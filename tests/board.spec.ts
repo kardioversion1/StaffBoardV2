@@ -9,7 +9,8 @@ vi.mock('@/state', () => ({
 
 import { renderLeadership } from '@/ui/board';
 import { setNurseCache } from '@/utils/names';
-import type { ActiveBoard, Staff } from '@/state';
+import type { ActiveBoard } from '@/state';
+import type { Staff } from '@/state/staff';
 
 const baseBoard: ActiveBoard = {
   dateISO: '2024-01-01',

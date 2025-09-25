@@ -10,6 +10,7 @@ import {
   DB,
   KS,
   mergeBoards,
+  type ActiveBoard,
 } from '@/state';
 import { applyTheme } from '@/state/theme';
 import { applyUI } from '@/state/uiConfig';
@@ -17,7 +18,7 @@ import { seedDefaults } from '@/seedDefaults';
 import { seedDemoHistory } from '@/history/seed';
 import { hhmmNowLocal, deriveShift } from '@/utils/time';
 import { renderHeader } from '@/ui/header';
-import { renderTabs, activeTab } from '@/ui/tabs';
+import { renderTabs, activeTab, initTabs } from '@/ui/tabs';
 import { renderBoard } from '@/ui/board';
 import { renderSettings } from '@/ui/settings';
 import { renderHistoryTab } from '@/ui/historyTab';
@@ -33,7 +34,7 @@ document.addEventListener('history-saved', () =>
 export async function renderAll() {
   applyTheme();
   await renderHeader();
-  await renderTabs();
+  renderTabs();
   const root = document.getElementById('panel');
   if (!root) {
     console.error('Missing #panel element');
@@ -65,6 +66,7 @@ export async function manualHandoff() {
 }
 
 initState();
+initTabs();
 (async () => {
   const { dateISO, shift } = STATE;
   if (!(await Server.health())) {
@@ -104,7 +106,7 @@ initState();
     const { dateISO, shift } = STATE;
     try {
       const remote = await Server.load('active', { date: dateISO, shift });
-      const local = await DB.get(KS.ACTIVE(dateISO, shift));
+      const local = await DB.get<ActiveBoard>(KS.ACTIVE(dateISO, shift));
       if (remote) {
         const merged = local ? mergeBoards(remote, local) : remote;
         if (JSON.stringify(merged) !== JSON.stringify(local)) {

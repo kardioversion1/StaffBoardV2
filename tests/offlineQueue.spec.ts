@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
-vi.mock('@/state', () => {
+const { KS, STATE, store } = vi.hoisted(() => {
   const KS = {
     STAFF: 'STAFF',
     HISTORY: 'HISTORY',
@@ -29,33 +29,37 @@ vi.mock('@/state', () => {
       handoff: '',
       version: 1,
     },
-    [KS.STAFF]: [
-      { id: 'n1', name: 'Alice', role: 'nurse', type: 'home' },
-    ],
+    [KS.STAFF]: [{ id: 'n1', name: 'Alice', role: 'nurse', type: 'home' }],
   };
-  const loadStaff = async () => store[KS.STAFF];
-  return {
-    STATE,
-    KS,
-    loadStaff,
-    saveStaff: vi.fn(),
-    migrateActiveBoard: (a: any) => a,
-    setActiveBoardCache: () => {},
-    getActiveBoardCache: (d: string, s: string) => store[KS.ACTIVE(d, s)],
-    mergeBoards: (remote: any, local: any) => ({ ...remote, ...local }),
-    DB: {
-      get: async (k: string) => store[k],
-      set: async (k: string, v: any) => {
-        store[k] = v;
-      },
-      del: async (k: string) => {
-        delete store[k];
-      },
-    },
-    getConfig: () => ({ zones: [{ name: 'Zone A', color: 'var(--panel)' }] }),
-    saveConfig: async () => {},
-  };
+  return { KS, STATE, store };
 });
+
+vi.mock('@/state', () => ({
+  STATE,
+  KS,
+  migrateActiveBoard: (a: any) => a,
+  setActiveBoardCache: () => {},
+  getActiveBoardCache: (d: string, s: string) => store[KS.ACTIVE(d, s)],
+  mergeBoards: (remote: any, local: any) => ({ ...remote, ...local }),
+  DB: {
+    get: async (k: string) => store[k],
+    set: async (k: string, v: any) => {
+      store[k] = v;
+    },
+    del: async (k: string) => {
+      delete store[k];
+    },
+  },
+  getConfig: () => ({ zones: [{ name: 'Zone A', color: 'var(--panel)' }] }),
+  saveConfig: async () => {},
+}));
+
+vi.mock('@/state/staff', () => ({
+  rosterStore: {
+    load: async () => store[KS.STAFF],
+    save: vi.fn(),
+  },
+}));
 
 vi.mock('@/server', () => ({ load: vi.fn(), save: vi.fn() }));
 vi.mock('@/ui/widgets', () => ({ renderWeather: vi.fn() }));
@@ -68,6 +72,11 @@ import { openAssignDialog } from '@/ui/assignDialog';
 import { save as serverSave } from '@/server';
 
 describe('offline save queue', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
   it('flushes queued saves when back online', async () => {
     vi.useFakeTimers();
     const root = document.createElement('div');
@@ -95,3 +104,4 @@ describe('offline save queue', () => {
     expect(board.zones['Zone A'][0].nurseId).toBe('n1');
   });
 });
+

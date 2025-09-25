@@ -2,17 +2,17 @@ import * as Server from '@/server';
 import {
   DB,
   KS,
-  loadStaff,
+  STATE,
   CURRENT_SCHEMA_VERSION,
   migrateActiveBoard,
   setActiveBoardCache,
   getActiveBoardCache,
   mergeBoards,
-  type Staff,
   type ActiveBoard,
   getConfig,
   type Config,
 } from '@/state';
+import { rosterStore, type Staff } from '@/state/staff';
 import { notifyUpdate, onUpdate } from '@/state/sync';
 import { setNurseCache } from '@/utils/names';
 import { renderWeather } from '@/ui/widgets';
@@ -47,6 +47,27 @@ const toHHMM = (min: number): string => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
+/** Attempt to flush queued board saves in order. */
+const offlineQueue: ActiveBoard[] = [];
+async function flushQueuedSaves(): Promise<Error | null> {
+  while (offlineQueue.length) {
+    const board = offlineQueue[0];
+    try {
+      await Server.save('active', board);
+      offlineQueue.shift();
+    } catch (err) {
+      return err as Error;
+    }
+  }
+  return null;
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    void flushQueuedSaves();
+  });
+}
+
 function buildEmptyActive(
   dateISO: string,
   shift: 'day' | 'night',
@@ -69,24 +90,6 @@ function buildEmptyActive(
 }
 
 let clockHandler: (() => void) | null = null;
-const offlineQueue: ActiveBoard[] = [];
-async function flushQueuedSaves(): Promise<void> {
-  while (offlineQueue.length) {
-    const board = offlineQueue[0];
-    try {
-      await Server.save('active', board);
-      offlineQueue.shift();
-    } catch {
-      break;
-    }
-  }
-}
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('online', () => {
-    void flushQueuedSaves();
-  });
-}
 
 /** Render the main board view. */
 export async function renderBoard(
@@ -97,7 +100,7 @@ export async function renderBoard(
     const cfg = getConfig();
     if (!cfg.zones) cfg.zones = [];
 
-    const staff: Staff[] = await loadStaff();
+    const staff: Staff[] = await rosterStore.load();
     setNurseCache(staff);
 
     const saveKey = KS.ACTIVE(ctx.dateISO, ctx.shift);
@@ -170,13 +173,11 @@ export async function renderBoard(
 
     const flushServer = async () => {
       if (saveTimer) clearTimeout(saveTimer);
-      try {
-        await Server.save('active', active!);
-        void flushQueuedSaves();
-      } catch (err) {
+      offlineQueue.push(structuredClone(active!));
+      const err = await flushQueuedSaves();
+      if (err) {
         console.error('failed to save active board', err);
         showToast('Saving locally; server unreachable');
-        offlineQueue.push(structuredClone(active!));
       }
     };
 

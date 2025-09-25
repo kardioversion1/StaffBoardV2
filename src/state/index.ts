@@ -3,9 +3,6 @@
 import { Shift, hhmmNowLocal, toDateISO, deriveShift } from '@/utils/time';
 import * as DB from '@/db';
 import * as Server from '@/server';
-import { canonNurseType, type NurseType } from '@/domain/lexicon';
-import { ensureStaffId } from '@/utils/id';
-import { ensureRole } from '@/utils/role';
 import { normalizeZones, type ZoneDef } from '@/utils/zones';
 import { DEFAULT_WEATHER_COORDS } from '@/config/weather';
 import {
@@ -15,16 +12,23 @@ import {
   type ShiftKind,
   type PublishedShiftSnapshot,
   type Assignment,
-} from '@/state/history';
+} from '@/history';
 import type { UIThemeConfig } from '@/state/theme';
 import { THEME_PRESETS } from '@/state/theme';
+import { rosterStore, type Staff } from '@/state/staff';
+import { ensureUniqueAssignment, type Slot } from '@/slots';
+
+export type { Slot } from '@/slots';
+export type { Staff } from '@/state/staff';
+
+// ------- Schema / core types -------
 
 export type WidgetsConfig = {
-  show?: boolean;
+  show?: boolean | undefined;
   weather: {
     units: 'F' | 'C';
-    lat?: number;
-    lon?: number;
+    lat?: number | undefined;
+    lon?: number | undefined;
   };
 };
 
@@ -35,47 +39,27 @@ export type Config = {
   pin: string;
   relockMin: number;
   widgets: WidgetsConfig;
-  zoneColors?: Record<string, string>;
-  shiftDurations?: { day: number; night: number };
-  dtoMinutes?: number;
-  showPinned?: { charge: boolean; triage: boolean };
-  rss?: { url: string; enabled: boolean };
-  physicians?: { calendarUrl: string };
-  privacy?: boolean;
+  zoneColors?: Record<string, string> | undefined;
+  shiftDurations?: { day: number; night: number } | undefined;
+  dtoMinutes?: number | undefined;
+  showPinned?: { charge: boolean; triage: boolean } | undefined;
+  rss?: { url: string; enabled: boolean } | undefined;
+  physicians?: { calendarUrl: string } | undefined;
+  privacy?: boolean | undefined;
   ui?: {
     signoutMode?: 'shiftHuddle' | 'disabled' | 'legacySignout';
-    rightSidebarWidthPx?: number;
-    rightSidebarMinPx?: number;
-    rightSidebarMaxPx?: number;
-  };
-  uiTheme?: UIThemeConfig;
+    rightSidebarWidthPx?: number | undefined;
+    rightSidebarMinPx?: number | undefined;
+    rightSidebarMaxPx?: number | undefined;
+  } | undefined;
+  uiTheme?: UIThemeConfig | undefined;
 };
-
-export type Staff = {
-  id: string;
-  name?: string;
-  first?: string;
-  last?: string;
-  rf?: number;
-  role: 'nurse' | 'tech';
-  type: NurseType;
-  active?: boolean;
-  notes?: string;
-  prefDay?: boolean;
-  prefNight?: boolean;
-  eligibleRoles?: ('charge' | 'triage' | 'admin')[];
-  defaultZone?: string;
-  dtoEligible?: boolean;
-};
-
-import { ensureUniqueAssignment, type Slot } from '@/slots';
-export type { Slot } from '@/slots';
 
 export interface ZoneAssignment {
   id: string;
   role: 'nurse' | 'tech';
-  start?: string;
-  end?: string;
+  start?: string | undefined;
+  end?: string | undefined;
 }
 
 export const CURRENT_SCHEMA_VERSION = 2;
@@ -83,12 +67,12 @@ export const CURRENT_SCHEMA_VERSION = 2;
 export interface ActiveShift {
   dateISO: string;
   shift: Shift;
-  endAtISO?: string;
-  charge?: Slot;
-  triage?: Slot;
-  admin?: Slot;
+  endAtISO?: string | undefined;
+  charge?: Slot | undefined;
+  triage?: Slot | undefined;
+  admin?: Slot | undefined;
   zones: Record<string, Slot[]>;
-  incoming: { nurseId: string; eta: string; arrived?: boolean }[];
+  incoming: { nurseId: string; eta: string; arrived?: boolean | undefined }[];
   offgoing: { nurseId: string; ts: number }[];
   comments: string;
   huddle: string;
@@ -114,17 +98,21 @@ export const STATE: AppState = {
   shift: deriveShift(_clock),
 };
 
-export function initState() {
+export function initState(): void {
   STATE.dateISO = toDateISO(new Date());
   STATE.locked = false;
   STATE.clockHHMM = hhmmNowLocal();
   STATE.shift = deriveShift(STATE.clockHHMM);
 }
 
+// ------- Active board cache -------
+
 const ACTIVE_BOARD_CACHE: Record<string, ActiveBoard> = {};
+
 export function setActiveBoardCache(board: ActiveBoard): void {
   ACTIVE_BOARD_CACHE[KS.ACTIVE(board.dateISO, board.shift)] = board;
 }
+
 export function getActiveBoardCache(
   dateISO: string,
   shift: Shift
@@ -132,10 +120,13 @@ export function getActiveBoardCache(
   return ACTIVE_BOARD_CACHE[KS.ACTIVE(dateISO, shift)];
 }
 
+// ------- Board merge -------
+
 /** Merge a local board into the remote one without overwriting remote edits. */
 export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoard {
   const merged: ActiveBoard = { ...remote, zones: { ...remote.zones } };
 
+  // Text fields prefer remote, fall back to local
   merged.comments = remote.comments || local.comments;
   merged.huddle = remote.huddle || local.huddle;
   merged.handoff = remote.handoff || local.handoff;
@@ -147,9 +138,7 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
   ): T[] => {
     const map = new Map<string, T>();
     // Insert remote items first so their order is preserved when merging.
-    for (const item of a) {
-      map.set(key(item), item);
-    }
+    for (const item of a) map.set(key(item), item);
     for (const item of b) {
       const k = key(item);
       const existing = map.get(k);
@@ -169,6 +158,7 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
     (o) => `${o.nurseId}|${o.ts}`
   );
 
+  // Pinned roles: ensure uniqueness
   if (local.charge) {
     ensureUniqueAssignment(merged, local.charge.nurseId);
     merged.charge = local.charge;
@@ -182,6 +172,7 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
     merged.admin = local.admin;
   }
 
+  // Zones: append local slots ensuring uniqueness across board
   for (const [zone, slots] of Object.entries(local.zones)) {
     for (const slot of slots) {
       ensureUniqueAssignment(merged, slot.nurseId);
@@ -193,7 +184,7 @@ export function mergeBoards(remote: ActiveBoard, local: ActiveBoard): ActiveBoar
   return merged;
 }
 
-// ------- Config defaults / loaders (single-source implementation) -------
+// ------- Config defaults / loaders -------
 
 export const WIDGETS_DEFAULTS: WidgetsConfig = {
   show: true,
@@ -435,32 +426,14 @@ export const KS = {
   DRAFT: (dateISO: string, shift: Shift) => `DRAFT:${dateISO}:${shift}`,
 } as const;
 
-// ------- Staff load/save -------
+// ------- Staff load/save (legacy wrappers over rosterStore) -------
 
 export async function loadStaff(): Promise<Staff[]> {
-  try {
-    const remote = await Server.load('roster');
-    await DB.set(KS.STAFF, remote);
-  } catch {}
-  const list = (await DB.get<Staff[]>(KS.STAFF)) || [];
-  let changed = false;
-  const normalized = list.map((s) => {
-    ensureRole(s);
-    const id = ensureStaffId(s.id);
-    const rawType = (s as { type?: string | null }).type;
-    const type = (canonNurseType(rawType) || rawType || 'home') as NurseType;
-    if (id !== s.id) changed = true;
-    return { ...s, id, type } as Staff;
-  });
-  if (changed) await DB.set(KS.STAFF, normalized);
-  return normalized;
+  return rosterStore.load();
 }
 
 export async function saveStaff(list: Staff[]): Promise<void> {
-  try {
-    await Server.save('roster', list);
-  } catch {}
-  await DB.set(KS.STAFF, list);
+  await rosterStore.save(list);
 }
 
 // ------- History import / apply draft -------
@@ -481,7 +454,7 @@ export async function applyDraftToActive(
   await DB.del(KS.DRAFT(dateISO, shift));
 
   // Build and persist a published snapshot for history.
-  const staff = await loadStaff();
+  const staff = await rosterStore.load();
   const staffMap: Record<string, Staff> = Object.fromEntries(
     staff.map((s) => [s.id, s])
   );
@@ -570,4 +543,5 @@ export async function applyDraftToActive(
   }
 }
 
+// Re-export DB for convenience (legacy callers)
 export { DB };

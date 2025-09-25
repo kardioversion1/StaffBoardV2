@@ -1,6 +1,6 @@
 import { labelFromId } from '@/utils/names';
 import { findShiftsByStaff } from '@/state/history';
-import type { Staff } from '@/state';
+import type { Staff } from '@/state/staff';
 
 /**
  * Open overlay to assign a staff member.
@@ -108,3 +108,4 @@ export function openAssignDialog(
 }
 
 export default openAssignDialog;
+

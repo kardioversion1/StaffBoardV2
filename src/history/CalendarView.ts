@@ -2,9 +2,9 @@ import {
   getShiftByDate,
   savePublishedShift,
   indexStaffAssignments,
-  PublishedShiftSnapshot,
-} from '@/state/history';
-import { exportShiftCSV } from '@/history';
+  type PublishedShiftSnapshot,
+} from '@/history';
+import { exportShiftCSV } from '@/history/ui';
 import { DB, KS } from '@/state';
 import { formatTime24h, formatDuration } from '@/utils/format';
 import './history.css';

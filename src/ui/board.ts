@@ -2,7 +2,6 @@ import * as Server from '@/server';
 import {
   DB,
   KS,
-  STATE,
   loadStaff,
   CURRENT_SCHEMA_VERSION,
   migrateActiveBoard,
@@ -81,6 +80,12 @@ async function flushQueuedSaves(): Promise<void> {
       break;
     }
   }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    void flushQueuedSaves();
+  });
 }
 
 /** Render the main board view. */

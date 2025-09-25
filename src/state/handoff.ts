@@ -9,7 +9,7 @@ import {
 import { generateShiftCode, nextShiftWindow, ShiftSchedule } from '@/utils/shiftCodes';
 
 export type HandoffState = {
-  active?: Handoff;
+  active?: Handoff | undefined;
   begin(): Promise<void>;
   saveUpdates(patch: Partial<Handoff['updates']>): Promise<void>;
   startInPerson(seconds: number): Promise<void>;

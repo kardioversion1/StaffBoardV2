@@ -1,9 +1,9 @@
 export interface ZoneDef {
   id: string;
   name: string;
-  color?: string;
+  color?: string | undefined;
   /** Whether the zone is part of the patient care team area. */
-  pct?: boolean;
+  pct?: boolean | undefined;
 }
 
 function toSlugId(raw: string, fallback: string): string {

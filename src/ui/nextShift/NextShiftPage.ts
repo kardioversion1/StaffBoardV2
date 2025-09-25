@@ -8,7 +8,7 @@ import {
   publishNextDraft,
   type DraftShift,
 } from '@/state/nextShift';
-import { loadStaff, type Staff } from '@/state/staff';
+import { rosterStore, type Staff } from '@/state/staff';
 import { type Slot } from '@/slots';
 import { deriveShift } from '@/utils/time';
 import { showToast } from '@/ui/banner';
@@ -40,7 +40,8 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   await loadConfig();
   await seedZonesIfNeeded();
   const cfg = getConfig();
-  const staff = await loadStaff();
+  await rosterStore.load();
+  const staff = rosterStore.active();
   let draft: DraftShift | null = await loadNextDraft();
   if (!draft) {
     const startISO = nextShiftStartISO();
@@ -156,7 +157,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
           item.classList.toggle('selected', (item as HTMLElement).dataset.id === id);
         });
       });
-      el.addEventListener('dragstart', (ev) => {
+      (el as HTMLElement).addEventListener('dragstart', (ev: DragEvent) => {
         ev.dataTransfer?.setData('text/plain', id);
       });
     });
@@ -166,8 +167,8 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   searchInput.addEventListener('input', () => renderStaff(searchInput.value));
 
   root.querySelectorAll('.zone-drop').forEach((el) => {
-    el.addEventListener('dragover', (e) => e.preventDefault());
-    el.addEventListener('drop', (e) => {
+    (el as HTMLElement).addEventListener('dragover', (e: DragEvent) => e.preventDefault());
+    (el as HTMLElement).addEventListener('drop', (e: DragEvent) => {
       e.preventDefault();
       const id = e.dataTransfer?.getData('text/plain');
       if (id) {

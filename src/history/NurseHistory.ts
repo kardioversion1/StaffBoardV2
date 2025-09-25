@@ -1,7 +1,6 @@
-import { loadStaff } from '@/state/staff';
-import type { Staff } from '@/state/staff';
-import { findShiftsByStaff } from '@/history';
-import { exportNurseHistoryCSV } from '@/history/ui';
+import { rosterStore, type Staff } from '@/state/staff';
+import { findShiftsByStaff } from '@/state/history';
+import { exportNurseHistoryCSV } from '@/history';
 import { formatTime24h, formatDuration } from '@/utils/format';
 import './history.css';
 
@@ -38,7 +37,8 @@ export function renderNurseHistory(root: HTMLElement): void {
   let selected: string | null = null;
 
   (async () => {
-    staffList = await loadStaff();
+    await rosterStore.load();
+    staffList = rosterStore.all();
     render();
   })();
 
@@ -105,4 +105,5 @@ export function renderNurseHistory(root: HTMLElement): void {
     URL.revokeObjectURL(url);
   });
 }
+
 

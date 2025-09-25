@@ -29,7 +29,12 @@ vi.mock('@/state/nextShift', () => ({
 }));
 
 vi.mock('@/state/staff', () => ({
-  loadStaff: vi.fn().mockResolvedValue([{ id: 'n1', name: 'Alice', role: 'nurse' }]),
+  rosterStore: {
+    load: vi.fn().mockResolvedValue(undefined),
+    active: vi
+      .fn()
+      .mockReturnValue([{ id: 'n1', name: 'Alice', role: 'nurse', type: 'home' }]),
+  },
 }));
 
 vi.mock('@/seed', () => ({

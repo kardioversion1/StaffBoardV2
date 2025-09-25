@@ -1,5 +1,5 @@
 import { getConfig, saveConfig, mergeConfigDefaults } from '@/state/config';
-import { loadStaff, saveStaff, Staff } from '@/state/staff';
+import { rosterStore, type Staff } from '@/state/staff';
 import { createStaffId, ensureStaffId } from '@/utils/id';
 import { renderWeather } from './widgets';
 import { getUIConfig, saveUIConfig, applyUI } from '@/state/uiConfig';
@@ -38,7 +38,8 @@ export async function renderSettings(root: HTMLElement): Promise<void> {
 
 async function renderRosterPane() {
   const el = document.getElementById('roster-pane')!;
-  let staff = await loadStaff();
+  await rosterStore.load();
+  let staff = rosterStore.all();
   let selected: string | null = null;
 
   const renderList = (filter = '') => {
@@ -96,7 +97,7 @@ async function renderRosterPane() {
     (document.getElementById('staff-add') as HTMLButtonElement).onclick = async () => {
       const n = { id: createStaffId(), role: 'nurse', type: 'other' } as Staff;
       staff.push(n);
-      await saveStaff(staff);
+      await rosterStore.save(staff);
       renderList(search.value.toLowerCase());
     };
 
@@ -121,7 +122,7 @@ async function renderRosterPane() {
       try {
         const arr = JSON.parse(text) as Staff[];
         staff = arr.map((s) => ({ ...s, id: ensureStaffId(s.id) }));
-        await saveStaff(staff);
+        await rosterStore.save(staff);
         renderList(search.value.toLowerCase());
       } catch {
         alert('Invalid JSON');
@@ -172,7 +173,7 @@ async function renderRosterPane() {
       st.role = (document.getElementById('ne-role') as HTMLSelectElement).value as Staff['role'];
       st.type = (document.getElementById('ne-type') as HTMLSelectElement).value as any;
       st.notes = (document.getElementById('ne-notes') as HTMLTextAreaElement).value || undefined;
-      await saveStaff(staff);
+      await rosterStore.save(staff);
       renderList((document.getElementById('roster-search') as HTMLInputElement).value.toLowerCase());
       document.dispatchEvent(new Event('config-changed'));
     };

@@ -29,9 +29,7 @@ const { KS, STATE, store } = vi.hoisted(() => {
       handoff: '',
       version: 1,
     },
-    [KS.STAFF]: [
-      { id: 'n1', name: 'Alice', role: 'nurse', type: 'home' },
-    ],
+    [KS.STAFF]: [{ id: 'n1', name: 'Alice', role: 'nurse', type: 'home' }],
   };
   return { KS, STATE, store };
 });
@@ -106,3 +104,4 @@ describe('offline save queue', () => {
     expect(board.zones['Zone A'][0].nurseId).toBe('n1');
   });
 });
+

@@ -1,26 +1,19 @@
+import { KS } from './keys';
 import * as DB from '@/db';
-import { canonNurseType, type NurseType } from '@/domain/lexicon';
+import * as Server from '@/server';
 import { ensureStaffId } from '@/utils/id';
 import { ensureRole } from '@/utils/role';
-import { KS } from './keys';
-import * as Server from '@/server';
+import { canonNurseType, type NurseType } from '@/domain/lexicon';
 
-export type Staff = {
+/** Basic staff record. */
+export interface Staff {
   id: string;
   name?: string;
-  first?: string;
-  last?: string;
-  rf?: number;
-  role: 'nurse' | 'tech';
-  type: NurseType;
-  active?: boolean;
-  notes?: string;
-  prefDay?: boolean;
-  prefNight?: boolean;
-  eligibleRoles?: ('charge' | 'triage' | 'admin')[];
-  defaultZone?: string;
-  dtoEligible?: boolean;
-};
+  role: string; // e.g., 'nurse' or 'tech'
+  type?: NurseType | string; // e.g., 'home', 'traveler'
+  rf?: string;
+  active?: boolean; // optional flag for filtering active/inactive
+}
 
 type RawStaff = Omit<Staff, 'type'> & { type?: Staff['type'] | string | null };
 
@@ -49,7 +42,9 @@ export class RosterStore {
       if (remote) {
         await DB.set(KS.STAFF, remote);
       }
-    } catch {}
+    } catch {
+      /* ignore network errors */
+    }
 
     const data = (await DB.get<RawStaff[]>(KS.STAFF)) || [];
     let changed = false;
@@ -68,7 +63,9 @@ export class RosterStore {
     this.list = list.map(normalizeStaff);
     try {
       await Server.save('roster', this.list);
-    } catch {}
+    } catch {
+      /* ignore network errors */
+    }
     await DB.set(KS.STAFF, this.list);
     this.emit();
   }
@@ -110,3 +107,4 @@ export async function loadStaff(): Promise<Staff[]> {
 export async function saveStaff(list: Staff[]): Promise<void> {
   await rosterStore.save(list);
 }
+

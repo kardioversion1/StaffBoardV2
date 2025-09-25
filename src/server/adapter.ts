@@ -32,7 +32,7 @@ const withAuth = (headers: HeadersInit = {}): HeadersInit => (
 
 export const health: ServerAPI['health'] = async () => {
   try {
-    const res = await fetch('/api.php?action=health', {
+    const res = await fetch('/api.php?action=ping', {
       cache: 'no-store',
       headers: withAuth(),
     });

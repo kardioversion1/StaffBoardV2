@@ -23,7 +23,8 @@ export function createIncomingPanel(): HTMLElement {
 export async function renderIncoming(
   active: ActiveBoard,
   staffList: Staff[],
-  save: () => void
+  save: () => void,
+  beforeChange: () => void = () => {}
 ) {
   const cont = document.getElementById('incoming')!;
   cont.innerHTML = '';
@@ -42,6 +43,7 @@ export async function renderIncoming(
       const diff = toMin(s.startHHMM) - now;
       if (diff <= 40 && diff >= 0) {
         if (!active.incoming.some((i) => i.nurseId === s.nurseId)) {
+          beforeChange();
           active.incoming.push({ nurseId: s.nurseId, eta: s.startHHMM });
           changed = true;
         }
@@ -70,13 +72,21 @@ export async function renderIncoming(
       });
       const toggleArrived = () => {
         if (STATE.locked) return;
+        beforeChange();
         inc.arrived = !inc.arrived;
         const cfg = getConfig();
         const moved = autoAssignArrivals(active, cfg);
         save();
-        void renderIncoming(active, staffList, save);
+        void renderIncoming(active, staffList, save, beforeChange);
         if (moved) {
-          renderAssignments(active, cfg, staffList, save, document.getElementById('panel')!);
+          renderAssignments(
+            active,
+            cfg,
+            staffList,
+            save,
+            document.getElementById('panel')!,
+            beforeChange
+          );
         }
       };
       card.addEventListener('click', toggleArrived);
@@ -114,9 +124,10 @@ export async function renderIncoming(
         const saveBtn = overlay.querySelector('#inc-save') as HTMLButtonElement | null;
         const cancelBtn = overlay.querySelector('#inc-cancel') as HTMLButtonElement | null;
         saveBtn?.addEventListener('click', () => {
+          beforeChange();
           active.incoming.push({ nurseId: id, eta: (etaEl?.value || '').trim() });
           save();
-          void renderIncoming(active, staffList, save);
+          void renderIncoming(active, staffList, save, beforeChange);
           overlay.remove();
         });
         cancelBtn?.addEventListener('click', () => overlay.remove());

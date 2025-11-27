@@ -43,6 +43,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   await rosterStore.load();
   const staff = rosterStore.active();
   let draft: DraftShift | null = await loadNextDraft();
+  let undoStack: DraftShift[] = [];
   if (!draft) {
     const startISO = nextShiftStartISO();
     const dateISO = startISO.slice(0, 10);
@@ -104,6 +105,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
             <label>End Time <input type="datetime-local" id="next-end" value="${
               draft.endAtISO || ''
             }"></label>
+            <button id="next-undo" class="btn" disabled>Undo last change</button>
             <button id="next-save" class="btn">Save Draft</button>
             <button id="next-publish" class="btn">Publish</button>
           </div>
@@ -117,9 +119,52 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   const searchInput = document.getElementById('next-search') as HTMLInputElement;
   const goLiveInput = document.getElementById('next-go-live') as HTMLInputElement;
   const endInput = document.getElementById('next-end') as HTMLInputElement;
+  const undoBtn = document.getElementById('next-undo') as HTMLButtonElement;
 
   let selected: string | null = null;
   let publishTimer: number | undefined;
+
+  const updateUndo = () => {
+    undoBtn.disabled = undoStack.length === 0;
+  };
+
+  const pushUndo = () => {
+    if (!draft) return;
+    undoStack.push(structuredClone(draft));
+    updateUndo();
+  };
+
+  const applyDraftToUI = (next: DraftShift): void => {
+    draft = structuredClone(next);
+    goLiveInput.value = draft.publishAtISO || '';
+    endInput.value = draft.endAtISO || '';
+    for (const z of cfg.zones || []) {
+      const el = document.getElementById(`zone-${z.id}`) as HTMLElement | null;
+      const slot = draft.zones?.[z.name]?.[0];
+      if (!el) continue;
+      const name = slot
+        ? staff.find((s) => s.id === slot.nurseId)?.name || slot.nurseId
+        : '';
+      el.textContent = name;
+      if (slot?.nurseId) {
+        el.dataset.nurseId = slot.nurseId;
+      } else {
+        delete el.dataset.nurseId;
+      }
+      el.classList.toggle('empty', !slot);
+    }
+    updateUndo();
+  };
+
+  applyDraftToUI(draft);
+
+  undoBtn.addEventListener('click', () => {
+    const previous = undoStack.pop();
+    updateUndo();
+    if (!previous) return;
+    applyDraftToUI(previous);
+    showToast('Reverted last draft change');
+  });
 
   function renderStaff(filter = ''): void {
     const norm = filter.toLowerCase();
@@ -172,21 +217,36 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
       e.preventDefault();
       const id = e.dataTransfer?.getData('text/plain');
       if (id) {
+        pushUndo();
         const s = staff.find((st) => st.id === id);
-        (el as HTMLElement).textContent = s?.name || id;
-        (el as HTMLElement).dataset.nurseId = id;
+        const target = el as HTMLElement;
+        target.textContent = s?.name || id;
+        target.dataset.nurseId = id;
+        target.classList.remove('empty');
+        if (!draft.zones[`${target.dataset.zone}`]) {
+          draft.zones[`${target.dataset.zone}`] = [];
+        }
+        draft.zones[target.dataset.zone || ''] = [{ nurseId: id }];
+        updateUndo();
       }
     });
   });
 
   root.querySelectorAll('.zone-clear').forEach((btn) => {
     btn.addEventListener('click', () => {
+      pushUndo();
       const id = (btn as HTMLElement).dataset.zoneId;
       const zone = document.getElementById(`zone-${id}`) as HTMLElement | null;
       if (zone) {
         zone.textContent = '';
         delete zone.dataset.nurseId;
+        zone.classList.add('empty');
       }
+      const zoneDef = (cfg.zones || []).find((z) => String(z.id) === id);
+      if (zoneDef && draft?.zones) {
+        draft.zones[zoneDef.name] = [];
+      }
+      updateUndo();
     });
   });
 
@@ -234,8 +294,10 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   }
 
   document.getElementById('next-save')?.addEventListener('click', async () => {
+    pushUndo();
     draft = gatherDraft();
     await saveNextDraft(draft);
+    applyDraftToUI(draft);
     schedulePublish();
     if (draft.publishAtISO) {
       const start = draft.publishAtISO.slice(11, 16);
@@ -249,8 +311,10 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   document
     .getElementById('next-publish')
     ?.addEventListener('click', async () => {
+      pushUndo();
       draft = gatherDraft();
       await saveNextDraft(draft);
+      applyDraftToUI(draft);
       if (publishTimer) clearTimeout(publishTimer);
       try {
         await publishNextDraft();

@@ -364,9 +364,13 @@ function manageSlot(
 
   overlay.querySelector('#mg-save')!.addEventListener('click', async () => {
     beforeChange();
-      const rfVal = (overlay.querySelector('#mg-rf') as HTMLInputElement).value.trim();
-      if (rfVal) st.rf = Number(rfVal);
-      else delete st.rf;
+
+    const rfVal = (overlay.querySelector('#mg-rf') as HTMLInputElement).value.trim();
+    if (rfVal) {
+      st.rf = Number(rfVal);
+    } else {
+      delete st.rf;
+    }
 
     const studVal = (overlay.querySelector('#mg-student') as HTMLInputElement).value.trim();
     slot.student = studVal ? studVal : undefined;
@@ -387,11 +391,13 @@ function manageSlot(
       if (moved) showBanner('Previous assignment cleared');
     }
 
-      if (typeof rosterStore.save === 'function') {
-        await rosterStore.save(staffList);
-      }
+    if (typeof rosterStore.save === 'function') {
+      await rosterStore.save(staffList);
+    }
+
     save();
     overlay.remove();
     rerender();
   });
 }
+

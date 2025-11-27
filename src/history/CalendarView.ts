@@ -46,8 +46,12 @@ export function renderCalendarView(root: HTMLElement): void {
   const exportBtn = root.querySelector('#hist-export') as HTMLButtonElement;
   let loaded: PublishedShiftSnapshot[] = [];
 
+  listEl.classList.add('muted');
+  listEl.textContent = 'No history yet. Load or save a snapshot to get started.';
+
   function renderTable(snaps: PublishedShiftSnapshot[]): void {
     listEl.textContent = '';
+    listEl.classList.remove('muted');
     if (snaps.length === 0) {
       const div = document.createElement('div');
       div.className = 'muted';

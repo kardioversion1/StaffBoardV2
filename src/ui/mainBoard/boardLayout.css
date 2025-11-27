@@ -112,16 +112,18 @@
   position: absolute;
   top: 8px;
   right: 8px;
-  background: none;
-  border: none;
+  padding: 6px 10px;
   cursor: pointer;
 }
 
 .zone-card__add {
   position: absolute;
-  background: none;
-  border: none;
+  padding: 8px 12px;
+  border-radius: 10px;
   cursor: pointer;
+  background: var(--tab);
+  border: 1px solid var(--line);
+  color: var(--text-high);
 }
 
 .zone-card__add--small {
@@ -131,14 +133,50 @@
 }
 
 .zone-card__add--large {
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 2rem;
+  position: static;
+  transform: none;
+  margin-top: 10px;
+  font-size: 1rem;
+}
+
+.zone-card__edit {
+  background: var(--tab);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text-high);
+}
+
+.zone-card__edit:hover,
+.zone-card__add:hover {
+  background: var(--control);
 }
 
 .recent-assignment {
   animation: zone-glow 1s ease-in-out infinite alternate;
+}
+
+.zone-card--empty {
+  border-style: dashed;
+}
+
+.zone-card__empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+}
+
+.nurse-row--hidden {
+  display: none;
+}
+
+.nurse-card[data-role='nurse'] {
+  border-left: 4px solid var(--zone-bg-2);
+}
+
+.nurse-card[data-role='tech'] {
+  border-left: 4px solid var(--zone-bg-6);
 }
 
 @keyframes zone-glow {

@@ -19,6 +19,7 @@ import { seedDemoHistory } from '@/history/seed';
 import { hhmmNowLocal, deriveShift } from '@/utils/time';
 import { renderHeader } from '@/ui/header';
 import { renderTabs, activeTab, initTabs } from '@/ui/tabs';
+import { renderPageIntro } from '@/ui/pageIntro';
 import { renderBoard } from '@/ui/board';
 import { renderSettings } from '@/ui/settings';
 import { renderHistoryTab } from '@/ui/historyTab';
@@ -35,6 +36,7 @@ export async function renderAll() {
   applyTheme();
   await renderHeader();
   renderTabs();
+  renderPageIntro(activeTab());
   const root = document.getElementById('panel');
   if (!root) {
     console.error('Missing #panel element');

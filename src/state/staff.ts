@@ -4,16 +4,7 @@ import * as Server from '@/server';
 import { ensureStaffId } from '@/utils/id';
 import { ensureRole } from '@/utils/role';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
-
-/** Basic staff record. */
-export interface Staff {
-  id: string;
-  name?: string;
-  role: string; // e.g., 'nurse' or 'tech'
-  type?: NurseType | string; // e.g., 'home', 'traveler'
-  rf?: string;
-  active?: boolean; // optional flag for filtering active/inactive
-}
+import type { Staff } from './staff/types';
 
 type RawStaff = Omit<Staff, 'type'> & { type?: Staff['type'] | string | null };
 
@@ -107,4 +98,6 @@ export async function loadStaff(): Promise<Staff[]> {
 export async function saveStaff(list: Staff[]): Promise<void> {
   await rosterStore.save(list);
 }
+
+export type { Staff } from './staff/types';
 

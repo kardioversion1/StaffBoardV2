@@ -172,7 +172,9 @@ async function renderRosterPane() {
       st.name = `${st.first} ${st.last}`.trim();
       st.role = (document.getElementById('ne-role') as HTMLSelectElement).value as Staff['role'];
       st.type = (document.getElementById('ne-type') as HTMLSelectElement).value as any;
-      st.notes = (document.getElementById('ne-notes') as HTMLTextAreaElement).value || undefined;
+      const notesVal = (document.getElementById('ne-notes') as HTMLTextAreaElement).value;
+      if (notesVal) st.notes = notesVal;
+      else delete st.notes;
       await rosterStore.save(staff);
       renderList((document.getElementById('roster-search') as HTMLInputElement).value.toLowerCase());
       document.dispatchEvent(new Event('config-changed'));

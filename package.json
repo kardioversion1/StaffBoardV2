@@ -11,9 +11,6 @@
     "precheck": "tsc --noEmit",
     "test": "vitest run"
   },
-  "vitest": {
-    "setupFiles": ["tests/setup-fetch.ts"]
-  },
   "devDependencies": {
     "typescript": "5.5.4",
     "vite": "5.3.5",

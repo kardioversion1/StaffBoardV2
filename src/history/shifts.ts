@@ -10,11 +10,11 @@ export interface Assignment {
   role: RoleKind;
   zone: string;
   startISO: string;
-  endISO?: string;
+  endISO?: string | undefined;
   dto?: {
     effectiveISO: string;
     offgoingUntilISO: string;
-  };
+  } | undefined;
 }
 
 export interface HuddleChecklistItem {
@@ -42,20 +42,20 @@ export interface PublishedShiftSnapshot {
   shift: ShiftKind;
   publishedAtISO: string;
   publishedBy: string;
-  charge?: string;
-  triage?: string;
-  admin?: string;
+  charge?: string | undefined;
+  triage?: string | undefined;
+  admin?: string | undefined;
   zoneAssignments: Assignment[];
   incoming: string[];
   offgoing: string[];
   comments: string;
-  huddle?: HuddleRecord;
+  huddle?: HuddleRecord | undefined;
   audit: {
     createdAtISO: string;
     createdBy: string;
-    mutatedAtISO?: string;
-    mutatedBy?: string;
-    reason?: string;
+    mutatedAtISO?: string | undefined;
+    mutatedBy?: string | undefined;
+    reason?: string | undefined;
   };
 }
 

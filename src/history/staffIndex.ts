@@ -14,10 +14,10 @@ export interface NurseShiftIndexEntry {
   dateISO: string;
   shift: ShiftKind;
   zone: string;
-  previousZone?: string;
+  previousZone?: string | undefined;
   startISO: string;
-  endISO?: string;
-  dto?: boolean;
+  endISO?: string | undefined;
+  dto?: boolean | undefined;
 }
 
 /** Index staff assignments for quick lookup by nurse. */

@@ -14,9 +14,14 @@ export function createOffgoingPanel(): HTMLElement {
 }
 
 /** Render recently offgoing staff. */
-export function renderOffgoing(active: ActiveBoard, save: () => void): void {
+export function renderOffgoing(
+  active: ActiveBoard,
+  beforeChange: () => void = () => {},
+  save: () => void
+): void {
   const cont = document.getElementById('offgoing')!;
   const cutoff = Date.now() - 60 * 60 * 1000;
+  const original = active.offgoing?.slice();
   active.offgoing = (active.offgoing || []).filter((o) => o.ts > cutoff);
 
   cont.innerHTML = '';
@@ -24,6 +29,9 @@ export function renderOffgoing(active: ActiveBoard, save: () => void): void {
     const div = document.createElement('div');
     div.textContent = labelFromId(o.nurseId);
     cont.appendChild(div);
+  }
+  if (JSON.stringify(original) !== JSON.stringify(active.offgoing)) {
+    beforeChange();
   }
   save();
 }

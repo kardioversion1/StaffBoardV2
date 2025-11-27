@@ -11,7 +11,6 @@ import {
 } from '@/slots';
 import { showBanner } from '@/ui/banner';
 import { openAssignDialog } from '@/ui/assignDialog';
-import type { ParentNode } from 'happy-dom';
 import { renderIncoming } from './incoming';
 
 type RoleFilter = 'all' | 'nurse' | 'tech';

@@ -4,7 +4,7 @@ import * as Server from '@/server';
 import { ensureStaffId } from '@/utils/id';
 import { ensureRole } from '@/utils/role';
 import { canonNurseType, type NurseType } from '@/domain/lexicon';
-import type { Staff } from './types';
+import type { Staff } from './staff/types';
 
 type RawStaff = Omit<Staff, 'type'> & { type?: Staff['type'] | string | null };
 
@@ -99,5 +99,4 @@ export async function saveStaff(list: Staff[]): Promise<void> {
   await rosterStore.save(list);
 }
 
-export type { Staff } from './types';
-
+export type { Staff } from './staff/types';

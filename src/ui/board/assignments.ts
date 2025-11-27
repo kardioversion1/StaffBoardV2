@@ -1,12 +1,6 @@
-import {
-  STATE,
-  saveStaff,
-  saveConfig,
-  type ActiveBoard,
-  type Config,
-  type Slot,
-  type Staff,
-} from '@/state';
+import * as State from '@/state';
+import type { ActiveBoard, Config, Slot, Staff } from '@/state';
+import { rosterStore } from '@/state/staff';
 import { labelFromId } from '@/utils/names';
 import { nurseTile } from '../nurseTile';
 import {
@@ -19,6 +13,9 @@ import { showBanner } from '@/ui/banner';
 import { openAssignDialog } from '@/ui/assignDialog';
 import type { ParentNode } from 'happy-dom';
 import { renderIncoming } from './incoming';
+
+type RoleFilter = 'all' | 'nurse' | 'tech';
+let roleFilter: RoleFilter = 'all';
 
 /** Default end time 12h after start. */
 export const defaultEnd = (start: string): string => {
@@ -34,7 +31,17 @@ export function createAssignmentsPanel(): HTMLElement {
   const section = document.createElement('section');
   section.className = 'panel';
   section.innerHTML = `
-    <h3>Assignments</h3>
+    <div class="panel-header">
+      <div>
+        <h3>Assignments</h3>
+        <p class="muted small">Place staff by zone and highlight empty slots.</p>
+      </div>
+      <div class="role-filter" role="group" aria-label="Filter assignments">
+        <button class="btn btn-pill" data-role-filter="all">All staff</button>
+        <button class="btn btn-pill" data-role-filter="nurse">RNs</button>
+        <button class="btn btn-pill" data-role-filter="tech">Techs</button>
+      </div>
+    </div>
     <div id="zones" class="zones-grid"></div>
   `;
   return section;
@@ -46,7 +53,8 @@ export function renderAssignments(
   cfg: Config,
   staff: Staff[],
   save: () => void,
-  root: ParentNode
+  root: ParentNode,
+  beforeChange: () => void = () => {}
 ): void {
   const pctCont = root.querySelector('#pct-zones') as HTMLElement | null;
   const cont = root.querySelector('#zones') as HTMLElement | null;
@@ -58,7 +66,24 @@ export function renderAssignments(
   cont.innerHTML = '';
   pctCont.style.minHeight = '40px';
   cont.style.minHeight = '40px';
+  const roleButtons = Array.from(
+    (root as ParentNode).querySelectorAll<HTMLButtonElement>('[data-role-filter]')
+  );
+  roleButtons.forEach((btn) => {
+    const value = (btn.dataset.roleFilter as RoleFilter) || 'all';
+    btn.classList.toggle('active', value === roleFilter);
+    btn.onclick = () => {
+      roleFilter = value;
+      renderAssignments(active, cfg, staff, save, root, beforeChange);
+    };
+  });
   const zones: any[] = cfg.zones || [];
+
+  if (zones.length === 0) {
+    cont.innerHTML = '<div class="muted">No zones configured. Add zones from Settings.</div>';
+    pctCont.innerHTML = '';
+    return;
+  }
 
   zones.forEach((z: any, i: number) => {
     const zName = z.name;
@@ -88,15 +113,16 @@ export function renderAssignments(
           : rawEnd;
         const slot: Slot = {
           nurseId,
-          startHHMM: STATE.clockHHMM,
-          endTimeOverrideHHMM: end || defaultEnd(STATE.clockHHMM),
+          startHHMM: State.STATE.clockHHMM,
+          endTimeOverrideHHMM: end || defaultEnd(State.STATE.clockHHMM),
         };
+        beforeChange();
         const moved = upsertSlot(active, { zone: z.name }, slot);
         if (moved) showBanner('Previous assignment cleared');
         active.incoming = active.incoming.filter((i) => i.nurseId !== nurseId);
         save();
-        renderIncoming(active, staff, save);
-        renderAssignments(active, cfg, staff, save, root);
+        renderIncoming(active, staff, save, beforeChange);
+        renderAssignments(active, cfg, staff, save, root, beforeChange);
         return;
       }
 
@@ -104,11 +130,12 @@ export function renderAssignments(
       if (!zoneIdxStr) return;
       const fromIdx = Number(zoneIdxStr);
       if (isNaN(fromIdx) || fromIdx === i) return;
+      beforeChange();
       const [moved] = cfg.zones.splice(fromIdx, 1);
       moved.pct = z.pct;
       cfg.zones.splice(i, 0, moved);
-      await saveConfig({ zones: cfg.zones });
-      renderAssignments(active, cfg, staff, save, root);
+      await State.saveConfig({ zones: cfg.zones });
+      renderAssignments(active, cfg, staff, save, root, beforeChange);
     });
 
     const explicit = z.color || cfg.zoneColors?.[zName];
@@ -125,16 +152,22 @@ export function renderAssignments(
     section.appendChild(title);
 
     const editBtn = document.createElement('button');
-    editBtn.textContent = '⚙';
+    editBtn.textContent = 'Zone settings';
     editBtn.className = 'zone-card__edit';
-    editBtn.title = 'Edit zone';
+    editBtn.title = 'Rename or recolor this zone';
+    editBtn.setAttribute('aria-label', `Edit settings for ${zName}`);
     editBtn.addEventListener('click', async () => {
-      const val = prompt('Rename zone', z.name)?.trim();
+      const renamePrompt =
+        typeof window !== 'undefined' && typeof window.prompt === 'function'
+          ? window.prompt('Rename zone', z.name)
+          : null;
+      const val = renamePrompt?.trim();
       if (val && val !== z.name) {
         if (cfg.zones.some((zz) => zz.name === val)) {
           alert('A zone with that name already exists.');
           return;
         }
+        beforeChange();
         const idx = cfg.zones.findIndex((zz) => zz.name === z.name);
         cfg.zones[idx].name = val;
         if (cfg.zoneColors && cfg.zoneColors[z.name]) {
@@ -143,7 +176,7 @@ export function renderAssignments(
         }
         active.zones[val] = active.zones[z.name] || [];
         delete active.zones[z.name];
-        await saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
+        await State.saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
         document.dispatchEvent(new Event('config-changed'));
         await save();
         renderAssignments(active, cfg, staff, save, root);
@@ -168,6 +201,9 @@ export function renderAssignments(
 
       const row = document.createElement('div');
       row.className = 'nurse-row';
+      const isHidden =
+        roleFilter !== 'all' && (st.role || 'nurse').toLowerCase() !== roleFilter;
+      row.classList.toggle('nurse-row--hidden', isHidden);
 
       const tileWrapper = document.createElement('div');
       tileWrapper.innerHTML = nurseTile(s, {
@@ -193,11 +229,12 @@ export function renderAssignments(
           st!,
           staff,
           save,
-          () => renderAssignments(active, cfg, staff, save, root),
+          () => renderAssignments(active, cfg, staff, save, root, beforeChange),
           z.name,
           idx,
           active,
-          cfg
+          cfg,
+          beforeChange
         )
       );
 
@@ -206,18 +243,29 @@ export function renderAssignments(
     });
 
     const hasSlots = (active.zones[zName] || []).length > 0;
+    if (!hasSlots) {
+      const empty = document.createElement('div');
+      empty.className = 'zone-card__empty';
+      empty.textContent = 'No staff assigned';
+      body.appendChild(empty);
+      section.classList.add('zone-card--empty');
+    } else {
+      section.classList.remove('zone-card--empty');
+    }
     const addBtn = document.createElement('button');
-    addBtn.textContent = '+';
+    addBtn.textContent = '+ Add staff';
     addBtn.className = hasSlots
       ? 'zone-card__add zone-card__add--small'
       : 'zone-card__add zone-card__add--large';
-    addBtn.title = 'Add staff';
+    addBtn.title = 'Open the staff picker';
+    addBtn.setAttribute('aria-label', `Add staff to ${zName}`);
     addBtn.addEventListener('click', () => {
       openAssignDialog(staff, (id) => {
+        beforeChange();
         const slot: Slot = {
           nurseId: id,
-          startHHMM: STATE.clockHHMM,
-          endTimeOverrideHHMM: defaultEnd(STATE.clockHHMM),
+          startHHMM: State.STATE.clockHHMM,
+          endTimeOverrideHHMM: defaultEnd(State.STATE.clockHHMM),
         };
         const moved = upsertSlot(active, { zone: z.name }, slot);
         if (moved) showBanner('Previous assignment cleared');
@@ -243,9 +291,10 @@ export function renderAssignments(
       if (!zoneIdxStr) return;
       const idx = Number(zoneIdxStr);
       if (isNaN(idx)) return;
+      beforeChange();
       cfg.zones[idx].pct = pct;
-      await saveConfig({ zones: cfg.zones });
-      renderAssignments(active, cfg, staff, save, root);
+      await State.saveConfig({ zones: cfg.zones });
+      renderAssignments(active, cfg, staff, save, root, beforeChange);
     });
   };
 
@@ -262,11 +311,12 @@ function manageSlot(
   zone: string,
   index: number,
   board: ActiveBoard,
-  cfg: Config
+  cfg: Config,
+  beforeChange: () => void = () => {}
 ): void {
-  const startValue = slot.startHHMM || STATE.clockHHMM;
+  const startValue = slot.startHHMM || State.STATE.clockHHMM;
   const pad2 = (n: number) => n.toString().padStart(2, '0');
-  const duration = cfg.shiftDurations?.[STATE.shift] ?? 12;
+  const duration = cfg.shiftDurations?.[State.STATE.shift] ?? 12;
   let endValue = slot.endTimeOverrideHHMM && /^\d{4}$/.test(slot.endTimeOverrideHHMM)
     ? slot.endTimeOverrideHHMM.replace(/(\d{2})(\d{2})/, '$1:$2')
     : slot.endTimeOverrideHHMM || '';
@@ -314,6 +364,7 @@ function manageSlot(
   overlay.querySelector('#mg-cancel')!.addEventListener('click', () => overlay.remove());
 
   overlay.querySelector('#mg-save')!.addEventListener('click', async () => {
+    beforeChange();
     const rfVal = (overlay.querySelector('#mg-rf') as HTMLInputElement).value.trim();
     st.rf = rfVal ? Number(rfVal) : undefined;
 
@@ -336,7 +387,9 @@ function manageSlot(
       if (moved) showBanner('Previous assignment cleared');
     }
 
-    await saveStaff(staffList);
+    if (typeof rosterStore.save === 'function') {
+      await rosterStore.save();
+    }
     save();
     overlay.remove();
     rerender();

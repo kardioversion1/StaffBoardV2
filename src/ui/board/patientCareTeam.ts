@@ -25,7 +25,8 @@ export function renderLeadership(
   staff: Staff[],
   save: () => void,
   root: ParentNode,
-  rerender: () => void
+  rerender: () => void,
+  beforeChange: () => void = () => {}
 ): void {
   const cfg = getConfig();
   const chargeEl = root.querySelector('#slot-charge') as HTMLElement | null;
@@ -47,11 +48,11 @@ export function renderLeadership(
   secEl.style.display = active.admin?.nurseId ? '' : 'none';
 
   chargeEl.onclick = () =>
-    assignLeadDialog(active, staff, save, 'charge', rerender);
+    assignLeadDialog(active, staff, save, 'charge', rerender, beforeChange);
   triageEl.onclick = () =>
-    assignLeadDialog(active, staff, save, 'triage', rerender);
+    assignLeadDialog(active, staff, save, 'triage', rerender, beforeChange);
   secEl.onclick = () =>
-    assignLeadDialog(active, staff, save, 'admin', rerender);
+    assignLeadDialog(active, staff, save, 'admin', rerender, beforeChange);
 }
 
 function assignLeadDialog(
@@ -59,7 +60,8 @@ function assignLeadDialog(
   staffList: Staff[],
   save: () => void,
   role: 'charge' | 'triage' | 'admin',
-  rerender: () => void
+  rerender: () => void,
+  beforeChange: () => void
 ): void {
   const overlay = document.createElement('div');
   overlay.className = 'manage-overlay';
@@ -95,6 +97,7 @@ function assignLeadDialog(
   );
   overlay.querySelector('#lead-save')!.addEventListener('click', () => {
     const id = sel.value;
+    beforeChange();
     if (id) {
       const moved = upsertSlot(board, role, { nurseId: id });
       if (moved) showBanner('Previous assignment cleared');

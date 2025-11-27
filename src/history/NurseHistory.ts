@@ -1,6 +1,6 @@
 import { rosterStore, type Staff } from '@/state/staff';
 import { findShiftsByStaff } from '@/history';
-import { exportNurseHistoryCSV } from '@/history';
+import { exportNurseHistoryCSV } from '@/history/ui';
 import { formatTime24h, formatDuration } from '@/utils/format';
 import './history.css';
 
@@ -105,5 +105,3 @@ export function renderNurseHistory(root: HTMLElement): void {
     URL.revokeObjectURL(url);
   });
 }
-
-

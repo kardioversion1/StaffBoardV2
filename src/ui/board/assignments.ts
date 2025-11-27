@@ -3,12 +3,7 @@ import type { ActiveBoard, Config, Slot, Staff } from '@/state';
 import { rosterStore } from '@/state/staff';
 import { labelFromId } from '@/utils/names';
 import { nurseTile } from '../nurseTile';
-import {
-  startBreak,
-  endBreak,
-  moveSlot,
-  upsertSlot,
-} from '@/slots';
+import { startBreak, endBreak, moveSlot, upsertSlot } from '@/slots';
 import { showBanner } from '@/ui/banner';
 import { openAssignDialog } from '@/ui/assignDialog';
 import { renderIncoming } from './incoming';
@@ -65,8 +60,9 @@ export function renderAssignments(
   cont.innerHTML = '';
   pctCont.style.minHeight = '40px';
   cont.style.minHeight = '40px';
+
   const roleButtons = Array.from(
-    (root as ParentNode).querySelectorAll<HTMLButtonElement>('[data-role-filter]')
+    (root as ParentNode).querySelectorAll<HTMLButtonElement>('[data-role-filter]'),
   );
   roleButtons.forEach((btn) => {
     const value = (btn.dataset.roleFilter as RoleFilter) || 'all';
@@ -76,6 +72,7 @@ export function renderAssignments(
       renderAssignments(active, cfg, staff, save, root, beforeChange);
     };
   });
+
   const zones: any[] = cfg.zones || [];
 
   if (zones.length === 0) {
@@ -90,6 +87,7 @@ export function renderAssignments(
     section.className = 'zone-card';
     section.setAttribute('data-testid', 'zone-card');
     section.draggable = true;
+
     section.addEventListener('dragstart', (e) => {
       const ev = e as DragEvent;
       ev.dataTransfer?.setData('zone-index', String(i));
@@ -107,9 +105,10 @@ export function renderAssignments(
       const nurseId = dt?.getData('incoming-id');
       if (nurseId) {
         const rawEnd = prompt('Shift end time (HH:MM)?')?.trim();
-        const end = rawEnd && /^\d{4}$/.test(rawEnd)
-          ? rawEnd.replace(/(\d{2})(\d{2})/, '$1:$2')
-          : rawEnd;
+        const end =
+          rawEnd && /^\d{4}$/.test(rawEnd)
+            ? rawEnd.replace(/(\d{2})(\d{2})/, '$1:$2')
+            : rawEnd;
         const slot: Slot = {
           nurseId,
           startHHMM: State.STATE.clockHHMM,
@@ -213,6 +212,7 @@ export function renderAssignments(
       } as Staff);
       const tile = tileWrapper.firstElementChild as HTMLElement;
       row.appendChild(tile);
+
       if (s.assignedTs && Date.now() - s.assignedTs < 15 * 60 * 1000) {
         tile.classList.add('recent-assignment');
         const remaining = 15 * 60 * 1000 - (Date.now() - s.assignedTs);
@@ -233,8 +233,8 @@ export function renderAssignments(
           idx,
           active,
           cfg,
-          beforeChange
-        )
+          beforeChange,
+        ),
       );
 
       row.appendChild(btn);
@@ -251,6 +251,7 @@ export function renderAssignments(
     } else {
       section.classList.remove('zone-card--empty');
     }
+
     const addBtn = document.createElement('button');
     addBtn.textContent = '+ Add staff';
     addBtn.className = hasSlots
@@ -272,6 +273,7 @@ export function renderAssignments(
         renderAssignments(active, cfg, staff, save, root);
       });
     });
+
     if (hasSlots) {
       section.appendChild(addBtn);
     } else {
@@ -311,14 +313,16 @@ function manageSlot(
   index: number,
   board: ActiveBoard,
   cfg: Config,
-  beforeChange: () => void = () => {}
+  beforeChange: () => void = () => {},
 ): void {
   const startValue = slot.startHHMM || State.STATE.clockHHMM;
   const pad2 = (n: number) => n.toString().padStart(2, '0');
   const duration = cfg.shiftDurations?.[State.STATE.shift] ?? 12;
-  let endValue = slot.endTimeOverrideHHMM && /^\d{4}$/.test(slot.endTimeOverrideHHMM)
-    ? slot.endTimeOverrideHHMM.replace(/(\d{2})(\d{2})/, '$1:$2')
-    : slot.endTimeOverrideHHMM || '';
+  let endValue =
+    slot.endTimeOverrideHHMM && /^\d{4}$/.test(slot.endTimeOverrideHHMM)
+      ? slot.endTimeOverrideHHMM.replace(/(\d{2})(\d{2})/, '$1:$2')
+      : slot.endTimeOverrideHHMM || '';
+
   if (!endValue && startValue) {
     const [sh, sm] = startValue.split(':').map(Number);
     const end = new Date();
@@ -342,12 +346,21 @@ function manageSlot(
           <label>RF <input id="mg-rf" type="number" value="${st.rf ?? ''}"></label>
         </div>
         <div class="manage-col">
-          <label class="mod"><span class="icon">🎓</span><input id="mg-student" placeholder="Student" value="${typeof slot.student === 'string' ? slot.student : ''}"></label>
-          <label class="mod"><span class="icon">☕</span><input type="checkbox" id="mg-break" ${slot.break?.active ? 'checked' : ''}/> Break</label>
-          <label class="mod"><span class="icon">🔥</span><input type="checkbox" id="mg-high" ${slot.highAcuityUntil && slot.highAcuityUntil > Date.now() ? 'checked' : ''}/> High acuity</label>
+          <label class="mod"><span class="icon">🎓</span><input id="mg-student" placeholder="Student" value="${
+            typeof slot.student === 'string' ? slot.student : ''
+          }"></label>
+          <label class="mod"><span class="icon">☕</span><input type="checkbox" id="mg-break" ${
+            slot.break?.active ? 'checked' : ''
+          }/> Break</label>
+          <label class="mod"><span class="icon">🔥</span><input type="checkbox" id="mg-high" ${
+            slot.highAcuityUntil && slot.highAcuityUntil > Date.now() ? 'checked' : ''
+          }/> High acuity</label>
           <label class="mod">Zone <select id="mg-zone">
             ${(cfg.zones || [])
-              .map((z: any) => `<option value="${z.name}"${z.name === zone ? ' selected' : ''}>${z.name}</option>`)
+              .map(
+                (z: any) =>
+                  `<option value="${z.name}"${z.name === zone ? ' selected' : ''}>${z.name}</option>`,
+              )
               .join('')}
           </select></label>
         </div>
@@ -364,9 +377,14 @@ function manageSlot(
 
   overlay.querySelector('#mg-save')!.addEventListener('click', async () => {
     beforeChange();
-      const rfVal = (overlay.querySelector('#mg-rf') as HTMLInputElement).value.trim();
-      if (rfVal) st.rf = Number(rfVal);
-      else delete st.rf;
+
+    // RF value: store number if present, otherwise remove rf
+    const rfVal = (overlay.querySelector('#mg-rf') as HTMLInputElement).value.trim();
+    if (rfVal) {
+      st.rf = Number(rfVal);
+    } else {
+      delete st.rf;
+    }
 
     const studVal = (overlay.querySelector('#mg-student') as HTMLInputElement).value.trim();
     slot.student = studVal ? studVal : undefined;
@@ -387,9 +405,10 @@ function manageSlot(
       if (moved) showBanner('Previous assignment cleared');
     }
 
-      if (typeof rosterStore.save === 'function') {
-        await rosterStore.save(staffList);
-      }
+    if (typeof rosterStore.save === 'function') {
+      await rosterStore.save(staffList);
+    }
+
     save();
     overlay.remove();
     rerender();

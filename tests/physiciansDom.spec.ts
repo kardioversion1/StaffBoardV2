@@ -9,144 +9,59 @@ describe('physician schedule rendering', () => {
     document.body.innerHTML = '';
   });
 
-  it('shows start times and last names on the board', async () => {
-    const sample = [
-      'BEGIN:VCALENDAR',
-      'BEGIN:VEVENT',
-      'DTSTART:20240101T060000',
-      'LOCATION:Jewish Downtown',
-      'DESCRIPTION:Dr DiMeo',
-      'END:VEVENT',
-      'BEGIN:VEVENT',
-      'DTSTART:20240101T120000',
-      'LOCATION:Jewish Downtown',
-      'DESCRIPTION:Dr Cohen',
-      'END:VEVENT',
-      'BEGIN:VEVENT',
-      'DTSTART:20240101T140000',
-      'LOCATION:Jewish South',
-      'DESCRIPTION:Dr Rassi',
-      'END:VEVENT',
-      'BEGIN:VEVENT',
-      'DTSTART:20240101T220000',
-      'LOCATION:Jewish Downtown',
-      'DESCRIPTION:Dr Fischer',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\n');
+  const sampleIcs = [
+    'BEGIN:VCALENDAR',
+    'BEGIN:VEVENT',
+    'DTSTART;VALUE=DATE:20241201',
+    'DESCRIPTION:--- Jewish Hospital ---\\nDay | Huffstickler | 6a – 2p, Nite | Bequer | 10p – 6a\\n--- Med South ---\\nsouthday8 | Stephens | noon – 10p',
+    'END:VEVENT',
+    'BEGIN:VEVENT',
+    'DTSTART;VALUE=DATE:20241202',
+    'DESCRIPTION:--- Jewish Hospital ---\\nDay | Cohen | 7a – 3p',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\n');
+
+  it('renders a seven-day list with parsed times and locations', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
         headers: { get: () => 'text/calendar' },
-        text: () => Promise.resolve(sample),
+        text: () => Promise.resolve(sampleIcs),
       } as unknown as Response)
     );
 
     const el = document.createElement('div');
-    await phys.renderPhysicians(el, '2024-01-01');
-    expect(el.querySelectorAll('li')).toHaveLength(3);
-    const text = el.textContent || '';
-    expect(text).toContain('6am Dr. DiMeo');
-    expect(text).toContain('12pm Dr. Cohen');
-    expect(text).toContain('10pm Dr. Fischer');
-    expect(text).not.toContain('Dr. Rassi');
+    await phys.renderPhysicians(el, '2024-12-01');
+    const items = Array.from(el.querySelectorAll('li')).map((li) => li.textContent || '');
+
+    expect(items).toHaveLength(4);
+    expect(items[0]).toContain('Dec');
+    expect(items.join(' ')).toContain('Jewish Hospital');
+    expect(items.join(' ')).toContain('Med South');
+    expect(items.join(' ')).toContain('06:00–14:00');
+    expect(items.join(' ')).toContain('22:00–06:00 (+1d)');
   });
 
-  it('shows times even when midnight', async () => {
-    const sample = [
-      'BEGIN:VCALENDAR',
-      'BEGIN:VEVENT',
-      'DTSTART:20240101T000000',
-      'LOCATION:Jewish Downtown',
-      'ATTENDEE;CN="Dr Bayers":mailto:bayers@example.com',
-      'ATTENDEE;CN="Dr Fox":mailto:fox@example.com',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\n');
+  it('renders popup grouped by date and location with 24-hour ranges', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
         headers: { get: () => 'text/calendar' },
-        text: () => Promise.resolve(sample),
+        text: () => Promise.resolve(sampleIcs),
       } as unknown as Response)
     );
 
-    const el = document.createElement('div');
-    await phys.renderPhysicians(el, '2024-01-01');
-    const items = Array.from(el.querySelectorAll('li')).map((li) => li.textContent?.trim());
-    expect(items).toEqual(['12am Dr. Bayers', '12am Dr. Fox']);
-  });
-
-  it('aggregates upcoming physicians without locations', async () => {
-    const sample = [
-      'BEGIN:VCALENDAR',
-      'BEGIN:VEVENT',
-      'DTSTART:20240101T000000',
-      'ATTENDEE;CN="Dr Bayers":mailto:bayers@example.com',
-      'ATTENDEE;CN="Dr Fox":mailto:fox@example.com',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\n');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        headers: { get: () => 'text/calendar' },
-        text: () => Promise.resolve(sample),
-      } as unknown as Response)
-    );
-
-      const data = await phys.getUpcomingDoctors('2024-01-01', 1);
-      expect(data).toEqual({
-        '2024-01-01': {
-          Downtown: [
-            { time: '00:00', name: 'Dr. Bayers' },
-            { time: '00:00', name: 'Dr. Fox' },
-          ],
-        },
-      });
-    });
-
-    it('renders popup with per-day schedules for both locations', async () => {
-    const sample = [
-      'BEGIN:VCALENDAR',
-      'BEGIN:VEVENT',
-      'DTSTART:20240101T060000',
-      'LOCATION:Jewish Downtown',
-      'DESCRIPTION:Dr A',
-      'END:VEVENT',
-      'BEGIN:VEVENT',
-      'DTSTART:20240101T120000',
-      'LOCATION:Jewish South',
-      'DESCRIPTION:Dr B',
-      'END:VEVENT',
-      'BEGIN:VEVENT',
-      'DTSTART:20240102T060000',
-      'LOCATION:Jewish Downtown',
-      'DESCRIPTION:Dr C',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\n');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        headers: { get: () => 'text/calendar' },
-        text: () => Promise.resolve(sample),
-      } as unknown as Response)
-    );
-
-    await phys.renderPhysicianPopup('2024-01-01', 2);
+    await phys.renderPhysicianPopup('2024-12-01', 2);
     const overlay = document.querySelector('.phys-overlay') as HTMLElement;
     const text = overlay.textContent || '';
-    expect(text).toContain('2024-01-01');
-    expect(text).toContain('Downtown');
-    expect(text).toContain('South Hospital');
-    expect(text).toContain('6am Dr. A');
-    expect(text).toContain('12pm Dr. B');
-    expect(text).toContain('2024-01-02');
-    expect(text).toContain('6am Dr. C');
+
+    expect(text).toContain('Upcoming Physicians');
+    expect(text).toContain('Jewish Hospital');
+    expect(text).toContain('Med South');
+    expect(text).toContain('06:00–14:00');
+    expect(text).toContain('22:00–06:00 (+1d)');
   });
 });

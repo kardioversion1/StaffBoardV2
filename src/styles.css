@@ -96,9 +96,27 @@ header{display:grid;grid-template-columns:1fr auto auto;gap:var(--gap);align-ite
 .actions{display:flex;gap:var(--gap);align-items:center}
 
 /* tab navigation */
-#tabs{display:flex;gap:var(--gap);margin-bottom:var(--gap)}
-#tabs [role="tab"]{background:var(--tab);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
-#tabs [role="tab"].active{background:var(--accent);color:var(--text)}
+#tabs{display:flex;gap:var(--gap);margin-bottom:var(--gap);border-bottom:1px solid var(--line);padding-bottom:6px}
+#tabs [role="tab"]{background:transparent;border:none;border-bottom:3px solid transparent;border-radius:10px 10px 0 0;padding:10px 14px;cursor:pointer;color:var(--text-muted);font-weight:700}
+#tabs [role="tab"].active{background:var(--panel);color:var(--text-high);border-color:var(--accent);box-shadow:var(--shadow)}
+#tabs [role="tab"]:hover{color:var(--text-high)}
+
+.page-intro{margin-bottom:var(--gap)}
+.intro-header{display:flex;align-items:center;justify-content:space-between;gap:var(--gap)}
+.intro-title{font-size:var(--f-lg);font-weight:700}
+.intro-help{color:var(--accent);text-decoration:none;font-weight:700}
+.intro-list{margin:8px 0 0 18px;padding:0;display:grid;gap:4px}
+
+.board-toolbar{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px;margin-bottom:var(--gap);box-shadow:var(--elev-1)}
+.board-toolbar__actions{display:flex;gap:8px}
+
+.panel-header{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--gap)}
+.panel-header .small{margin:4px 0 0}
+.role-filter{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn-pill{border-radius:999px;padding:6px 12px;font-weight:600}
+.btn-pill.active{background:var(--accent);color:var(--text-high);border-color:var(--accent)}
+.btn-ghost{background:transparent;color:var(--text-high);border-color:var(--line)}
+.small{font-size:.9em}
 
 /* choose the variable-based sidebar width */
 .layout{display:grid;grid-template-columns:1fr var(--right-sidebar-w);gap:var(--gap)}

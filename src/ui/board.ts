@@ -140,8 +140,30 @@ export async function renderBoard(
       showToast('Using local data; changes may not persist');
     }
 
+    const undoStack: ActiveBoard[] = [];
+    let undoBtn: HTMLButtonElement | null = null;
+    const updateUndoBtn = () => {
+      if (!undoBtn) return;
+      undoBtn.disabled = undoStack.length === 0;
+      undoBtn.title = undoStack.length
+        ? 'Undo your most recent change to this board'
+        : 'No changes to undo yet';
+    };
+    const beforeChange = () => {
+      undoStack.push(structuredClone(active!));
+      updateUndoBtn();
+    };
+
     // Layout assembly
     root.innerHTML = '';
+    const toolbar = document.createElement('div');
+    toolbar.className = 'board-toolbar';
+    toolbar.innerHTML = `
+      <div>
+        <p class="muted small">Assign staff to rooms for this shift. You can undo the last change.</p>
+      </div>
+      <div class="board-toolbar__actions"></div>
+    `;
     const layout = document.createElement('div');
     layout.className = 'layout';
     layout.setAttribute('data-testid', 'main-board');
@@ -161,6 +183,7 @@ export async function renderBoard(
     right.appendChild(createPhysiciansPanel());
     layout.appendChild(right);
 
+    root.appendChild(toolbar);
     root.appendChild(layout);
 
     // Save logic
@@ -188,20 +211,46 @@ export async function renderBoard(
     };
 
     const refresh = () => {
-      renderLeadership(active!, staff, queueSave, root, refresh);
-      renderAssignments(active!, cfg, staff, queueSave, root);
+      renderLeadership(active!, staff, queueSave, root, refresh, beforeChange);
+      renderAssignments(active!, cfg, staff, queueSave, root, beforeChange);
     };
 
+    undoBtn = document.createElement('button');
+    undoBtn.id = 'board-undo';
+    undoBtn.className = 'btn';
+    undoBtn.textContent = 'Undo last change';
+    undoBtn.disabled = true;
+    undoBtn.addEventListener('click', async () => {
+      const previous = undoStack.pop();
+      updateUndoBtn();
+      if (!previous) return;
+      active = migrateActiveBoard(previous);
+      normalizeActiveZones(active, cfg.zones);
+      setActiveBoardCache(active);
+      await DB.set(saveKey, active);
+      notifyUpdate(saveKey);
+      refresh();
+      wireComments(active, queueSave, beforeChange);
+      await renderIncoming(active, staff, queueSave, beforeChange);
+      renderOffgoing(active, beforeChange, queueSave);
+      showToast('Last change undone');
+    });
+    toolbar.querySelector('.board-toolbar__actions')?.appendChild(undoBtn);
+    updateUndoBtn();
+
     refresh();
-    wireComments(active!, queueSave);
-    await renderIncoming(active!, staff, queueSave);
-    renderOffgoing(active!, queueSave);
+    wireComments(active!, queueSave, beforeChange);
+    await renderIncoming(active!, staff, queueSave, beforeChange);
+    renderOffgoing(active!, beforeChange, queueSave);
 
     const checkArrivals = () => {
+      const snapshot = structuredClone(active!);
       if (autoAssignArrivals(active!, cfg)) {
+        undoStack.push(snapshot);
+        updateUndoBtn();
         queueSave();
-        void renderIncoming(active!, staff, queueSave);
-        renderAssignments(active!, cfg, staff, queueSave, root);
+        void renderIncoming(active!, staff, queueSave, beforeChange);
+        renderAssignments(active!, cfg, staff, queueSave, root, beforeChange);
       }
     };
     if (clockHandler) document.removeEventListener('clock-tick', clockHandler);
@@ -246,8 +295,8 @@ export async function renderBoard(
       const c = getConfig();
       normalizeActiveZones(active!, c.zones);
       queueSave();
-      renderLeadership(active!, staff, queueSave, root, refresh);
-      renderAssignments(active!, c, staff, queueSave, root);
+      renderLeadership(active!, staff, queueSave, root, refresh, beforeChange);
+      renderAssignments(active!, c, staff, queueSave, root, beforeChange);
     });
   } catch (err) {
     console.error(err);

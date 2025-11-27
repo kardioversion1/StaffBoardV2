@@ -1,5 +1,5 @@
 import { rosterStore, type Staff } from '@/state/staff';
-import { findShiftsByStaff } from '@/state/history';
+import { findShiftsByStaff } from '@/history';
 import { exportNurseHistoryCSV } from '@/history';
 import { formatTime24h, formatDuration } from '@/utils/format';
 import './history.css';

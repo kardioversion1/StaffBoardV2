@@ -48,6 +48,10 @@
   background: rgba(74, 163, 255, 0.15);
   border-radius: 8px;
 }
+.next-shift .zone-drop.empty {
+  opacity: 0.7;
+  background: var(--control);
+}
 
 .next-shift .zone-cell {
   display: flex;

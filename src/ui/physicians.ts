@@ -1,25 +1,22 @@
 import { getConfig } from '@/state';
 
-type Event = {
-  date: string;   // YYYY-MM-DD
-  time: string;   // HH:MM
-  end?: string;   // HH:MM
-  summary: string;
+type IcsEvent = {
+  date: string; // YYYY-MM-DD
+  description: string;
+};
+
+type Assignment = {
+  date: string; // start date
+  endDate: string; // start date or +1 when crossing midnight
   location: string;
+  shift: string;
+  name: string;
+  start: string; // HH:MM
+  end: string; // HH:MM
+  crossesMidnight: boolean;
 };
 
 const DEFAULT_CAL_URL = 'https://www.bytebloc.com/sk/?76b6a156';
-
-/** Extract a physician's last name and format as "Dr. <Last>". */
-function extractDoctor(summary: string): string | null {
-  if (/Jewish\s+Hospital/i.test(summary)) return null;
-  const parts = summary.split('|').map((s) => s.trim()).filter(Boolean);
-  const namePart = parts.length > 1 ? parts[1] : parts[0];
-  if (!namePart || /^-+$/.test(namePart)) return null;
-  const clean = namePart.replace(/^Dr\.?\s+/i, '').trim();
-  const last = clean.split(/\s+/).pop();
-  return last ? `Dr. ${last}` : null;
-}
 
 /** Unescape ICS text per RFC 5545 (\, \; \, \n, \N) */
 function icsUnescape(text: string): string {
@@ -68,48 +65,25 @@ function extractDateTime(dtstart: string): { date: string; time: string } | null
 
 /** Internal bag for ICS VEVENT fields. */
 type IcsBag = {
-  attendees: string[];
   [k: string]: unknown;
 };
 
-function parseICS(text: string): Event[] {
+function parseICS(text: string): IcsEvent[] {
   const lines = unfoldICSLines(text);
-  const events: Event[] = [];
+  const events: IcsEvent[] = [];
   let current: IcsBag | null = null;
 
   for (const line of lines) {
     if (line === 'BEGIN:VEVENT') {
-      current = { attendees: [] };
+      current = {};
       continue;
     }
     if (line === 'END:VEVENT') {
       if (current?.DTSTART) {
         const dt = extractDateTime(String(current.DTSTART));
         if (dt) {
-          const { date, time } = dt;
-          const endDt = current.DTEND ? extractDateTime(String(current.DTEND)) : null;
-          const location = icsUnescape(String(current.LOCATION || '')).trim();
-          const attendees = current.attendees as string[];
-
-          const push = (summary: string) => {
-            const evt: Event = { date, time, summary, location };
-            if (endDt) evt.end = endDt.time;
-            events.push(evt);
-          };
-
-          if (attendees.length) {
-            for (const name of attendees) push(name);
-          } else if (current.DESCRIPTION) {
-            const desc = icsUnescape(String(current.DESCRIPTION));
-            const names = desc
-              .split(/\r?\n|,|;/)
-              .map((s) => s.trim())
-              .filter((s) => s && !/er\s*main\s*schedule/i.test(s));
-            for (const name of names) push(name);
-          } else if (current.SUMMARY) {
-            const sum = icsUnescape(String(current.SUMMARY)).trim();
-            if (!/er\s*main\s*schedule/i.test(sum)) push(sum);
-          }
+          const description = current.DESCRIPTION ? icsUnescape(String(current.DESCRIPTION)) : '';
+          events.push({ date: dt.date, description });
         }
       }
       current = null;
@@ -118,65 +92,108 @@ function parseICS(text: string): Event[] {
     if (current) {
       const idx = line.indexOf(':');
       if (idx > -1) {
-        const keyRaw = line.slice(0, idx); // e.g., "DTSTART;TZID=America/New_York"
-        const key = keyRaw.split(';')[0];  // -> "DTSTART"
+        const keyRaw = line.slice(0, idx);
+        const key = keyRaw.split(';')[0];
         const value = line.slice(idx + 1);
-
-        if (key === 'ATTENDEE') {
-          const cnMatch = /CN=([^;:]+)/i.exec(keyRaw);
-          const name = cnMatch ? icsUnescape(cnMatch[1]).replace(/^"|"$/g, '').trim() : '';
-          if (name) current.attendees.push(name);
-        } else {
-          (current as Record<string, unknown>)[key] = value;
-        }
+        (current as Record<string, unknown>)[key] = value;
       }
     }
   }
   return events;
 }
 
-/** Time formatting helpers (single definitions). */
-const formatTime = (hhmm: string): string => {
-  const [hh] = hhmm.split(':').map(Number);
-  const hour = ((hh + 11) % 12) + 1;
-  const suffix = hh < 12 ? 'am' : 'pm';
-  return `${hour}${suffix}`;
+const normalizeTime = (raw: string): string | null => {
+  const token = raw.trim().toLowerCase();
+  if (!token) return null;
+  if (token === 'noon') return '12:00';
+  if (token === 'midnight') return '00:00';
+  const m = /^(\d{1,2})(?::?(\d{2}))?\s*(a|p|am|pm)?$/.exec(token);
+  if (!m) return null;
+  const [, hRaw, mmRaw = '00', suffixRaw] = m;
+  let hour = Number(hRaw);
+  const mins = Number(mmRaw);
+  const suffix = suffixRaw?.[0];
+  if (suffix === 'p' && hour < 12) hour += 12;
+  if (suffix === 'a' && hour === 12) hour = 0;
+  if (!suffix && hour === 24) hour = 0;
+  return `${String(hour).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 };
 
-const formatTimeFull = (hhmm: string): string => {
-  const [hh, mm] = hhmm.split(':').map(Number);
-  const hour = ((hh + 11) % 12) + 1;
-  const suffix = hh < 12 ? 'AM' : 'PM';
-  return `${String(hour).padStart(2, '0')}:${String(mm).padStart(2, '0')} ${suffix}`;
+const formatDateLabel = (iso: string): string => {
+  const d = new Date(`${iso}T00:00:00`);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-const formatRange = (start: string, end?: string): string =>
-  end ? `${formatTimeFull(start)} - ${formatTimeFull(end)}` : formatTimeFull(start);
+const formatRange24 = (start: string, end: string, crosses: boolean): string =>
+  `${start}–${end}${crosses ? ' (+1d)' : ''}`;
 
-const formatRangeShort = (start: string, end?: string): string =>
-  end ? `${formatTime(start)}-${formatTime(end)}` : formatTime(start);
-
-/** Heuristics to match JH Downtown; add aliases as needed. */
-const JEWISH_DOWNTOWN_PATTERNS = [
-  /jewish\s*downtown/i,
-  /jewish\s*hospital/i,
-  /\bJH\b/i,
-  /\bUofL\b.*(JH|Jewish)/i,
-];
-
-/** Heuristics to match JH South; add aliases as needed. */
-const JEWISH_SOUTH_PATTERNS = [
-  /jewish\s*south/i,
-  /south\s*hospital/i,
-  /\bJH\b.*south/i,
-];
-
-/** Normalize a raw location into a display label (e.g. "Downtown"). */
-function normalizeLocation(loc: string): string | null {
-  const s = loc.trim();
-  if (JEWISH_DOWNTOWN_PATTERNS.some((re) => re.test(s))) return 'Downtown';
-  if (JEWISH_SOUTH_PATTERNS.some((re) => re.test(s))) return 'South Hospital';
+const normalizeSectionName = (name: string): string | null => {
+  if (/jewish\s*hospital/i.test(name)) return 'Jewish Hospital';
+  if (/med\s*south/i.test(name)) return 'Med South';
   return null;
+};
+
+const splitSections = (description: string): { title: string; body: string }[] => {
+  const sections: { title: string; body: string }[] = [];
+  const matches = [...description.matchAll(/---\s*([^\n-]+?)\s*---/g)];
+  if (!matches.length) return sections;
+
+  for (let i = 0; i < matches.length; i += 1) {
+    const title = matches[i][1].trim();
+    const start = (matches[i].index ?? 0) + matches[i][0].length;
+    const end = i + 1 < matches.length ? matches[i + 1].index ?? description.length : description.length;
+    const body = description.slice(start, end).trim();
+    sections.push({ title, body });
+  }
+  return sections;
+};
+
+const parseAssignmentsFromSection = (body: string, date: string, location: string): Assignment[] => {
+  let normalized = body.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
+  normalized = normalized.replace(/^\([^)]*\)\s*/, '');
+  if (!normalized) return [];
+  const parts = normalized.split(/\s*,\s*/);
+  const results: Assignment[] = [];
+
+  for (const part of parts) {
+    const cleaned = part.replace(/^(Downtown:|South:)/i, '').replace(/\.+$/, '').trim();
+    if (!cleaned.includes('|')) continue;
+    const [shiftRaw, nameRaw, rangeRaw] = cleaned.split('|').map((s) => s.trim());
+    if (!shiftRaw || !nameRaw || !rangeRaw) continue;
+    const [startRaw, endRaw] = rangeRaw.split(/[–—-]/).map((s) => s.trim());
+    const start = normalizeTime(startRaw);
+    const end = normalizeTime(endRaw);
+    if (!start || !end) continue;
+
+    const startDate = new Date(`${date}T${start}:00`);
+    const endDate = new Date(`${date}T${end}:00`);
+    if (endDate <= startDate) endDate.setDate(endDate.getDate() + 1);
+
+    results.push({
+      date,
+      endDate: endDate.toISOString().slice(0, 10),
+      location,
+      shift: shiftRaw,
+      name: nameRaw,
+      start,
+      end,
+      crossesMidnight: endDate.toISOString().slice(0, 10) !== date,
+    });
+  }
+  return results;
+};
+
+function extractAssignments(events: IcsEvent[]): Assignment[] {
+  const assignments: Assignment[] = [];
+  for (const evt of events) {
+    const sections = splitSections(evt.description);
+    for (const section of sections) {
+      const location = normalizeSectionName(section.title);
+      if (!location) continue;
+      assignments.push(...parseAssignmentsFromSection(section.body, evt.date, location));
+    }
+  }
+  return assignments;
 }
 
 /** Fetch physician calendar text (uses proxy to bypass CORS unless same-origin). */
@@ -201,37 +218,59 @@ async function fetchPhysicianICS(): Promise<string> {
   return await proxied.text();
 }
 
-/** Fetch and render physicians for the given day (Downtown only). */
+const dateToMs = (iso: string): number => new Date(`${iso}T00:00:00`).getTime();
+
+async function loadAssignments(startDateISO: string, days: number): Promise<Assignment[]> {
+  const ics = await fetchPhysicianICS();
+  const events = parseICS(ics);
+  const assignments = extractAssignments(events);
+
+  const start = dateToMs(startDateISO);
+  const end = start + days * 86400000;
+
+  return assignments
+    .filter((a) => {
+      const t = dateToMs(a.date);
+      return t >= start && t < end;
+    })
+    .sort(
+      (a, b) => new Date(`${a.date}T${a.start}:00`).getTime() - new Date(`${b.date}T${b.start}:00`).getTime()
+    );
+}
+
+/** Fetch and render physicians for the next week starting from the given date. */
 export async function renderPhysicians(el: HTMLElement, dateISO: string): Promise<void> {
+  const previous = el.innerHTML;
   try {
-    const ics = await fetchPhysicianICS();
-    const events = parseICS(ics);
+    const assignments = await loadAssignments(dateISO, 7);
 
-    const docsMap = new Map<string, { name: string; time: string }>();
-    for (const e of events) {
-      if (e.date !== dateISO) continue;
-      const loc = e.location ? normalizeLocation(e.location) : 'Downtown';
-      if (loc !== 'Downtown') continue;
-
-      const parts = e.summary.split('|').map((s) => s.trim());
-      const name = extractDoctor(parts[1] || parts[0]);
-      if (!name) continue;
-
-      docsMap.set(`${name}|${e.time}`, { name, time: e.time });
-    }
-
-    const docs = Array.from(docsMap.values()).sort((a, b) => a.time.localeCompare(b.time));
-
-    if (docs.length === 0) {
-      el.textContent = 'No physicians scheduled';
+    if (assignments.length === 0) {
+      el.textContent = 'No physician assignments for the next 7 days.';
       return;
     }
 
-    const items = docs.map((d) => `<li>${formatTime(d.time)} ${d.name}</li>`).join('');
+    const items = assignments
+      .map(
+        (a) =>
+          `<li><strong>${formatDateLabel(a.date)}</strong> – ${a.location} – ${formatRange24(
+            a.start,
+            a.end,
+            a.crossesMidnight
+          )} – ${a.name} (${a.shift})</li>`
+      )
+      .join('');
 
-    el.innerHTML = `<ul class="phys-list">${items}</ul>`;
+    el.innerHTML = `<ul class="phys-list phys-schedule">${items}</ul>`;
   } catch {
-    el.textContent = 'Physician schedule unavailable';
+    if (previous) {
+      el.innerHTML = previous;
+      const warn = document.createElement('div');
+      warn.className = 'phys-error';
+      warn.textContent = 'Unable to load physician schedule';
+      el.appendChild(warn);
+    } else {
+      el.textContent = 'Physician schedule unavailable';
+    }
   }
 }
 
@@ -239,34 +278,22 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
 export async function getUpcomingDoctors(
   startDateISO: string,
   days: number
-): Promise<Record<string, Record<string, { time: string; name: string }[]>>> {
-  const ics = await fetchPhysicianICS();
-  const events = parseICS(ics);
+): Promise<Record<string, Record<string, Assignment[]>>> {
+  const assignments = await loadAssignments(startDateISO, days);
+  const map: Record<string, Record<string, Assignment[]>> = {};
 
-  const start = new Date(startDateISO + 'T00:00:00').getTime();
-  const end = start + days * 86400000;
+  for (const a of assignments) {
+    (map[a.date] ||= {});
+    const arr = (map[a.date][a.location] ||= []);
+    arr.push(a);
+  }
 
-  const map: Record<string, Record<string, { time: string; name: string }[]>> = {};
-  for (const e of events) {
-    const t = new Date(e.date + 'T00:00:00').getTime();
-    const locName = e.location ? normalizeLocation(e.location) : 'Downtown';
-    if (t >= start && t < end && locName) {
-      const name = extractDoctor(e.summary.trim());
-      if (name) {
-        (map[e.date] ||= {});
-        const arr = (map[e.date][locName] ||= []);
-        if (!arr.some((r) => r.name === name && r.time === e.time)) {
-          arr.push({ time: e.time, name });
-        }
-      }
+  for (const date of Object.keys(map)) {
+    for (const loc of Object.keys(map[date])) {
+      map[date][loc].sort((a, b) => a.start.localeCompare(b.start));
     }
   }
 
-  for (const d of Object.keys(map)) {
-    for (const loc of Object.keys(map[d])) {
-      map[d][loc].sort((a, b) => a.time.localeCompare(b.time));
-    }
-  }
   return map;
 }
 
@@ -276,39 +303,8 @@ export async function renderPhysicianPopup(
   days: number
 ): Promise<void> {
   try {
-    const ics = await fetchPhysicianICS();
-    const events = parseICS(ics);
-
-    const start = new Date(startDateISO + 'T00:00:00').getTime();
-    const end = start + days * 86400000;
-
-    const map: Record<
-      string,
-      Record<string, { shift: string; start: string; end: string; name: string }[]>
-    > = {};
-
-    for (const e of events) {
-      const t = new Date(e.date + 'T00:00:00').getTime();
-      if (t < start || t >= end) continue;
-
-      const loc = e.location ? normalizeLocation(e.location) : null;
-      if (!loc) continue;
-
-      const parts = e.summary.split('|').map((s) => s.trim());
-      const name = extractDoctor(parts[1] || parts[0]);
-      if (!name) continue;
-
-      const shift = parts.length > 1 ? parts[0] : '';
-      (map[e.date] ||= {});
-      (map[e.date][loc] ||= []).push({
-        shift,
-        start: e.time,
-        end: e.end || '',
-        name,
-      });
-    }
-
-    const dates = Object.keys(map).sort();
+    const grouped = await getUpcomingDoctors(startDateISO, days);
+    const dates = Object.keys(grouped).sort();
 
     const overlay = document.createElement('div');
     overlay.className = 'phys-overlay';
@@ -320,14 +316,13 @@ export async function renderPhysicianPopup(
         ? '<p>No physicians scheduled</p>'
         : dates
             .map((d) => {
-              const groups = map[d];
+              const groups = grouped[d];
               const locs = Object.keys(groups)
                 .map((loc) => {
                   const rows = groups[loc]
-                    .sort((a, b) => a.start.localeCompare(b.start))
                     .map(
                       (r) =>
-                        `<tr><td>${r.shift}</td><td>${formatRangeShort(r.start, r.end)} </td><td>${r.name}</td></tr>`
+                        `<tr><td>${r.shift}</td><td>${formatRange24(r.start, r.end, r.crossesMidnight)}</td><td>${r.name}</td></tr>`
                     )
                     .join('');
                   return `<div class="phys-loc">
@@ -340,7 +335,7 @@ export async function renderPhysicianPopup(
                 })
                 .join('');
               return `<div class="phys-day">
-                <strong class="phys-date">${d}</strong>
+                <strong class="phys-date">${formatDateLabel(d)}</strong>
                 ${locs}
               </div>`;
             })
@@ -384,4 +379,13 @@ export function attachPhysiciansButton(
 }
 
 // Exported for testing
-export const __test = { parseICS, extractDateISO, icsUnescape, unfoldICSLines };
+export const __test = {
+  parseICS,
+  extractDateISO,
+  icsUnescape,
+  unfoldICSLines,
+  normalizeTime,
+  splitSections,
+  parseAssignmentsFromSection,
+  extractAssignments,
+};

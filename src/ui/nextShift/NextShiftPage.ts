@@ -211,7 +211,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   renderStaff();
   searchInput.addEventListener('input', () => renderStaff(searchInput.value));
 
-  // ✅ Conflict-resolved block: use Codex's safer version, with main's indentation
+  // Clean, conflict-free drop handler
   root.querySelectorAll('.zone-drop').forEach((el) => {
     (el as HTMLElement).addEventListener('dragover', (e: DragEvent) => e.preventDefault());
     (el as HTMLElement).addEventListener('drop', (e: DragEvent) => {
@@ -224,8 +224,8 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
         target.textContent = s?.name || id;
         target.dataset.nurseId = id;
         target.classList.remove('empty');
-        if (!draft.zones[`${target.dataset.zone}`]) {
-          draft.zones[`${target.dataset.zone}`] = [];
+        if (!draft.zones[target.dataset.zone || '']) {
+          draft.zones[target.dataset.zone || ''] = [];
         }
         draft.zones[target.dataset.zone || ''] = [{ nurseId: id }];
         updateUndo();

@@ -400,4 +400,3 @@ function manageSlot(
     rerender();
   });
 }
-

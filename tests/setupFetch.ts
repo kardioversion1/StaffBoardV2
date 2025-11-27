@@ -5,7 +5,7 @@ if (typeof window !== 'undefined') {
 
   const mockResponse = () =>
     Promise.resolve(
-      new Response('null', {
+      new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -22,13 +22,30 @@ if (typeof window !== 'undefined') {
             : '';
 
     let targetHost = '';
+    let action: string | null = null;
+    let mode: string | null = null;
+
     try {
-      targetHost = new URL(urlString || 'http://localhost:3000', 'http://localhost:3000').host;
+      const parsed = new URL(urlString || 'http://localhost:3000', 'http://localhost:3000');
+      targetHost = parsed.host;
+      action = parsed.searchParams.get('action');
+      mode = parsed.searchParams.get('mode');
     } catch {
       targetHost = '';
     }
 
-    if (targetHost.includes('localhost:3000') || targetHost.includes('127.0.0.1:3000')) {
+    const isLocal = targetHost.includes('localhost:3000') || targetHost.includes('127.0.0.1:3000');
+    if (isLocal) {
+      // For historyKv get calls, tests expect a literal `null` JSON body
+      if (action === 'historyKv' && mode === 'get') {
+        return Promise.resolve(
+          new Response('null', {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        );
+      }
+      // For everything else to localhost:3000, just pretend it succeeded
       return mockResponse();
     }
 

@@ -1,170 +1,130 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { __test, getUpcomingDoctors } from '@/ui/physicians';
 
+const { parseICS, normalizeTime, parseAssignmentsFromSection } = __test;
+
 describe('physician schedule parsing', () => {
   afterEach(() => {
-    // Restore any mocked globals between tests
     vi.restoreAllMocks();
   });
 
-  it('extracts events from ICS', () => {
+  it('parses ICS events and preserves descriptions', () => {
     const sample = [
       'BEGIN:VCALENDAR',
       'BEGIN:VEVENT',
-      'DTSTART:20240101T0700',
-      'SUMMARY:ER Main Schedule',
-      'LOCATION:Jewish Downtown',
-      'ATTENDEE;CN=Dr A:mailto:a@example.com',
-      'ATTENDEE;CN=Dr B:mailto:b@example.com',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\n');
-    const events = __test.parseICS(sample);
-    expect(events).toHaveLength(2);
-      expect(events[0]).toEqual({
-        date: '2024-01-01',
-        time: '07:00',
-        summary: 'Dr A',
-        location: 'Jewish Downtown',
-      });
-      expect(events[1]).toEqual({
-        date: '2024-01-01',
-        time: '07:00',
-        summary: 'Dr B',
-        location: 'Jewish Downtown',
-      });
-  });
-
-  it('handles DTSTART with TZID parameter', () => {
-    const sample = [
-      'BEGIN:VCALENDAR',
-      'BEGIN:VEVENT',
-      'DTSTART;TZID=America/New_York:20240101T070000',
-      'SUMMARY:ER Main Schedule',
-      'LOCATION:Jewish Downtown',
-      'ATTENDEE;CN=Dr A:mailto:a@example.com',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\n');
-    const events = __test.parseICS(sample);
-    expect(events).toHaveLength(1);
-      expect(events[0]).toEqual({
-        date: '2024-01-01',
-        time: '07:00',
-        summary: 'Dr A',
-        location: 'Jewish Downtown',
-      });
-  });
-
-  it('falls back to DESCRIPTION when attendees missing', () => {
-    const sample = [
-      'BEGIN:VCALENDAR',
-      'BEGIN:VEVENT',
-      'DTSTART:20240102T070000',
-      'SUMMARY:ER Main Schedule',
-      'LOCATION:Jewish Downtown',
-      'DESCRIPTION:Dr A\\nDr B',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\n');
-    const events = __test.parseICS(sample);
-    expect(events).toHaveLength(2);
-      expect(events[0]).toEqual({
-        date: '2024-01-02',
-        time: '07:00',
-        summary: 'Dr A',
-        location: 'Jewish Downtown',
-      });
-      expect(events[1]).toEqual({
-        date: '2024-01-02',
-        time: '07:00',
-        summary: 'Dr B',
-        location: 'Jewish Downtown',
-      });
-  });
-
-  it('converts UTC timestamps to the local date', () => {
-    const expected = (() => {
-      const base = new Date(Date.UTC(2024, 0, 1, 0, 0, 0));
-      const offset = base.getTimezoneOffset();
-      const local = new Date(base.getTime() - offset * 60000);
-      return local.toISOString().slice(0, 10);
-    })();
-    expect(__test.extractDateISO('20240101T000000Z')).toBe(expected);
-    expect(__test.extractDateISO('20240101T0000Z')).toBe(expected);
-  });
-
-  it('handles DATE-TIME values without seconds', () => {
-    expect(__test.extractDateISO('20240101T0700')).toBe('2024-01-01');
-  });
-
-  it('groups upcoming physicians by date and location (range filtered)', async () => {
-    const sample = [
-      'BEGIN:VCALENDAR',
-      'BEGIN:VEVENT',
-      'DTSTART:20240101T070000',
-      'SUMMARY:ER Main Schedule',
-      'LOCATION:Jewish Downtown',
-      'ATTENDEE;CN=Dr A:mailto:a@example.com',
-      'ATTENDEE;CN=Dr B:mailto:b@example.com',
-      'END:VEVENT',
-      'BEGIN:VEVENT',
-      'DTSTART:20240105T070000',
-      'SUMMARY:ER Main Schedule',
-      'LOCATION:Jewish Downtown',
-      'ATTENDEE;CN=Dr C:mailto:c@example.com',
-      'END:VEVENT',
-      'BEGIN:VEVENT',
-      'DTSTART:20240101T070000',
-      'SUMMARY:ER Main Schedule',
-      'LOCATION:Jewish South',
-      'ATTENDEE;CN=Dr S:mailto:s@example.com',
-      'ATTENDEE;CN=Dr T:mailto:t@example.com',
-      'END:VEVENT',
-      'BEGIN:VEVENT',
-      'DTSTART:20240108T070000',
-      'SUMMARY:ER Main Schedule',
-      'LOCATION:Jewish Downtown',
-      'ATTENDEE;CN=Dr D:mailto:d@example.com',
-      'END:VEVENT',
-      'BEGIN:VEVENT',
-      'DTSTART:20240103T070000',
-      'SUMMARY:ER Main Schedule',
-      'LOCATION:Other',
-      'ATTENDEE;CN=Dr E:mailto:e@example.com',
+      'DTSTART;VALUE=DATE:20241201',
+      'DESCRIPTION:--- Jewish Hospital ---\\nDay | Huff | 6a – 2p',
       'END:VEVENT',
       'END:VCALENDAR',
     ].join('\n');
 
-    // Mock proxy fetch to return sample ICS
+    const events = parseICS(sample);
+    expect(events).toEqual([
+      {
+        date: '2024-12-01',
+        description: '--- Jewish Hospital ---\nDay | Huff | 6a – 2p',
+      },
+    ]);
+  });
+
+  it('normalizes shorthand times', () => {
+    expect(normalizeTime('6a')).toBe('06:00');
+    expect(normalizeTime('noon')).toBe('12:00');
+    expect(normalizeTime('11:59p')).toBe('23:59');
+  });
+
+  it('extracts assignments from a section including overnight shifts', () => {
+    const section = 'Day | Huff | 6a – 2p, Nite | Bequer | 10p – 6a';
+    const res = parseAssignmentsFromSection(section, '2024-12-01', 'Jewish Hospital');
+    expect(res).toEqual([
+      {
+        date: '2024-12-01',
+        endDate: '2024-12-01',
+        location: 'Jewish Hospital',
+        shift: 'Day',
+        name: 'Huff',
+        start: '06:00',
+        end: '14:00',
+        crossesMidnight: false,
+      },
+      {
+        date: '2024-12-01',
+        endDate: '2024-12-02',
+        location: 'Jewish Hospital',
+        shift: 'Nite',
+        name: 'Bequer',
+        start: '22:00',
+        end: '06:00',
+        crossesMidnight: true,
+      },
+    ]);
+  });
+
+  it('groups upcoming assignments from description sections', async () => {
+    const sample = [
+      'BEGIN:VCALENDAR',
+      'BEGIN:VEVENT',
+      'DTSTART;VALUE=DATE:20241201',
+      'DESCRIPTION:--- Jewish Hospital ---\\nDay | Huff | 6a – 2p\\n--- Med South ---\\nSouthday | Stephens | noon – 10p',
+      'END:VEVENT',
+      'BEGIN:VEVENT',
+      'DTSTART;VALUE=DATE:20241202',
+      'DESCRIPTION:--- Jewish Hospital ---\\nNite | Bequer | 10p – 6a',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\n');
+
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       headers: { get: () => 'text/calendar' },
       text: () => Promise.resolve(sample),
     } as unknown as Response);
-
     vi.stubGlobal('fetch', fetchMock);
 
-    const res = await getUpcomingDoctors('2024-01-01', 7);
-    expect(res).toEqual({
-      '2024-01-01': {
-        Downtown: [
-          { time: '07:00', name: 'Dr. A' },
-          { time: '07:00', name: 'Dr. B' },
+    const result = await getUpcomingDoctors('2024-12-01', 2);
+    expect(result).toEqual({
+      '2024-12-01': {
+        'Jewish Hospital': [
+          {
+            date: '2024-12-01',
+            endDate: '2024-12-01',
+            location: 'Jewish Hospital',
+            shift: 'Day',
+            name: 'Huff',
+            start: '06:00',
+            end: '14:00',
+            crossesMidnight: false,
+          },
         ],
-        'South Hospital': [
-          { time: '07:00', name: 'Dr. S' },
-          { time: '07:00', name: 'Dr. T' },
+        'Med South': [
+          {
+            date: '2024-12-01',
+            endDate: '2024-12-01',
+            location: 'Med South',
+            shift: 'Southday',
+            name: 'Stephens',
+            start: '12:00',
+            end: '22:00',
+            crossesMidnight: false,
+          },
         ],
       },
-      '2024-01-05': { Downtown: [{ time: '07:00', name: 'Dr. C' }] },
+      '2024-12-02': {
+        'Jewish Hospital': [
+          {
+            date: '2024-12-02',
+            endDate: '2024-12-03',
+            location: 'Jewish Hospital',
+            shift: 'Nite',
+            name: 'Bequer',
+            start: '22:00',
+            end: '06:00',
+            crossesMidnight: true,
+          },
+        ],
+      },
     });
 
-    // Ensure we hit the proxy endpoint
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api.php?action=physicians',
-      { credentials: 'same-origin' }
-    );
+    expect(fetchMock).toHaveBeenCalledWith('/api.php?action=physicians', { credentials: 'same-origin' });
   });
 });
-

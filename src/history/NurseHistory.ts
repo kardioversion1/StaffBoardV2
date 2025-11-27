@@ -105,5 +105,3 @@ export function renderNurseHistory(root: HTMLElement): void {
     URL.revokeObjectURL(url);
   });
 }
-
-

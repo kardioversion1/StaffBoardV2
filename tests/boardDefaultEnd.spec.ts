@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { upsertSlot, type Board, type Slot } from '@/slots';
-import { defaultEnd } from '@/ui/board';
+import { defaultEnd } from '@/ui/board/assignments';
 
 describe('default end time', () => {
   it('adds 12 hours when end time omitted', () => {

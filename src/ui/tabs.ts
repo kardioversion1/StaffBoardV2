@@ -53,8 +53,10 @@ export function renderTabs(): void {
   nav.setAttribute('role', 'tablist');
   nav.innerHTML = TABS.map((t) => `<button role="tab" data-tab="${t.id}">${t.label()}</button>`).join('');
   nav.onkeydown = (e) => {
-    if (!(e.target instanceof HTMLButtonElement)) return;
-    let idx = TABS.findIndex((t) => t.id === e.target.dataset.tab);
+    const target = e.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const currentId = target.dataset.tab || 'Board';
+    let idx = TABS.findIndex((t) => t.id === currentId);
     if (e.key === 'ArrowRight') idx = (idx + 1) % TABS.length;
     else if (e.key === 'ArrowLeft') idx = (idx - 1 + TABS.length) % TABS.length;
     else return;

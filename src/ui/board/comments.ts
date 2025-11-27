@@ -12,12 +12,17 @@ export function createCommentsPanel(): HTMLElement {
 }
 
 /** Wire up the comments textarea to the active board. */
-export function wireComments(active: ActiveBoard, save: () => void): void {
+export function wireComments(
+  active: ActiveBoard,
+  save: () => void,
+  beforeChange: () => void = () => {}
+): void {
   const el = document.getElementById('comments') as HTMLTextAreaElement | null;
   if (!el) return;
 
   el.value = active.comments || '';
   el.addEventListener('change', () => {
+    beforeChange();
     active.comments = el.value.trim();
     save();
   });

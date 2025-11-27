@@ -364,8 +364,13 @@ function manageSlot(
 
   overlay.querySelector('#mg-save')!.addEventListener('click', async () => {
     beforeChange();
+
     const rfVal = (overlay.querySelector('#mg-rf') as HTMLInputElement).value.trim();
-    st.rf = rfVal ? Number(rfVal) : undefined;
+    if (rfVal) {
+      st.rf = Number(rfVal);
+    } else {
+      delete st.rf;
+    }
 
     const studVal = (overlay.querySelector('#mg-student') as HTMLInputElement).value.trim();
     slot.student = studVal ? studVal : undefined;
@@ -387,10 +392,12 @@ function manageSlot(
     }
 
     if (typeof rosterStore.save === 'function') {
-      await rosterStore.save();
+      await rosterStore.save(staffList);
     }
+
     save();
     overlay.remove();
     rerender();
   });
 }
+

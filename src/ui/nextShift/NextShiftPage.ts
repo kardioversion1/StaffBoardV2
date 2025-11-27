@@ -211,12 +211,13 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   renderStaff();
   searchInput.addEventListener('input', () => renderStaff(searchInput.value));
 
+  // ✅ Conflict-resolved block: use Codex's safer version, with main's indentation
   root.querySelectorAll('.zone-drop').forEach((el) => {
     (el as HTMLElement).addEventListener('dragover', (e: DragEvent) => e.preventDefault());
     (el as HTMLElement).addEventListener('drop', (e: DragEvent) => {
       e.preventDefault();
       const id = e.dataTransfer?.getData('text/plain');
-      if (id) {
+      if (id && draft) {
         pushUndo();
         const s = staff.find((st) => st.id === id);
         const target = el as HTMLElement;

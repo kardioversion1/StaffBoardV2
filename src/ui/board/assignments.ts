@@ -177,7 +177,7 @@ export function renderAssignments(
         await State.saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
         document.dispatchEvent(new Event('config-changed'));
         await save();
-        renderAssignments(active, cfg, staff, save, root);
+        renderAssignments(active, cfg, staff, save, root, beforeChange);
       }
     });
     section.appendChild(editBtn);
@@ -270,7 +270,7 @@ export function renderAssignments(
         const moved = upsertSlot(active, { zone: z.name }, slot);
         if (moved) showBanner('Previous assignment cleared');
         save();
-        renderAssignments(active, cfg, staff, save, root);
+        renderAssignments(active, cfg, staff, save, root, beforeChange);
       });
     });
 

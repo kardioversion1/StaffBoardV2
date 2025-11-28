@@ -48,7 +48,7 @@ export function renderAssignments(
   staff: Staff[],
   save: () => void,
   root: ParentNode,
-  beforeChange: () => void = () => {}
+  beforeChange: () => void = () => {},
 ): void {
   const pctCont = root.querySelector('#pct-zones') as HTMLElement | null;
   const cont = root.querySelector('#zones') as HTMLElement | null;
@@ -56,6 +56,7 @@ export function renderAssignments(
     console.warn('Missing zones container');
     return;
   }
+
   pctCont.innerHTML = '';
   cont.innerHTML = '';
   pctCont.style.minHeight = '40px';
@@ -177,7 +178,7 @@ export function renderAssignments(
         await State.saveConfig({ zones: cfg.zones, zoneColors: cfg.zoneColors });
         document.dispatchEvent(new Event('config-changed'));
         await save();
-        renderAssignments(active, cfg, staff, save, root);
+        renderAssignments(active, cfg, staff, save, root, beforeChange);
       }
     });
     section.appendChild(editBtn);
@@ -270,7 +271,7 @@ export function renderAssignments(
         const moved = upsertSlot(active, { zone: z.name }, slot);
         if (moved) showBanner('Previous assignment cleared');
         save();
-        renderAssignments(active, cfg, staff, save, root);
+        renderAssignments(active, cfg, staff, save, root, beforeChange);
       });
     });
 
@@ -378,7 +379,6 @@ function manageSlot(
   overlay.querySelector('#mg-save')!.addEventListener('click', async () => {
     beforeChange();
 
-    // RF value: store number if present, otherwise remove rf
     const rfVal = (overlay.querySelector('#mg-rf') as HTMLInputElement).value.trim();
     if (rfVal) {
       st.rf = Number(rfVal);

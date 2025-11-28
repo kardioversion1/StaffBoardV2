@@ -9,7 +9,7 @@ import {
   type DraftShift,
 } from '@/state/nextShift';
 import { rosterStore, type Staff } from '@/state/staff';
-import { type Slot } from '@/slots';
+import type { Slot } from '@/slots';
 import { deriveShift } from '@/utils/time';
 import { showToast } from '@/ui/banner';
 
@@ -42,7 +42,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   await seedZonesIfNeeded();
   const cfg = getConfig();
   await rosterStore.load();
-  const staff = rosterStore.active();
+  const staff: Staff[] = rosterStore.active();
   let draft: DraftShift | null = await loadNextDraft();
   let undoStack: DraftShift[] = [];
 
@@ -216,7 +216,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   renderStaff();
   searchInput.addEventListener('input', () => renderStaff(searchInput.value));
 
-  // Clean drag/drop handler for zones
+  // Zone drag/drop
   root.querySelectorAll('.zone-drop').forEach((el) => {
     const target = el as HTMLElement;
 
@@ -244,6 +244,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
     });
   });
 
+  // Clear buttons
   root.querySelectorAll('.zone-clear').forEach((btn) => {
     btn.addEventListener('click', () => {
       pushUndo();

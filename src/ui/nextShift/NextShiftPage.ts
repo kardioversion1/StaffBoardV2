@@ -9,11 +9,12 @@ import {
   type DraftShift,
 } from '@/state/nextShift';
 import { rosterStore, type Staff } from '@/state/staff';
-import { type Slot } from '@/slots';
+import type { Slot } from '@/slots';
 import { deriveShift } from '@/utils/time';
 import { showToast } from '@/ui/banner';
 
 const pad = (n: number): string => n.toString().padStart(2, '0');
+
 const fmtLocal = (d: Date): string =>
   `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
     d.getHours(),
@@ -41,9 +42,10 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   await seedZonesIfNeeded();
   const cfg = getConfig();
   await rosterStore.load();
-  const staff = rosterStore.active();
+  const staff: Staff[] = rosterStore.active();
   let draft: DraftShift | null = await loadNextDraft();
   let undoStack: DraftShift[] = [];
+
   if (!draft) {
     const startISO = nextShiftStartISO();
     const dateISO = startISO.slice(0, 10);
@@ -171,19 +173,19 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
     const nurses = staff.filter(
       (s) =>
         s.role === 'nurse' &&
-        (!filter || (s.name || s.id).toLowerCase().includes(norm))
+        (!filter || (s.name || s.id).toLowerCase().includes(norm)),
     );
     const techs = staff.filter(
       (s) =>
         s.role === 'tech' &&
-        (!filter || (s.name || s.id).toLowerCase().includes(norm))
+        (!filter || (s.name || s.id).toLowerCase().includes(norm)),
     );
     nurseCol.innerHTML = nurses
       .map(
         (s) =>
           `<div class="assign-item${selected === s.id ? ' selected' : ''}" draggable="true" data-id="${s.id}">${
             s.name || s.id
-          }</div>`
+          }</div>`,
       )
       .join('');
     techCol.innerHTML = techs
@@ -191,7 +193,7 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
         (s) =>
           `<div class="assign-item${selected === s.id ? ' selected' : ''}" draggable="true" data-id="${s.id}">${
             s.name || s.id
-          }</div>`
+          }</div>`,
       )
       .join('');
     root.querySelectorAll('.assign-item').forEach((el) => {
@@ -199,7 +201,10 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
       el.addEventListener('click', () => {
         selected = id;
         root.querySelectorAll('.assign-item').forEach((item) => {
-          item.classList.toggle('selected', (item as HTMLElement).dataset.id === id);
+          item.classList.toggle(
+            'selected',
+            (item as HTMLElement).dataset.id === id,
+          );
         });
       });
       (el as HTMLElement).addEventListener('dragstart', (ev: DragEvent) => {
@@ -211,27 +216,35 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
   renderStaff();
   searchInput.addEventListener('input', () => renderStaff(searchInput.value));
 
-    root.querySelectorAll('.zone-drop').forEach((el) => {
-      (el as HTMLElement).addEventListener('dragover', (e: DragEvent) => e.preventDefault());
-      (el as HTMLElement).addEventListener('drop', (e: DragEvent) => {
-        e.preventDefault();
-        const id = e.dataTransfer?.getData('text/plain');
-        if (id && draft) {
-          pushUndo();
-          const s = staff.find((st) => st.id === id);
-          const target = el as HTMLElement;
-          target.textContent = s?.name || id;
-          target.dataset.nurseId = id;
-          target.classList.remove('empty');
-          if (!draft.zones[`${target.dataset.zone}`]) {
-            draft.zones[`${target.dataset.zone}`] = [];
-          }
-          draft.zones[target.dataset.zone || ''] = [{ nurseId: id }];
-          updateUndo();
-        }
-      });
-    });
+  // Zone drag/drop
+  root.querySelectorAll('.zone-drop').forEach((el) => {
+    const target = el as HTMLElement;
 
+    target.addEventListener('dragover', (e: DragEvent) => e.preventDefault());
+
+    target.addEventListener('drop', (e: DragEvent) => {
+      e.preventDefault();
+      const id = e.dataTransfer?.getData('text/plain');
+      if (!id || !draft) return;
+
+      pushUndo();
+
+      const s = staff.find((st) => st.id === id);
+      target.textContent = s?.name || id;
+      target.dataset.nurseId = id;
+      target.classList.remove('empty');
+
+      const zoneKey = target.dataset.zone || '';
+      if (!draft.zones[zoneKey]) {
+        draft.zones[zoneKey] = [];
+      }
+      draft.zones[zoneKey] = [{ nurseId: id }];
+
+      updateUndo();
+    });
+  });
+
+  // Clear buttons
   root.querySelectorAll('.zone-clear').forEach((btn) => {
     btn.addEventListener('click', () => {
       pushUndo();
@@ -308,20 +321,18 @@ export async function renderNextShiftPage(root: HTMLElement): Promise<void> {
     }
   });
 
-  document
-    .getElementById('next-publish')
-    ?.addEventListener('click', async () => {
-      pushUndo();
-      draft = gatherDraft();
-      await saveNextDraft(draft);
-      applyDraftToUI(draft);
-      if (publishTimer) clearTimeout(publishTimer);
-      try {
-        await publishNextDraft();
-      } catch (err) {
-        console.error(err);
-      }
-    });
+  document.getElementById('next-publish')?.addEventListener('click', async () => {
+    pushUndo();
+    draft = gatherDraft();
+    await saveNextDraft(draft);
+    applyDraftToUI(draft);
+    if (publishTimer) clearTimeout(publishTimer);
+    try {
+      await publishNextDraft();
+    } catch (err) {
+      console.error(err);
+    }
+  });
 
   schedulePublish();
 }

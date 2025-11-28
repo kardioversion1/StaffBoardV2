@@ -26,7 +26,10 @@ if (typeof window !== 'undefined') {
     let mode: string | null = null;
 
     try {
-      const parsed = new URL(urlString || 'http://localhost:3000', 'http://localhost:3000');
+      const parsed = new URL(
+        urlString || 'http://localhost:3000',
+        'http://localhost:3000'
+      );
       targetHost = parsed.host;
       action = parsed.searchParams.get('action');
       mode = parsed.searchParams.get('mode');
@@ -34,7 +37,10 @@ if (typeof window !== 'undefined') {
       targetHost = '';
     }
 
-    const isLocal = targetHost.includes('localhost:3000') || targetHost.includes('127.0.0.1:3000');
+    const isLocal =
+      targetHost.includes('localhost:3000') ||
+      targetHost.includes('127.0.0.1:3000');
+
     if (isLocal) {
       // For historyKv get calls, tests expect a literal `null` JSON body
       if (action === 'historyKv' && mode === 'get') {

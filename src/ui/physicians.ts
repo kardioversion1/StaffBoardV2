@@ -16,7 +16,7 @@ type Assignment = {
   crossesMidnight: boolean;
 };
 
-const DEFAULT_CAL_URL = 'https://www.bytebloc.com/sk/?76b6a156';
+const PHYSICIAN_FALLBACK = 'Physician schedule unavailable';
 
 /** Unescape ICS text per RFC 5545 (\, \; \, \n, \N) */
 function icsUnescape(text: string): string {
@@ -196,34 +196,93 @@ function extractAssignments(events: IcsEvent[]): Assignment[] {
   return assignments;
 }
 
-/** Fetch physician calendar text (uses proxy to bypass CORS unless same-origin). */
-async function fetchPhysicianICS(): Promise<string> {
+function resolvePhysicianUrl(): string | null {
   const cfg = getConfig?.();
   const cfgUrl: unknown = cfg?.physicians?.calendarUrl;
-  const rawUrl = typeof cfgUrl === 'string' && cfgUrl.trim() ? cfgUrl.trim() : DEFAULT_CAL_URL;
+  if (typeof cfgUrl !== 'string') return null;
+  const trimmed = cfgUrl.trim();
+  return trimmed ? trimmed : null;
+}
 
-  try {
-    const target = new URL(rawUrl, globalThis.location?.href ?? 'http://localhost');
-    if (globalThis.location && target.origin === globalThis.location.origin) {
-      const res = await fetch(target.toString(), { credentials: 'same-origin' });
-      if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
-      return await res.text();
-    }
-  } catch {
-    /* fall through to proxy */
+type PhysicianSchedule =
+  | { type: 'ics'; body: string }
+  | { type: 'json'; body: unknown };
+
+/** Fetch physician calendar text from the configured URL. */
+async function fetchPhysicianSchedule(): Promise<PhysicianSchedule> {
+  const url = resolvePhysicianUrl();
+  if (!url) throw new Error('Physician schedule URL not configured');
+
+  const target = new URL(url, globalThis.location?.href ?? 'http://localhost');
+  const init: RequestInit = {};
+  if (globalThis.location && target.origin === globalThis.location.origin) {
+    init.credentials = 'same-origin';
   }
 
-  const proxied = await fetch('/api.php?action=physicians', { credentials: 'same-origin' });
-  if (!proxied.ok) throw new Error('proxy fetch failed');
-  return await proxied.text();
+  const res = await fetch(target.toString(), init);
+  if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+
+  const contentType = res.headers?.get('content-type')?.toLowerCase() ?? '';
+  if (contentType.includes('application/json')) {
+    return { type: 'json', body: await res.json() };
+  }
+
+  return { type: 'ics', body: await res.text() };
 }
 
 const dateToMs = (iso: string): number => new Date(`${iso}T00:00:00`).getTime();
 
+function toDateISO(dateRaw: string): string | null {
+  if (!dateRaw) return null;
+  const parsed = new Date(dateRaw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+}
+
+function parseJsonAssignments(data: unknown): Assignment[] {
+  const arr = Array.isArray(data)
+    ? data
+    : Array.isArray((data as { shifts?: unknown })?.shifts)
+      ? (data as { shifts?: unknown }).shifts!
+      : [];
+
+  const assignments: Assignment[] = [];
+  for (const item of arr) {
+    if (!item || typeof item !== 'object') continue;
+    const raw = item as Record<string, unknown>;
+    const date = toDateISO(String(raw.date ?? raw.day ?? ''));
+    const name = String(raw.name ?? raw.physician ?? raw.provider ?? '').trim();
+    const start = normalizeTime(String(raw.start ?? raw.startTime ?? ''));
+    const end = normalizeTime(String(raw.end ?? raw.endTime ?? ''));
+    if (!date || !name || !start || !end) continue;
+
+    const startDate = new Date(`${date}T${start}:00`);
+    const endDate = new Date(`${date}T${end}:00`);
+    if (endDate <= startDate) endDate.setDate(endDate.getDate() + 1);
+
+    const location = String(raw.location ?? raw.site ?? 'Unspecified').trim() || 'Unspecified';
+    const shift = String(raw.shift ?? 'Shift').trim();
+
+    assignments.push({
+      date,
+      endDate: endDate.toISOString().slice(0, 10),
+      location,
+      shift,
+      name,
+      start,
+      end,
+      crossesMidnight: endDate.toISOString().slice(0, 10) !== date,
+    });
+  }
+  return assignments;
+}
+
 async function loadAssignments(startDateISO: string, days: number): Promise<Assignment[]> {
-  const ics = await fetchPhysicianICS();
-  const events = parseICS(ics);
-  const assignments = extractAssignments(events);
+  const schedule = await fetchPhysicianSchedule();
+  const assignments =
+    schedule.type === 'json'
+      ? parseJsonAssignments(schedule.body)
+      : extractAssignments(parseICS(schedule.body));
 
   const start = dateToMs(startDateISO);
   const end = start + days * 86400000;
@@ -241,11 +300,12 @@ async function loadAssignments(startDateISO: string, days: number): Promise<Assi
 /** Fetch and render physicians for the next week starting from the given date. */
 export async function renderPhysicians(el: HTMLElement, dateISO: string): Promise<void> {
   const previous = el.innerHTML;
+  el.textContent = 'Loading…';
   try {
     const assignments = await loadAssignments(dateISO, 7);
 
     if (assignments.length === 0) {
-      el.textContent = 'No physician assignments for the next 7 days.';
+      el.textContent = PHYSICIAN_FALLBACK;
       return;
     }
 
@@ -261,15 +321,16 @@ export async function renderPhysicians(el: HTMLElement, dateISO: string): Promis
       .join('');
 
     el.innerHTML = `<ul class="phys-list phys-schedule">${items}</ul>`;
-  } catch {
+  } catch (err) {
+    console.error('Failed to load physician schedule', err);
     if (previous) {
       el.innerHTML = previous;
       const warn = document.createElement('div');
       warn.className = 'phys-error';
-      warn.textContent = 'Unable to load physician schedule';
+      warn.textContent = PHYSICIAN_FALLBACK;
       el.appendChild(warn);
     } else {
-      el.textContent = 'Physician schedule unavailable';
+      el.textContent = PHYSICIAN_FALLBACK;
     }
   }
 }

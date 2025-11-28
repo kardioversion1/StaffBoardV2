@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import * as state from '@/state';
 import { __test, getUpcomingDoctors } from '@/ui/physicians';
 
 const { parseICS, normalizeTime, parseAssignmentsFromSection } = __test;
@@ -79,6 +80,7 @@ describe('physician schedule parsing', () => {
       headers: { get: () => 'text/calendar' },
       text: () => Promise.resolve(sample),
     } as unknown as Response);
+    vi.spyOn(state, 'getConfig').mockReturnValue({ physicians: { calendarUrl: 'https://example.com/phys.ics' } } as any);
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await getUpcomingDoctors('2024-12-01', 2);
@@ -125,6 +127,6 @@ describe('physician schedule parsing', () => {
       },
     });
 
-    expect(fetchMock).toHaveBeenCalledWith('/api.php?action=physicians', { credentials: 'same-origin' });
+    expect(fetchMock).toHaveBeenCalledWith('https://example.com/phys.ics', {});
   });
 });
